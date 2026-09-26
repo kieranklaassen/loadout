@@ -8,14 +8,16 @@ class DeployConfigTest < ActiveSupport::TestCase
 
   # Every tenant-specific key the render requires (no defaults).
   REQUIRED_ENV = {
-    "KAMAL_SERVICE" => "compound-stack",
-    "KAMAL_IMAGE" => "ghcr.io/example/compound-stack",
+    "KAMAL_SERVICE" => "loadout",
+    "KAMAL_IMAGE" => "ghcr.io/example/loadout",
     "KAMAL_WEB_HOST" => "203.0.113.10",
-    "KAMAL_PROXY_HOST" => "compound-stack.example.test",
+    "KAMAL_PROXY_HOST" => "loadout.example.test",
     "KAMAL_REGISTRY_USERNAME" => "example-user",
-    "KAMAL_STORAGE_VOLUME" => "compound_stack_storage",
+    "KAMAL_STORAGE_VOLUME" => "loadout_storage",
     "KAMAL_BUILDER_ARCH" => "amd64",
-    "KAMAL_SSH_USER" => "deploy"
+    "KAMAL_SSH_USER" => "deploy",
+    "PUBLIC_BASE_URL" => "https://loadout.example.test",
+    "EVERY_OAUTH_BASE_URL" => "https://every.example.test"
   }.freeze
 
   def render_deploy(env)
@@ -40,6 +42,15 @@ class DeployConfigTest < ActiveSupport::TestCase
 
   test "fails loud (KeyError) when a required tenant key is missing" do
     assert_raises(KeyError) { render_deploy(REQUIRED_ENV.except("KAMAL_IMAGE")) }
+    assert_raises(KeyError) { render_deploy(REQUIRED_ENV.except("PUBLIC_BASE_URL")) }
+  end
+
+  test "Sign in with Every secrets come from .kamal/secrets" do
+    config = YAML.safe_load(render_deploy(REQUIRED_ENV))
+
+    assert_includes config.dig("env", "secret"), "EVERY_OAUTH_CLIENT_ID"
+    assert_includes config.dig("env", "secret"), "EVERY_OAUTH_CLIENT_SECRET"
+    assert_equal "https://loadout.example.test", config.dig("env", "clear", "PUBLIC_BASE_URL")
   end
 
   test "no resolved secret or hardcoded IP is committed to deploy.yml" do

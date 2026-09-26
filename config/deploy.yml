@@ -46,7 +46,16 @@ registry:
 env:
   secret:
     - RAILS_MASTER_KEY
+    # Sign in with Every
+    - EVERY_OAUTH_CLIENT_ID
+    - EVERY_OAUTH_CLIENT_SECRET
   clear:
+    # Public https origin (https://loadout.every.to): the Every OAuth redirect
+    # URI, the MCP OAuth issuer and resource, and share links are built from it.
+    PUBLIC_BASE_URL: "<%= ENV.fetch("PUBLIC_BASE_URL") %>"
+    EVERY_OAUTH_BASE_URL: "<%= ENV.fetch("EVERY_OAUTH_BASE_URL") %>"
+    # Comma-separated emails that may review the catalog and flip flags.
+    ADMIN_EMAILS: "<%= ENV.fetch("ADMIN_EMAILS", "") %>"
     # Run Solid Queue inside Puma (single web role default). Split to a job role
     # for scale — see the commented job role above.
     SOLID_QUEUE_IN_PUMA: true
