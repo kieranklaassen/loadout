@@ -58,3 +58,25 @@ export type ProfileSummary = {
   name: string
   avatar_url: string | null
 }
+
+/** An MCP client the member approved, as the agents page receives it. */
+export type ConnectedAgent = {
+  id: string
+  name: string
+  hue: number
+  monogram: string
+  connected_at: string
+  last_used_at: string | null
+}
+
+/** The OAuth authorization request the consent form posts back unchanged. */
+export type OauthAuthorizationParams = {
+  client_id: string
+  redirect_uri: string
+  response_type: 'code'
+  code_challenge: string
+  code_challenge_method: 'S256'
+  state?: string
+  resource?: string
+  scope?: string
+}
