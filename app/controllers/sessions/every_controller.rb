@@ -2,6 +2,7 @@
 # callback, `failure` every other outcome (OmniAuth.config.on_failure).
 class Sessions::EveryController < InertiaController
   allow_unauthenticated_access
+  skip_onboarding_gate
 
   FAILURE_MESSAGES = {
     "every_oauth_unconfigured" => "Sign in with Every is not configured on this server."

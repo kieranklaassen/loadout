@@ -123,7 +123,7 @@ class WebmcpToolsControllerTest < ActionDispatch::IntegrationTest
     end
 
     test "accepts the token Inertia hands the page in the XSRF-TOKEN cookie" do
-      get root_path
+      get welcome_path
       token = cookies["XSRF-TOKEN"]
       assert token.present?, "Inertia should set the XSRF-TOKEN cookie"
 
