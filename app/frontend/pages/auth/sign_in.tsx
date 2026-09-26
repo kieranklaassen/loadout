@@ -1,68 +1,85 @@
-import { Head, useForm, usePage } from '@inertiajs/react'
-import { type FormEvent } from 'react'
+import { Head, Link, router, usePage } from '@inertiajs/react'
+import { buttonClasses } from '../../components/button'
+import Wordmark from '../../components/wordmark'
+import type { FlashData } from '../../types'
+
+export const EVERY_SIGN_IN_PATH = '/auth/every'
+
+interface DevLoginPerson {
+  email: string
+  name: string | null
+}
+
+interface SignInProps {
+  dev_login_people?: DevLoginPerson[]
+}
 
 interface SignInPageProps {
-  flash: { alert?: string; notice?: string }
+  flash: FlashData
   [key: string]: unknown
 }
 
-export default function SignIn() {
+export default function SignIn({ dev_login_people }: SignInProps) {
   const { flash } = usePage<SignInPageProps>().props
-  const form = useForm({ email_address: '', password: '' })
-
-  function submit(event: FormEvent) {
-    event.preventDefault()
-    form.post('/session')
-  }
 
   return (
     <>
       <Head title="Sign in" />
-      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Sign in</h1>
+      <div className="flex min-h-screen flex-col">
+        <header className="px-6 py-6 sm:px-10">
+          <Link href="/" aria-label="Loadout home" className="text-ink">
+            <Wordmark />
+          </Link>
+        </header>
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-8 px-6 pb-24">
+          <div className="animate-rise">
+            <p className="eyebrow">Sign in</p>
+            <h1 className="display mt-3 text-5xl">Your AI loadout, in a minute.</h1>
+            <p className="mt-4 text-lg text-ink-soft">
+              Use your every.to account. You pick a link, tap the tools you use, and decide who sees it.
+            </p>
+          </div>
 
-        {flash.alert && (
-          <p role="alert" className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-            {flash.alert}
-          </p>
-        )}
+          {flash.alert && (
+            <p role="alert" className="rounded-xl bg-every-coral/15 px-4 py-3 text-sm text-ink">
+              {flash.alert}
+            </p>
+          )}
 
-        <form onSubmit={submit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            Email
-            <input
-              type="email"
-              name="email_address"
-              autoComplete="username"
-              required
-              value={form.data.email_address}
-              onChange={(e) => form.setData('email_address', e.target.value)}
-              className="rounded border border-gray-300 px-3 py-2"
-            />
-          </label>
+          {/* A full page navigation, not an Inertia visit: the OmniAuth middleware answers with a redirect to Every. */}
+          <a href={EVERY_SIGN_IN_PATH} className={buttonClasses('primary', 'lg')}>
+            Sign in with Every
+          </a>
+          <p className="-mt-4 text-center text-xs text-ink-muted">Profiles are private until you make them public.</p>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Password
-            <input
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              value={form.data.password}
-              onChange={(e) => form.setData('password', e.target.value)}
-              className="rounded border border-gray-300 px-3 py-2"
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={form.processing}
-            className="rounded bg-gray-900 px-3 py-2 text-white disabled:opacity-50"
-          >
-            Sign in
-          </button>
-        </form>
-      </main>
+          {dev_login_people && (
+            <section aria-labelledby="dev-login-heading" className="flex flex-col gap-2 border-t border-dashed border-rule pt-5">
+              <h2 id="dev-login-heading" className="eyebrow">
+                Dev login
+              </h2>
+              {dev_login_people.length === 0 ? (
+                <p className="text-sm text-ink-muted">
+                  No seeded people yet. Run <code>bin/rails db:seed</code>.
+                </p>
+              ) : (
+                <ul className="grid grid-cols-2 gap-1.5">
+                  {dev_login_people.map((person) => (
+                    <li key={person.email}>
+                      <button
+                        type="button"
+                        onClick={() => router.post('/dev/login', { email_address: person.email })}
+                        className="w-full truncate rounded-full bg-white px-3 py-2 text-left text-sm text-ink ring-1 ring-rule hover:ring-ink/30"
+                      >
+                        Continue as {person.name ?? person.email}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+        </main>
+      </div>
     </>
   )
 }

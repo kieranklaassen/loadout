@@ -53,6 +53,15 @@ gem "mcp", "~> 1.6"
 # Vite integration for the app/frontend build pipeline
 gem "vite_rails"
 
+# Sign in with Every (lib/omniauth/strategies/every.rb)
+gem "omniauth", "~> 2.1"
+gem "omniauth-oauth2", "~> 1.8"
+
+# Feature flags: per-user staged rollout without a deploy (docs/modules/feature_flags.md)
+gem "flipper", "~> 1.3"
+gem "flipper-active_record", "~> 1.3"
+gem "flipper-ui", "~> 1.3"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
@@ -79,4 +88,5 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+  gem "webmock"
 end

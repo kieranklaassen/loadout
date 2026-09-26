@@ -1,12 +1,16 @@
 # frozen_string_literal: true
 
-# Demo landing page proving the Inertia round trip: a Rails controller renders a
-# snake_case page identifier and passes props the React component reads directly.
+# The front door. Signed-out visitors get the landing page; members go straight
+# to their profile (or finish onboarding first).
 class HomeController < InertiaController
-  # The demo landing page is public; every other Inertia page is gated by default.
   allow_unauthenticated_access only: :index
 
   def index
-    render inertia: "home/index", props: { name: "Compound Stack" }
+    if authenticated?
+      return redirect_to "/welcome" unless Current.user.onboarded?
+      return redirect_to "/#{Current.user.handle}"
+    end
+
+    render inertia: "home/index"
   end
 end

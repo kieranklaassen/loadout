@@ -1,0 +1,22 @@
+<%# Link-preview tags. Crawlers do not run JavaScript, so these render server-side from page_meta. %>
+<meta name="description" content="<%= meta[:description] %>">
+<meta property="og:site_name" content="Loadout">
+<meta property="og:type" content="<%= meta[:type] || "website" %>">
+<meta property="og:title" content="<%= meta[:title] %>">
+<meta property="og:description" content="<%= meta[:description] %>">
+<meta property="og:url" content="<%= meta[:url] %>">
+<% if meta[:image] %>
+  <meta property="og:image" content="<%= meta[:image] %>">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="<%= meta[:image_alt] || meta[:title] %>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="<%= meta[:image] %>">
+<% else %>
+  <meta name="twitter:card" content="summary">
+<% end %>
+<meta name="twitter:title" content="<%= meta[:title] %>">
+<meta name="twitter:description" content="<%= meta[:description] %>">
+<% if meta[:noindex] %>
+  <meta name="robots" content="noindex">
+<% end %>

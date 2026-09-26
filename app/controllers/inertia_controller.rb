@@ -12,6 +12,9 @@ class InertiaController < ApplicationController
   # for every subclass unless it opts out with `allow_unauthenticated_access`.
   include Authentication
 
+  # The signed-in member, or nil. Pages read identity from here, never refetch it.
+  inertia_share current_user: -> { current_user_props if authenticated? }
+
   # Flash messages, surfaced to every page as a plain hash keyed by type.
   inertia_share flash: -> { flash.to_hash }
 
@@ -28,4 +31,19 @@ class InertiaController < ApplicationController
   # WebmcpProvider registers them on the browser's model context while this is
   # non-null and unregisters them when it turns null (sign-out).
   inertia_share webmcp: -> { ToolRegistry.manifest if authenticated? }
+
+  private
+    def current_user_props
+      user = Current.user
+      {
+        id: user.id,
+        name: user.display_name,
+        handle: user.handle,
+        avatar_url: user.avatar_url,
+        every_member: user.every_member?,
+        admin: user.admin?,
+        public: user.public?,
+        onboarded: user.onboarded?
+      }
+    end
 end

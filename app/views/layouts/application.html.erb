@@ -16,6 +16,7 @@
       <meta http-equiv="origin-trial" content="<%= token %>">
     <% end %>
 
+    <%= render "layouts/meta", meta: page_meta %>
     <%= yield :head %>
 
     <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
@@ -44,7 +45,8 @@
 
   </head>
 
-  <body>
+  <body class="bg-paper text-ink antialiased">
     <%= yield %>
+    <%= flipper_flags_script_tag %>
   </body>
 </html>

@@ -1,46 +1,54 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SignIn from './sign_in'
 
-// The page uses Inertia's Head/usePage/useForm, all of which need the Inertia
-// app context. Mock them so the presentational form can be tested in isolation.
 const post = vi.fn()
+let flash: { alert?: string } = {}
 vi.mock('@inertiajs/react', () => ({
   Head: () => null,
-  usePage: () => ({ props: { flash: { alert: 'Invalid email or password.' } } }),
-  useForm: () => ({
-    data: { email_address: '', password: '' },
-    setData: vi.fn(),
-    post,
-    processing: false,
-  }),
+  Link: ({ children, href, ...rest }: { children: ReactNode; href: string }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+  usePage: () => ({ props: { flash } }),
+  router: { post: (...args: unknown[]) => post(...args) },
 }))
 
 describe('SignIn page', () => {
-  it('renders the email, password, and submit controls', () => {
-    render(<SignIn />)
-
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+  beforeEach(() => {
+    post.mockReset()
+    flash = {}
   })
 
-  it('surfaces a server error prop from flash', () => {
+  it('offers only Sign in with Every, as a full navigation to /auth/every', () => {
     render(<SignIn />)
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Invalid email or password.')
+    const link = screen.getByRole('link', { name: /sign in with every/i })
+    expect(link).toHaveAttribute('href', '/auth/every')
+    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /dev login/i })).not.toBeInTheDocument()
   })
 
-  it('submits the form to /session without a native page load', () => {
+  it('surfaces a sign-in failure from flash', () => {
+    flash = { alert: 'Sign in with Every did not complete. Try again.' }
     render(<SignIn />)
 
-    const submitted = fireEvent.submit(
-      screen.getByRole('button', { name: /sign in/i }).closest('form')!,
-    )
+    expect(screen.getByRole('alert')).toHaveTextContent('did not complete')
+  })
 
-    expect(post).toHaveBeenCalledWith('/session')
-    // preventDefault must have run — otherwise the browser performs a native
-    // GET and Inertia never sees the submission.
-    expect(submitted).toBe(false)
+  it('lists dev login people and posts the chosen email to /dev/login', () => {
+    render(<SignIn dev_login_people={[{ email: 'dev@every.to', name: 'Dev Person' }]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /continue as dev person/i }))
+
+    expect(post).toHaveBeenCalledWith('/dev/login', { email_address: 'dev@every.to' })
+  })
+
+  it('tells the developer to seed when the dev login has nobody to offer', () => {
+    render(<SignIn dev_login_people={[]} />)
+
+    expect(screen.getByText(/db:seed/)).toBeInTheDocument()
   })
 })

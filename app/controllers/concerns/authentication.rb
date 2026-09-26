@@ -38,7 +38,9 @@ module Authentication
       session.delete(:return_to_after_authenticating) || root_url
     end
 
+    # A browser that was already signed in gets one session, not a stray row.
     def start_new_session_for(user)
+      find_session_by_cookie&.destroy
       user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         Current.session = session
         cookies.signed.permanent[:session_id] = { value: session.id, httponly: true, same_site: :lax }

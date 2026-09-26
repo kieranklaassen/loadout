@@ -1,0 +1,7 @@
+public_map:
+  enabled: false   # dev/CI seed only; production always starts disabled
+  purpose: "Open the Every map to people outside Every"
+  usage: |
+    MapsController renders the map for a non-Every viewer only when this is
+    enabled for them (Flipper.enabled?(:public_map, Current.user)); otherwise
+    they see the explainer. Actor: the User (signed-out visitors are nil).

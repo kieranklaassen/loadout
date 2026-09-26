@@ -1,4 +1,106 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/newsreader/opsz.css';
+@import '@fontsource-variable/newsreader/opsz-italic.css';
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/500.css';
 
 @plugin '@tailwindcss/typography';
 @plugin '@tailwindcss/forms';
+
+/*
+ * Loadout's visual language follows every.to: warm paper, near-black ink, an
+ * editorial serif for display type, a clean grotesk for UI, mono for data.
+ * Signifier and Switzer are Every's licensed faces; Newsreader and Inter are
+ * the open stand-ins.
+ */
+@theme {
+  --font-serif: 'Newsreader Variable', 'Signifier', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter Variable', 'Switzer', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+
+  --color-paper: #fdfaf7;
+  --color-paper-deep: #f6f0e8;
+  --color-ink: #121212;
+  --color-ink-soft: #3c3c3c;
+  --color-ink-muted: #6b6b6b;
+  --color-rule: #e7e0d6;
+  --color-every-blue: #1652ea;
+  --color-every-sky: #c0f0fb;
+  --color-every-lime: #8cff8a;
+  --color-every-coral: #ff7765;
+
+  --radius-card: 1.25rem;
+  --shadow-card: 0 1px 0 rgb(18 18 18 / 0.04), 0 12px 32px -18px rgb(18 18 18 / 0.25);
+  --shadow-lift: 0 1px 0 rgb(18 18 18 / 0.05), 0 24px 48px -24px rgb(18 18 18 / 0.35);
+
+  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--color-every-sky);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-every-blue);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .display {
+    font-family: var(--font-serif);
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .card {
+    background: white;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .hairline {
+    border-color: var(--color-rule);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
