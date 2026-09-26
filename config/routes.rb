@@ -34,6 +34,8 @@ Rails.application.routes.draw do
   get "welcome", to: "onboarding#show", as: :welcome
 
   # The Every map (U5 routes go here).
+  get "map" => "maps#index", as: :map
+  get "map/:category" => "maps#show", as: :map_category
 
   # Admin: catalog review and the Flipper dashboard (U8 routes go here).
 

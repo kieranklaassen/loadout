@@ -58,3 +58,47 @@ export type ProfileSummary = {
   name: string
   avatar_url: string | null
 }
+
+/** One row of an Every map ranking: a tool or model, how many people use it, and who is named. */
+export type MapRank = {
+  item: CatalogItem
+  count: number
+  share: number
+  people: ProfileSummary[]
+  others_count: number
+  in_loadout: boolean
+  usual_model?: CatalogItem | null
+}
+
+export type MapPanel = {
+  category: Category
+  people_count: number
+  tools_count: number
+  models_count: number
+  tools: MapRank[]
+  models: MapRank[]
+}
+
+export type MapSummary = {
+  members: number
+  picks: number
+  tools: number
+  categories: number
+}
+
+export type MapUpgrade = {
+  category: Category
+  tool: CatalogItem
+  from_model: CatalogItem
+  to_model: CatalogItem
+  colleagues_count: number
+}
+
+export type MapDiscovery = {
+  empty_categories: { category: Category; people_count: number; tools: MapRank[] }[]
+  upgrades: MapUpgrade[]
+}
+
+export type MapPerson = ProfileSummary & {
+  picks: { tool: CatalogItem; model: CatalogItem | null; primary: boolean }[]
+}
