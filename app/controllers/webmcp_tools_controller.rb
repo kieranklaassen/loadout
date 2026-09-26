@@ -28,7 +28,7 @@ class WebmcpToolsController < ApplicationController
     arguments = parsed_arguments
     return render json: { error: "Send a JSON body of the form {\"arguments\": {...}}." }, status: :bad_request unless arguments
 
-    result = ToolRegistry.call(params[:name], arguments:, user: Current.session.user)
+    result = ToolRegistry.call(params[:name], arguments:, user: Current.session.user, source: "webmcp")
     return render json: { error: "Unknown tool: #{params[:name]}" }, status: :not_found unless result
 
     render json: { result: }

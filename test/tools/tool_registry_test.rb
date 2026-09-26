@@ -10,7 +10,7 @@ class ToolRegistryTest < ActiveSupport::TestCase
   setup { @user = users(:one) }
 
   def mcp(method, params = nil)
-    ToolRegistry.mcp_server(user: @user).handle({ jsonrpc: "2.0", id: 1, method:, params: }.compact)
+    ToolRegistry.mcp_server(user: @user, source: "mcp").handle({ jsonrpc: "2.0", id: 1, method:, params: }.compact)
   end
 
   test "every registered tool is an ApplicationTool with a valid, unique name and a description" do
@@ -41,17 +41,28 @@ class ToolRegistryTest < ActiveSupport::TestCase
   end
 
   test "call returns the MCP tools/call result for the same arguments" do
-    expected = mcp("tools/call", { name: "whoami", arguments: {} })[:result]
-    assert_equal expected, ToolRegistry.call("whoami", arguments: {}, user: @user)
+    expected = mcp("tools/call", { name: "list_categories", arguments: {} })[:result]
+    assert_equal expected, ToolRegistry.call("list_categories", arguments: {}, user: @user, source: "webmcp")
   end
 
   test "call returns nil for an unknown tool" do
-    assert_nil ToolRegistry.call("nope", arguments: {}, user: @user)
+    assert_nil ToolRegistry.call("nope", arguments: {}, user: @user, source: "webmcp")
   end
 
   test "a tool never runs without a user" do
-    result = ToolRegistry.call("whoami", arguments: {}, user: nil)
+    result = ToolRegistry.call("list_categories", arguments: {}, user: nil, source: "webmcp")
     assert result[:isError]
     assert_match(/sign in/i, result[:content].first[:text])
+  end
+
+  test "only the tools that never write are marked read-only" do
+    read_only = ToolRegistry.tools.select { |tool| tool.annotations_value.read_only_hint }.map(&:tool_name)
+    assert_equal %w[list_categories search_catalog get_my_loadout get_recent_changes], read_only
+    assert UpdateLoadoutTool.annotations_value.destructive_hint
+  end
+
+  test "the MCP server carries the member, the source, and the client name" do
+    server = ToolRegistry.mcp_server(user: @user, source: "mcp", client_name: "Cursor")
+    assert_equal({ user: @user, source: "mcp", client_name: "Cursor" }, server.server_context)
   end
 end

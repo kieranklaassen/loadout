@@ -52,7 +52,8 @@ surfaces** (see [docs/modules/webmcp.md](docs/modules/webmcp.md)):
   `WebmcpProvider` registers it on the browser's model context. The
   browser calls `POST /webmcp/tools/:name` (session + CSRF). That endpoint is
   the one sanctioned exception to "no parallel JSON API"; do not add others for tools.
-- MCP clients get the same tools from `ToolRegistry.mcp_server(user:)`.
+- MCP clients get the same tools from `ToolRegistry.mcp_server(user:, source: "mcp", client_name:)`,
+  served at `/mcp` behind the in-app OAuth 2.1 server (`McpController`).
 
 ## Deploying
 
