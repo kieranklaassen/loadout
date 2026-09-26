@@ -1,0 +1,11 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class <%= class_name %>ToolTest < ActiveSupport::TestCase
+  test "runs as the signed-in user" do
+    result = ToolRegistry.call("<%= tool_name %>", arguments: {}, user: users(:one))
+
+    assert_equal false, result[:isError], result[:content].first[:text]
+  end
+end

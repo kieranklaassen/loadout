@@ -1,0 +1,30 @@
+# The template's own manifest.
+#
+# A clone inherits this file and is therefore BORN COMPLETE — every module is
+# listed at the current template_version. A downstream app that adopts only some
+# modules lists only those (see docs/modules/*.md → "Adopt into an existing app").
+#
+# An upgrade agent reads changelog entries newer than template_version, filtered
+# to the modules listed here, applies them in order, and bumps template_version.
+# See docs/changelog/README.md and docs/template-manifest.md.
+
+template_version: "0.8.0"
+
+# module name -> the template_version at which this app adopted it.
+modules:
+  frontend: "0.1.0"
+  auth: "0.1.0"
+  jobs: "0.1.0"
+  testing: "0.1.0"
+  ci: "0.1.0"
+  deploy: "0.1.0"
+  ruby_llm: "0.1.0"
+  serialization: "0.1.0"
+  riffrec: "0.1.0"
+  agent-conventions: "0.1.0"
+  ruby_native: "0.2.0"
+  copse: "0.3.0"
+  geneva_drive: "0.4.0"
+  pwa: "0.5.0"
+  feature_flags: "0.6.0"
+  webmcp: "0.8.0"

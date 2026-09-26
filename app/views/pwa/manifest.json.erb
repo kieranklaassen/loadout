@@ -1,0 +1,27 @@
+<%# Web app manifest. Identity comes from config/initializers/pwa.rb — edit there. %>
+<% pwa = Rails.application.config.x.pwa %>
+{
+  "id": "/",
+  "name": <%== pwa.name.to_json %>,
+  "short_name": <%== pwa.short_name.to_json %>,
+  "description": <%== pwa.description.to_json %>,
+  "icons": [
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": <%== pwa.theme_color.to_json %>,
+  "background_color": <%== pwa.background_color.to_json %>
+}

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Share the local app over a Cloudflare quick tunnel (no account needed).
+#
+# Vite's dev server serves assets from its own localhost port (skipProxy), which
+# a remote visitor can't reach — so this script builds the assets once and runs
+# Rails alone, letting it serve the built bundle. Stop with Ctrl-C; the Rails
+# server this script started is cleaned up on exit.
+#
+# Usage: bin/tunnel            (defaults to PORT=3000)
+#        PORT=3205 bin/tunnel
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+PORT="${PORT:-3000}"
+
+if ! command -v cloudflared >/dev/null 2>&1; then
+  echo "cloudflared is not installed (macOS: brew install cloudflared)" >&2
+  exit 1
+fi
+
+bin/vite build
+
+RAILS_PID=""
+if ! lsof -i ":${PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
+  echo "Starting Rails on port ${PORT}..."
+  bin/rails server -p "${PORT}" &
+  RAILS_PID=$!
+  trap '[ -n "${RAILS_PID}" ] && kill "${RAILS_PID}" 2>/dev/null' EXIT
+  for _ in $(seq 1 30); do
+    lsof -i ":${PORT}" -sTCP:LISTEN -t >/dev/null 2>&1 && break
+    sleep 1
+  done
+else
+  echo "Reusing the server already listening on port ${PORT}."
+  echo "Note: if that server is Vite-backed (bin/dev), remote asset loading will fail."
+fi
+
+cloudflared tunnel --url "http://localhost:${PORT}"

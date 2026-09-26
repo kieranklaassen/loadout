@@ -1,0 +1,23 @@
+# Recurring Solid Queue tasks.
+#
+# GOTCHA: Solid Queue's `config_from` silently loads NOTHING when the current
+# environment has no top-level key here. So every environment gets an explicit
+# key (via the anchor below) — otherwise enabling the scheduler in, say,
+# development would silently run no recurring jobs and the omission is invisible.
+#
+# The hourly prune is MANDATORY: `solid_queue_jobs` accumulates finished rows
+# forever without it, and the table is on the same SQLite database as the queue.
+
+production: &recurring
+  clear_solid_queue_finished_jobs:
+    command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
+    schedule: every hour at minute 12
+  geneva_drive_housekeeping:
+    class: "GenevaDrive::HousekeepingJob"
+    schedule: "*/30 * * * *"
+
+development:
+  <<: *recurring
+
+test:
+  <<: *recurring

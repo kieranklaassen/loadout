@@ -1,0 +1,88 @@
+# Kamal deploy config — fully env-driven.
+#
+# Every TENANT-SPECIFIC value comes from ENV.fetch with NO default, so a missing
+# variable fails the render LOUDLY instead of silently reusing another tenant's
+# service name, host, or volume (the only shape proven to prevent a shared-host
+# config leak). Source these from .kamal/deploy.env before running kamal — see
+# DEPLOYING.md.
+
+# Refuse to run against an older Kamal than the fleet standard.
+minimum_version: 2.12.0
+
+# Name of your application. Used to uniquely configure containers.
+service: <%= ENV.fetch("KAMAL_SERVICE") %>
+
+# Name of the container image (e.g. ghcr.io-user/app-name).
+image: <%= ENV.fetch("KAMAL_IMAGE") %>
+
+# Deploy to these servers.
+servers:
+  web:
+    - <%= ENV.fetch("KAMAL_WEB_HOST") %>
+  # Scale job processing onto a dedicated machine by uncommenting this role and
+  # dropping SOLID_QUEUE_IN_PUMA below:
+  # job:
+  #   hosts:
+  #     - <%= ENV.fetch("KAMAL_JOB_HOST", "unset") %>
+  #   cmd: bin/jobs
+
+# Terminate SSL at kamal-proxy with an automatic Let's Encrypt certificate.
+# Requires config.assume_ssl + config.force_ssl in production.rb (Rails default).
+proxy:
+  ssl: true
+  host: <%= ENV.fetch("KAMAL_PROXY_HOST") %>
+  healthcheck:
+    path: /up
+
+# Where you keep your container images. Registry server defaults to ghcr.io;
+# username is tenant-specific and required.
+registry:
+  server: <%= ENV.fetch("KAMAL_REGISTRY_SERVER", "ghcr.io") %>
+  username: <%= ENV.fetch("KAMAL_REGISTRY_USERNAME") %>
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+# Inject ENV variables into containers (secrets come from .kamal/secrets).
+env:
+  secret:
+    - RAILS_MASTER_KEY
+  clear:
+    # Run Solid Queue inside Puma (single web role default). Split to a job role
+    # for scale — see the commented job role above.
+    SOLID_QUEUE_IN_PUMA: true
+    # One Puma worker: SQLite is single-writer, so more workers contend, they do not scale.
+    WEB_CONCURRENCY: "1"
+    # Riffrec endpoint (public, non-secret). Empty by default → feedback capture no-ops.
+    RIFFREC_ENDPOINT: "<%= ENV.fetch("RIFFREC_ENDPOINT", "") %>"
+    RIFFREC_PUBLIC_KEY: "<%= ENV.fetch("RIFFREC_PUBLIC_KEY", "") %>"
+    # WebMCP Chrome origin-trial tokens (public, origin-bound). Empty → no meta tag.
+    WEBMCP_ORIGIN_TRIAL_TOKEN: "<%= ENV.fetch("WEBMCP_ORIGIN_TRIAL_TOKEN", "") %>"
+
+# Aliases are triggered with "bin/kamal <alias>".
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  shell: app exec --interactive --reuse "bash"
+  logs: app logs -f
+  dbc: app exec --interactive --reuse "bin/rails dbconsole"
+
+# Persistent volume for the SQLite databases and local Active Storage files.
+# Recommended to back this path up off-server.
+volumes:
+  - "<%= ENV.fetch("KAMAL_STORAGE_VOLUME") %>:/rails/storage"
+
+# Bridge fingerprinted Vite assets between versions to avoid 404s on in-flight
+# requests. Vite builds into public/vite (not public/assets).
+asset_path: /rails/public/vite
+
+# Configure the image builder. arch is tenant/host-specific and required.
+# Optionally build on a remote docker host (e.g. the target box itself) to
+# avoid cross-arch emulation: KAMAL_BUILDER_REMOTE=ssh://user@host.
+builder:
+  arch: <%= ENV.fetch("KAMAL_BUILDER_ARCH") %>
+<% unless ENV["KAMAL_BUILDER_REMOTE"].to_s.empty? %>
+  remote: <%= ENV["KAMAL_BUILDER_REMOTE"] %>
+<% end %>
+
+# SSH user for the target hosts. Required — no root default.
+ssh:
+  user: <%= ENV.fetch("KAMAL_SSH_USER") %>

@@ -1,0 +1,44 @@
+# frozen_string_literal: true
+
+# How long to keep completed/canceled workflows before automatic deletion.
+# Set to nil to disable automatic cleanup.
+# When enabled, finished and canceled workflows older than this threshold
+# will be deleted along with their step execution records.
+#
+# GenevaDrive.delete_completed_workflows_after = 30.days
+
+# How long a step execution can be in "executing" state before being
+# considered stuck. This typically happens when a worker process crashes
+# mid-execution. The HousekeepingJob will recover these based on the
+# stuck_recovery_action setting.
+#
+# GenevaDrive.stuck_in_progress_threshold = 1.hour
+
+# How long a step execution can be past its scheduled_for time while
+# still in "scheduled" state before being considered stuck. This can
+# happen if jobs fail to enqueue or are lost by the queue backend.
+#
+# GenevaDrive.stuck_scheduled_threshold = 15.minutes
+
+# Action to take when recovering stuck step executions.
+# - :reattempt - Mark as recovered and schedule a retry (default)
+# - :cancel - Mark as recovered and cancel the workflow
+#
+# GenevaDrive.stuck_recovery_action = :reattempt
+
+# Maximum number of workflows/step executions to process in a single
+# housekeeping run. Prevents runaway processing if there's a large backlog.
+#
+# GenevaDrive.housekeeping_batch_size = 1000
+
+# Whether to defer job enqueueing until after the database transaction commits.
+# In production this ensures step execution records are visible to job workers
+# before the job runs. In test environments (the default when Rails.env.test?)
+# this is set to false so that jobs are enqueued immediately — transactional
+# tests (especially with SQLite) never commit the outermost transaction, which
+# can cause after_commit callbacks to misbehave or not fire at all.
+#
+# Set to true in tests if you need strict transaction semantics for a specific
+# test suite, or if you are not using transactional tests.
+#
+# GenevaDrive.enqueue_after_commit = !Rails.env.test?

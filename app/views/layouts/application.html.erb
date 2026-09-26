@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <%# App identity comes from config/initializers/pwa.rb (pwa module) %>
+    <% pwa = Rails.application.config.x.pwa %>
+    <title data-inertia><%= content_for(:title) || pwa.name %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="<%= pwa.name %>">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="<%= pwa.theme_color %>">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%# WebMCP origin trial (webmcp module): one public, origin-bound token per host; none when unset. %>
+    <% Webmcp.origin_trial_tokens.each do |token| %>
+      <meta http-equiv="origin-trial" content="<%= token %>">
+    <% end %>
+
+    <%= yield :head %>
+
+    <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app %>
+    <%= vite_stylesheet_tag "application" %>
+    <%= vite_react_refresh_tag %>
+    <%= vite_client_tag %>
+    <%= vite_typescript_tag "inertia.tsx" %>
+    <%= inertia_ssr_head %>
+    <%= vite_typescript_tag 'application' %>
+    <!--
+      If using a TypeScript entrypoint file:
+        vite_typescript_tag 'application'
+
+      If using a .jsx or .tsx entrypoint, add the extension:
+        vite_javascript_tag 'application.jsx'
+
+      Visit the guide for more information: https://vite-ruby.netlify.app/guide/rails
+    -->
+
+  </head>
+
+  <body>
+    <%= yield %>
+  </body>
+</html>

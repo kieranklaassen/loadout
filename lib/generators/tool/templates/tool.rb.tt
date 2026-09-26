@@ -1,0 +1,18 @@
+# frozen_string_literal: true
+
+class <%= class_name %>Tool < ApplicationTool
+  tool_name "<%= tool_name %>"
+  # What an agent reads to decide when to call this tool: say what it does, for
+  # whom, and what it returns.
+  description "TODO: describe <%= tool_name %>."
+  input_schema(properties: {}, required: [], additionalProperties: false)
+  # Flip read_only_hint to false (and review destructive_hint) for tools that write.
+  annotations(read_only_hint: true, destructive_hint: false)
+
+  # Acts as `user`; `arguments` has symbol keys and already passed input_schema.
+  # Return a String or anything JSON-serializable; raise Error for a failure the
+  # agent should read.
+  def call
+    raise NotImplementedError, "implement <%= class_name %>Tool#call"
+  end
+end

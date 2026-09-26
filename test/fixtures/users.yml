@@ -1,0 +1,10 @@
+<%# Plaintext for these fixtures is "Secret-Passw0rd" (>= MINIMUM_PASSWORD_LENGTH). %>
+<% password_digest = BCrypt::Password.create("Secret-Passw0rd") %>
+
+one:
+  email_address: one@example.com
+  password_digest: <%= password_digest %>
+
+two:
+  email_address: two@example.com
+  password_digest: <%= password_digest %>
