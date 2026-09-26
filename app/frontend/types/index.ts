@@ -58,3 +58,19 @@ export type ProfileSummary = {
   name: string
   avatar_url: string | null
 }
+
+/** The member a profile page is about. */
+export type ProfileDetail = {
+  handle: string
+  name: string
+  avatar_url: string | null
+  bio: string | null
+  every_member: boolean
+  public: boolean
+  url: string
+  display_url: string
+}
+
+export type LoadoutCategory = Category & {
+  entries: Entry[]
+}

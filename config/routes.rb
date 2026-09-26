@@ -40,4 +40,8 @@ Rails.application.routes.draw do
   root "home#index"
 
   # Profiles live on the root path, so they are drawn last (U4 routes go here).
+  # format: false keeps "/manifest.xml" and friends from reaching a profile.
+  handle = Regexp.new(User::Handle::FORMAT.source.delete_prefix("\\A").delete_suffix("\\z"))
+  get ":handle/og.png" => "profile_cards#show", as: :profile_card, format: false, constraints: { handle: }
+  get ":handle" => "profiles#show", as: :profile, format: false, constraints: { handle: }
 end
