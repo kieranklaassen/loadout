@@ -26,7 +26,10 @@ class SettingsController < InertiaController
     end
 
     if user.update(attributes)
-      redirect_to settings_path, status: :see_other, notice: saved_message(user)
+      # A profile page may ask to go public; a handle change must not return to the retired link.
+      return redirect_to settings_path, status: :see_other, notice: saved_message(user) if user.saved_change_to_handle?
+
+      redirect_back_or_to settings_path, status: :see_other, notice: saved_message(user)
     else
       field = user.errors.attribute_names.first
       settings_error(field, user.errors.full_messages_for(field).first)
