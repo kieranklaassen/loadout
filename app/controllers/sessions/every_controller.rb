@@ -17,7 +17,7 @@ class Sessions::EveryController < InertiaController
 
     user = User.from_every_auth!(uid: auth.uid, email: auth.info.email, name: auth.info.name, image: auth.info.image)
     start_new_session_for user
-    redirect_to user.onboarded? || agent_consent_pending? ? after_authentication_url : "/welcome"
+    redirect_to((user.onboarded? || agent_consent_pending?) ? after_authentication_url : "/welcome")
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.warn("every sign-in could not save the user: #{e.record.errors.full_messages.to_sentence}")
     redirect_to new_session_path, alert: DEFAULT_FAILURE_MESSAGE
