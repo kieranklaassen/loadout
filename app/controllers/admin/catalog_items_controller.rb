@@ -23,7 +23,9 @@ module Admin
     end
 
     def update
-      if @item.update(item_params)
+      @item.assign_attributes(item_params)
+      @item.admin_edited_at = Time.current if (@item.changed & %w[name maker hue monogram]).any?
+      if @item.save
         redirect_back_or_to admin_catalog_items_path, notice: "#{@item.name} #{update_verb}."
       else
         redirect_back_or_to admin_catalog_items_path, inertia: { errors: @item.errors.to_hash(true).transform_values(&:to_sentence) }

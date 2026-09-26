@@ -21,6 +21,7 @@ module CatalogItem
     validates :name, length: { maximum: 60 }
 
     before_validation :fill_derived_fields
+    after_update_commit :refresh_share_cards, if: -> { saved_change_to_name? || saved_change_to_monogram? || saved_change_to_hue? }
 
     scope :approved, -> { where(status: "approved") }
     scope :pending, -> { where(status: "pending") }
@@ -66,6 +67,11 @@ module CatalogItem
   end
 
   private
+
+  # Share cards are cached per member (ProfileCard); bump the members who show this item.
+  def refresh_share_cards
+    User.where(id: entries.select(:user_id)).update_all(updated_at: Time.current)
+  end
 
   def fill_derived_fields
     return if name.blank?

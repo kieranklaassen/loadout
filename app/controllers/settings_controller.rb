@@ -34,6 +34,8 @@ class SettingsController < InertiaController
       field = user.errors.attribute_names.first
       settings_error(field, user.errors.full_messages_for(field).first)
     end
+  rescue ActiveRecord::RecordNotUnique
+    settings_error(:handle, "loadout.every.to/#{attributes[:handle]} was just taken. Try another.")
   end
 
   def destroy

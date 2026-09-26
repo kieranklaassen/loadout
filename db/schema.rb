@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_26_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
   create_table "ai_models", force: :cascade do |t|
     t.string "slug", null: false
     t.string "name", null: false
@@ -25,6 +25,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230000) do
     t.date "released_on"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "admin_edited_at"
     t.index ["created_by_id"], name: "index_ai_models_on_created_by_id"
     t.index ["slug"], name: "index_ai_models_on_slug", unique: true
     t.index ["status"], name: "index_ai_models_on_status"
@@ -53,6 +54,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230000) do
     t.index ["category_id"], name: "index_entries_on_category_id"
     t.index ["tool_id"], name: "index_entries_on_tool_id"
     t.index ["user_id", "category_id", "tool_id", "ai_model_id"], name: "index_entries_uniqueness", unique: true
+    t.index ["user_id", "category_id", "tool_id"], name: "index_entries_uniqueness_without_model", unique: true, where: "ai_model_id IS NULL"
     t.index ["user_id"], name: "index_entries_on_user_id"
   end
 
@@ -215,6 +217,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230000) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "admin_edited_at"
     t.index ["created_by_id"], name: "index_tools_on_created_by_id"
     t.index ["slug"], name: "index_tools_on_slug", unique: true
     t.index ["status"], name: "index_tools_on_status"

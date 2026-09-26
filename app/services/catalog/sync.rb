@@ -2,7 +2,8 @@
 
 # Loads config/catalog.yml into the database. Idempotent: creates missing
 # categories, tools, and models by slug and refreshes seeded fields, but never
-# un-hides an item an admin hid and never touches member-suggested items.
+# un-hides an item an admin hid, never undoes an admin rename, and never
+# touches member-suggested items.
 module Catalog
   class Sync
     PATH = Rails.root.join("config/catalog.yml")
@@ -35,14 +36,10 @@ module Catalog
         item = klass.find_or_initialize_by(slug: attrs.fetch("slug"))
         next if item.persisted? && item.created_by_id.present?
 
-        fields = {
-          name: attrs.fetch("name"),
-          maker: attrs["maker"],
-          hue: attrs.fetch("hue"),
-          monogram: attrs.fetch("monogram").to_s,
-          category_slugs: Array(attrs["categories"]),
-          position: index
-        }
+        fields = { category_slugs: Array(attrs["categories"]), position: index }
+        unless item.admin_edited_at
+          fields.merge!(name: attrs.fetch("name"), maker: attrs["maker"], hue: attrs.fetch("hue"), monogram: attrs.fetch("monogram").to_s)
+        end
         fields.merge!(family: attrs["family"], released_on: attrs["released_on"]) if klass == AiModel
         fields[:status] = "approved" if item.new_record?
         item.update!(fields)

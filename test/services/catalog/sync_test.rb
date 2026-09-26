@@ -31,4 +31,13 @@ class Catalog::SyncTest < ActiveSupport::TestCase
 
     assert_empty missing
   end
+
+  test "keeps an admin's rename across syncs" do
+    Catalog::Sync.call
+    Tool.find_by!(slug: "cursor").update!(name: "Cursor IDE", admin_edited_at: Time.current)
+
+    Catalog::Sync.call
+
+    assert_equal "Cursor IDE", Tool.find_by!(slug: "cursor").name
+  end
 end

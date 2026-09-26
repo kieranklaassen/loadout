@@ -20,6 +20,7 @@ module Catalog
       raise Error, "An item can't be merged into itself." if @source.id == @target.id
 
       ApplicationRecord.transaction do
+        User.where(id: Entry.where(column => @source.id).select(:user_id)).update_all(updated_at: Time.current)
         Entry.where(column => @source.id).find_each { |entry| repoint(entry) }
         EntryChange.where(column => @source.id).update_all(column => @target.id)
         @target.update!(category_slugs: @target.category_slugs | @source.category_slugs)

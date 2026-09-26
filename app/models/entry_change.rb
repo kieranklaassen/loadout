@@ -50,7 +50,15 @@ class EntryChange < ApplicationRecord
     consumed = Set.new
     items = []
 
+    # Removed and re-added in one batch is no change at all.
     added.each do |addition|
+      twin = removed.find { |change| !consumed.include?(change) && [ change.tool_id, change.ai_model_id ] == [ addition.tool_id, addition.ai_model_id ] }
+      consumed << twin << addition if twin
+    end
+
+    added.each do |addition|
+      next if consumed.include?(addition)
+
       removal = removed.find { |change| change.tool_id == addition.tool_id && !consumed.include?(change) }
       removal ||= removed.first if removed.one? && added.one?
       next if removal.nil? || consumed.include?(removal)

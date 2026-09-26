@@ -163,10 +163,10 @@ class MapStats
       .group(:category_id, :ai_model_id).distinct.count(:user_id)
 
     mine.filter_map do |entry|
-      newer = family_models.select { |model| model.family == entry.ai_model.family && model.position < entry.ai_model.position }
+      newer = family_models.select { |model| model.newer_than?(entry.ai_model) }
       target, colleagues = newer.map { |model| [ model, moved.fetch([ entry.category_id, model.id ], 0) ] }
         .select { |_, count| count.positive? }
-        .max_by { |model, count| [ count, -model.position ] }
+        .min_by { |model, count| [ -count, model.recency_key ] }
       next if target.nil?
       next if viewer_pairs(:ai_model_id).include?([ entry.category_id, target.id ])
 

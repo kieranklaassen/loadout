@@ -41,4 +41,12 @@ class EntryChangeTest < ActiveSupport::TestCase
       "Added Cursor for coding"
     ], story
   end
+
+  test "removing and re-adding the same pick in one batch tells no story" do
+    update({ op: "add", category: "coding", tool: "cursor", model: "claude-opus-5" })
+    update({ op: "remove", category: "coding", tool: "cursor", model: "claude-opus-5" },
+      { op: "add", category: "coding", tool: "cursor", model: "claude-opus-5" })
+
+    assert_equal [ "Added Cursor with Claude Opus 5 for coding" ], story
+  end
 end
