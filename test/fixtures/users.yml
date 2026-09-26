@@ -11,6 +11,7 @@ every_ana:
   avatar_url: https://every.to/avatars/ana.png
   handle: ana
   public: true
+  loadout_updated_at: <%= 1.day.ago.to_fs(:db) %>
   onboarded_at: <%= 2.days.ago.to_fs(:db) %>
 
 every_cy:
@@ -19,4 +20,5 @@ every_cy:
   name: Cy Every
   handle: cy
   public: false
+  loadout_updated_at: <%= 1.day.ago.to_fs(:db) %>
   onboarded_at: <%= 2.days.ago.to_fs(:db) %>

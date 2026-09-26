@@ -6,6 +6,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_inertia_component "home/index"
+    assert_equal [ "ana" ], inertia.props[:featured].map { |person| person[:handle] }, "only public profiles are featured"
   end
 
   test "an onboarded member goes to their profile" do
