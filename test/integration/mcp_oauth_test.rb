@@ -104,7 +104,7 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     assert_equal 0, OauthAuthorizationCode.count
   end
 
-  test "authorization requests without S256 PKCE or with the wrong response_type go back to the client as errors" do
+  test "malformed authorization requests show an error page instead of redirecting (no open redirect)" do
     client_id = register_client
     _verifier, challenge = pkce_pair
     sign_in_as(@user)
@@ -112,8 +112,9 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     { { code_challenge: nil } => "invalid_request", { code_challenge_method: "plain" } => "invalid_request",
       { code_challenge: "short" } => "invalid_request", { response_type: "token" } => "unsupported_response_type" }.each do |override, error|
       get "/oauth/authorize", params: authorization_params(client_id:, challenge:).merge(override).compact
-      assert_response :found
-      assert_equal [ error, "state-123" ], redirect_query(response.location).values_at("error", "state"), override.inspect
+      assert_response :bad_request, override.inspect
+      assert_inertia_component "oauth/error"
+      assert_includes inertia.props[:message], error
     end
   end
 
@@ -123,7 +124,8 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     sign_in_as(@user)
 
     get "/oauth/authorize", params: authorization_params(client_id:, challenge:, resource: "https://other.example/mcp")
-    assert_equal "invalid_target", redirect_query(response.location)["error"]
+    assert_response :bad_request
+    assert_includes inertia.props[:message], "invalid_target"
 
     code = approve(user: @user, client_id:, challenge:, resource: "HTTP://WWW.EXAMPLE.COM/mcp/")
     body = exchange_code(code:, client_id:, verifier:, resource: "https://other.example/mcp")
@@ -282,9 +284,9 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     post "/oauth/token", params: { grant_type: "refresh_token", client_id: "x" }
     assert_response :too_many_requests
 
-    120.times { mcp_request("tools/list", token: "lo_at_same") }
-    mcp_request("tools/list", token: "lo_at_same")
-    assert_response :too_many_requests
+    300.times { |n| mcp_request("tools/list", token: "lo_at_random_#{n}") }
+    mcp_request("tools/list", token: "lo_at_fresh")
+    assert_response :too_many_requests, "a fresh token per request must not buy a fresh bucket"
   end
 
   class ConsentCsrfTest < ActionDispatch::IntegrationTest

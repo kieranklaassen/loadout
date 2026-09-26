@@ -17,6 +17,13 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
+    # Rate limits live in owned in-process stores; never let counts leak between tests.
+    setup do
+      [ Oauth::RegistrationsController, Oauth::TokensController, Oauth::RevocationsController, McpController ].each do |controller|
+        controller::RATE_LIMIT_STORE.clear
+      end
+    end
+
     # Add more helper methods to be used by all tests here...
   end
 end

@@ -6,8 +6,10 @@ class McpController < ActionController::API
   include OauthServer
 
   RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
-  rate_limit to: 120, within: 1.minute, store: RATE_LIMIT_STORE,
-             by: -> { bearer_token ? OauthToken.digest(bearer_token) : request.remote_ip },
+  # Keyed by IP, not by the presented token: a fresh random token per request
+  # must not buy a fresh bucket before authentication has even run.
+  rate_limit to: 300, within: 1.minute, store: RATE_LIMIT_STORE,
+             by: -> { request.remote_ip },
              with: -> { render json: { error: "Too many requests. Try again in a minute." }, status: :too_many_requests }
 
   before_action :authenticate
