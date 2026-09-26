@@ -9,7 +9,7 @@ function NavLink({ href, children, active }: { href: string; children: ReactNode
   return (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1.5 text-sm transition ${active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-ink/5 hover:text-ink'}`}
+      className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition ${active ? 'bg-ink text-paper' : 'text-ink-soft hover:bg-ink/5 hover:text-ink'}`}
     >
       {children}
     </Link>

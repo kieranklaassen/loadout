@@ -114,3 +114,63 @@ export type HandleAvailability = {
   available: boolean
   message: string
 }
+
+/** One row of an Every map ranking: a tool or model, how many people use it, and who is named. */
+export type MapRank = {
+  item: CatalogItem
+  count: number
+  share: number
+  people: ProfileSummary[]
+  others_count: number
+  in_loadout: boolean
+  usual_model?: CatalogItem | null
+}
+
+export type MapPanel = {
+  category: Category
+  people_count: number
+  tools_count: number
+  models_count: number
+  tools: MapRank[]
+  models: MapRank[]
+}
+
+export type MapSummary = {
+  members: number
+  picks: number
+  tools: number
+  categories: number
+}
+
+export type MapUpgrade = {
+  category: Category
+  tool: CatalogItem
+  from_model: CatalogItem
+  to_model: CatalogItem
+  colleagues_count: number
+}
+
+export type MapDiscovery = {
+  empty_categories: { category: Category; people_count: number; tools: MapRank[] }[]
+  upgrades: MapUpgrade[]
+}
+
+export type MapPerson = ProfileSummary & {
+  picks: { tool: CatalogItem; model: CatalogItem | null; primary: boolean }[]
+}
+
+export type CatalogKind = 'tool' | 'model'
+export type CatalogStatus = 'approved' | 'pending' | 'hidden'
+
+/** A catalog item as the admin review page receives it. */
+export type AdminCatalogItem = CatalogItem & {
+  id: number
+  kind: CatalogKind
+  status: CatalogStatus
+  family: string | null
+  people: number
+  created_by: { name: string; handle: string | null } | null
+  created_at: string
+}
+
+export type MergeTarget = Pick<CatalogItem, 'name' | 'hue' | 'monogram'> & { id: number }
