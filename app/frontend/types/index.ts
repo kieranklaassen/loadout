@@ -102,3 +102,19 @@ export type MapDiscovery = {
 export type MapPerson = ProfileSummary & {
   picks: { tool: CatalogItem; model: CatalogItem | null; primary: boolean }[]
 }
+
+export type CatalogKind = 'tool' | 'model'
+export type CatalogStatus = 'approved' | 'pending' | 'hidden'
+
+/** A catalog item as the admin review page receives it. */
+export type AdminCatalogItem = CatalogItem & {
+  id: number
+  kind: CatalogKind
+  status: CatalogStatus
+  family: string | null
+  people: number
+  created_by: { name: string; handle: string | null } | null
+  created_at: string
+}
+
+export type MergeTarget = Pick<CatalogItem, 'name' | 'hue' | 'monogram'> & { id: number }

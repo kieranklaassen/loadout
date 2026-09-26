@@ -38,6 +38,16 @@ Rails.application.routes.draw do
   get "map/:category" => "maps#show", as: :map_category
 
   # Admin: catalog review and the Flipper dashboard (U8 routes go here).
+  # Non-admins fall through to a 404, not a sign-in redirect.
+  admin_only = ->(request) { Session.find_by(id: request.cookie_jar.signed[:session_id])&.user&.admin? }
+  constraints(admin_only) do
+    mount Flipper::UI.app(Flipper) => "/admin/flipper"
+    namespace :admin do
+      resources :catalog_items, only: %i[index update destroy] do
+        post :merge, on: :member
+      end
+    end
+  end
 
   root "home#index"
 
