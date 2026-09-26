@@ -61,6 +61,19 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  test "a new member signing in to approve an agent goes straight back to the consent screen" do
+    stub_every_token
+    stub_every_userinfo
+    client_id = register_client
+    _verifier, challenge = pkce_pair
+    get "/oauth/authorize", params: authorization_params(client_id:, challenge:).except(:resource)
+    assert_redirected_to new_session_url
+
+    complete_every_sign_in
+
+    assert_match %r{/oauth/authorize\?}, response.location
+  end
+
   test "an onboarded member returns to where they were going" do
     ana = users(:every_ana)
     stub_every_token

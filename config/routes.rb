@@ -29,6 +29,17 @@ Rails.application.routes.draw do
     constraints: { name: /[A-Za-z0-9_.\-]{1,128}/ }, defaults: { format: :json }
 
   # MCP for agents: Streamable HTTP, OAuth 2.1 bearer tokens (U7 routes go here).
+  match "mcp" => "mcp#handle", via: %i[get post delete], as: :mcp, format: false
+  get ".well-known/oauth-protected-resource(/mcp)" => "well_known#protected_resource", as: :oauth_protected_resource, format: false
+  get ".well-known/oauth-authorization-server(/mcp)" => "well_known#authorization_server", as: :oauth_authorization_server, format: false
+  namespace :oauth do
+    post "register" => "registrations#create"
+    get "authorize" => "authorizations#new"
+    post "authorize" => "authorizations#create"
+    post "token" => "tokens#create"
+    post "revoke" => "revocations#create"
+  end
+  resources :agents, only: %i[index destroy]
 
   # Onboarding, editing, and settings (U3 routes go here).
   get "welcome", to: "onboarding#show", as: :welcome
