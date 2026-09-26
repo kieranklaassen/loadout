@@ -1,0 +1,32 @@
+opus_5_5:
+  slug: claude-opus-5-5
+  name: Claude Opus 5.5
+  maker: Anthropic
+  family: claude-opus
+  hue: 18
+  monogram: O5
+  status: approved
+  category_slugs: ["coding", "knowledge-work"]
+  position: 0
+
+opus_5:
+  slug: claude-opus-5
+  name: Claude Opus 5
+  maker: Anthropic
+  family: claude-opus
+  hue: 18
+  monogram: O5
+  status: approved
+  category_slugs: ["coding"]
+  position: 1
+
+gpt_6:
+  slug: gpt-6-astra
+  name: GPT-6 Astra
+  maker: OpenAI
+  family: gpt
+  hue: 160
+  monogram: G6
+  status: approved
+  category_slugs: ["coding"]
+  position: 2

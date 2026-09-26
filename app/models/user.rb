@@ -3,6 +3,8 @@ class User < ApplicationRecord
   include Handle
 
   has_many :sessions, dependent: :destroy
+  has_many :entries, dependent: :delete_all
+  has_many :entry_changes, dependent: :delete_all
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
   normalizes :every_user_id, with: ->(id) { id.strip.presence }

@@ -47,7 +47,7 @@ export type Entry = {
 export type ChangeEvent = {
   id: number
   sentence: string
-  action: 'added' | 'removed' | 'updated' | 'made_primary'
+  action: 'added' | 'removed' | 'updated' | 'made_primary' | 'switched'
   source: 'web' | 'mcp' | 'webmcp'
   client_name: string | null
   created_at: string

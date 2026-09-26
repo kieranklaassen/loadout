@@ -1,0 +1,17 @@
+coding:
+  slug: coding
+  name: Coding
+  blurb: Writing, reviewing, and shipping code.
+  position: 0
+
+knowledge_work:
+  slug: knowledge-work
+  name: Knowledge work
+  blurb: Email, docs, planning, thinking out loud.
+  position: 1
+
+video:
+  slug: video
+  name: Video
+  blurb: Generating and editing video.
+  position: 2

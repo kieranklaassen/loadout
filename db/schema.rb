@@ -10,7 +10,69 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_26_222400) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_223000) do
+  create_table "ai_models", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "maker"
+    t.integer "hue", default: 220, null: false
+    t.string "monogram", null: false
+    t.string "status", default: "approved", null: false
+    t.json "category_slugs", default: [], null: false
+    t.integer "created_by_id"
+    t.integer "position", default: 0, null: false
+    t.string "family"
+    t.date "released_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_ai_models_on_created_by_id"
+    t.index ["slug"], name: "index_ai_models_on_slug", unique: true
+    t.index ["status"], name: "index_ai_models_on_status"
+  end
+
+  create_table "categories", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "blurb"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["slug"], name: "index_categories_on_slug", unique: true
+  end
+
+  create_table "entries", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "category_id", null: false
+    t.integer "tool_id", null: false
+    t.integer "ai_model_id"
+    t.string "note"
+    t.boolean "primary", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_entries_on_ai_model_id"
+    t.index ["category_id"], name: "index_entries_on_category_id"
+    t.index ["tool_id"], name: "index_entries_on_tool_id"
+    t.index ["user_id", "category_id", "tool_id", "ai_model_id"], name: "index_entries_uniqueness", unique: true
+    t.index ["user_id"], name: "index_entries_on_user_id"
+  end
+
+  create_table "entry_changes", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "category_id", null: false
+    t.integer "tool_id", null: false
+    t.integer "ai_model_id"
+    t.string "action", null: false
+    t.string "source", null: false
+    t.string "client_name"
+    t.json "details", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["ai_model_id"], name: "index_entry_changes_on_ai_model_id"
+    t.index ["category_id"], name: "index_entry_changes_on_category_id"
+    t.index ["tool_id"], name: "index_entry_changes_on_tool_id"
+    t.index ["user_id", "created_at"], name: "index_entry_changes_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_entry_changes_on_user_id"
+  end
+
   create_table "flipper_features", force: :cascade do |t|
     t.string "key", null: false
     t.datetime "created_at", null: false
@@ -88,6 +150,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_222400) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "tools", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "maker"
+    t.integer "hue", default: 220, null: false
+    t.string "monogram", null: false
+    t.string "status", default: "approved", null: false
+    t.json "category_slugs", default: [], null: false
+    t.integer "created_by_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_tools_on_created_by_id"
+    t.index ["slug"], name: "index_tools_on_slug", unique: true
+    t.index ["status"], name: "index_tools_on_status"
+  end
+
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email_address", null: false
@@ -106,6 +185,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_222400) do
     t.index ["handle"], name: "index_users_on_handle", unique: true
   end
 
+  add_foreign_key "ai_models", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "entries", "ai_models"
+  add_foreign_key "entries", "categories"
+  add_foreign_key "entries", "tools"
+  add_foreign_key "entries", "users", on_delete: :cascade
+  add_foreign_key "entry_changes", "ai_models"
+  add_foreign_key "entry_changes", "categories"
+  add_foreign_key "entry_changes", "tools"
+  add_foreign_key "entry_changes", "users", on_delete: :cascade
   add_foreign_key "geneva_drive_step_executions", "geneva_drive_workflows", column: "workflow_id", on_delete: :cascade
   add_foreign_key "sessions", "users"
+  add_foreign_key "tools", "users", column: "created_by_id", on_delete: :nullify
 end
