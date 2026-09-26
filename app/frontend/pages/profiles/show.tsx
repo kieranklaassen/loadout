@@ -1,9 +1,10 @@
-import { Head, Link } from '@inertiajs/react'
+import { Head, Link, usePage } from '@inertiajs/react'
 import AppShell from '../../components/app_shell'
 import Avatar from '../../components/avatar'
 import { ButtonLink, buttonClasses } from '../../components/button'
 import ShareBar from '../../components/share_bar'
 import ToolMark from '../../components/tool_mark'
+import WelcomeLive from '../../components/welcome_live'
 import { LoadoutGlyph } from '../../components/wordmark'
 import { fullDate, relativeDate } from '../../lib/relative_date'
 import type { CatalogItem, ChangeEvent, Entry, LoadoutCategory, ProfileDetail } from '../../types'
@@ -220,12 +221,20 @@ export default function ProfileShow({ profile, categories, recent_changes, is_ow
   const firstName = profile.name.split(/\s+/)[0]
   const shareText = is_owner ? 'My AI loadout: the tools and models I use, per task.' : `${profile.name}’s AI loadout`
   const hasPicks = categories.length > 0
+  const { flash } = usePage<{ flash?: { welcome?: boolean } }>().props
+  const justLaunched = is_owner && Boolean(flash?.welcome)
 
   return (
     <AppShell wide>
       <Head title={`${profile.name}’s AI loadout`} />
 
-      {is_owner && !profile.public && <PrivateBanner />}
+      {justLaunched && (
+        <div className="mb-12">
+          <WelcomeLive handle={profile.handle} firstName={firstName} isPublic={profile.public} />
+        </div>
+      )}
+
+      {is_owner && !profile.public && !justLaunched && <PrivateBanner />}
 
       <header className="animate-rise flex flex-col gap-8 pb-12 sm:pb-16 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">

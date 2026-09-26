@@ -48,7 +48,7 @@ tools:
   - { slug: monologue, name: Monologue, maker: Every, hue: 300, monogram: Mo, categories: [speech-to-text] }
   - { slug: granola, name: Granola, maker: Granola, hue: 95, monogram: Gr, categories: [knowledge-work] }
   - { slug: raycast-ai, name: Raycast AI, maker: Raycast, hue: 5, monogram: Ra, categories: [knowledge-work] }
-  - { slug: notion-ai, name: Notion AI, maker: Notion, hue: 0, monogram: No, categories: [knowledge-work, writing] }
+  - { slug: notion-ai, name: Notion AI, maker: Notion, hue: 0, monogram: "No", categories: [knowledge-work, writing] }
   # Classification and APIs
   - { slug: typesafe-jev, name: TypeSafe Jev, maker: TypeSafe, hue: 255, monogram: Jv, categories: [classification] }
   - { slug: openai-api, name: OpenAI API, maker: OpenAI, hue: 160, monogram: OA, categories: [classification] }

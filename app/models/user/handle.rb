@@ -29,6 +29,27 @@ module User::Handle
       user.errors[:handle].empty? && !where(handle: user.handle).where.not(id: except&.id).exists?
     end
 
+    # { handle:, available:, message: } for the live check on the claim step and
+    # in settings. A member's own current handle counts as available to them.
+    def handle_availability(candidate, except: nil)
+      probe = new(handle: candidate)
+      handle = probe.handle.to_s
+      return { handle:, available: false, message: "Pick a handle." } if handle.blank?
+
+      probe.validate
+      problem = probe.errors.objects.find { |error| error.attribute == :handle && error.type != :taken }
+      if problem
+        message = problem.type == :reserved ? "loadout.every.to/#{handle} is reserved." : "Use 2 to 30 lowercase letters, numbers, and dashes."
+        return { handle:, available: false, message: }
+      end
+
+      if where(handle:).where.not(id: except&.id).exists?
+        { handle:, available: false, message: "loadout.every.to/#{handle} is taken." }
+      else
+        { handle:, available: true, message: "loadout.every.to/#{handle} is yours." }
+      end
+    end
+
     # A free handle derived from a name or email, for prefilling the claim step.
     def suggest_handle(from:, except: nil)
       base = from.to_s.split("@").first.to_s.unicode_normalize(:nfkd).downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-+|-+\z/, "")[0, 24]
@@ -40,6 +61,6 @@ module User::Handle
   private
 
   def handle_not_reserved
-    errors.add(:handle, "is reserved") if handle.present? && RESERVED.include?(handle)
+    errors.add(:handle, :reserved, message: "is reserved") if handle.present? && RESERVED.include?(handle)
   end
 end

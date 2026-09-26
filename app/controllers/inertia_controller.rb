@@ -12,6 +12,15 @@ class InertiaController < ApplicationController
   # for every subclass unless it opts out with `allow_unauthenticated_access`.
   include Authentication
 
+  # Onboarding gate: a signed-in member who has not finished onboarding is sent
+  # to /welcome from any page. Flows that must work mid-onboarding (sign-in,
+  # OAuth consent) opt out with `skip_onboarding_gate`.
+  before_action :require_onboarding
+
+  def self.skip_onboarding_gate(**options)
+    skip_before_action :require_onboarding, **options
+  end
+
   # The signed-in member, or nil. Pages read identity from here, never refetch it.
   inertia_share current_user: -> { current_user_props if authenticated? }
 
@@ -33,6 +42,12 @@ class InertiaController < ApplicationController
   inertia_share webmcp: -> { ToolRegistry.manifest if authenticated? }
 
   private
+    def require_onboarding
+      return unless request.get? && authenticated?
+
+      redirect_to welcome_path unless Current.user.onboarded?
+    end
+
     def current_user_props
       user = Current.user
       {

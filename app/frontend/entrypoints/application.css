@@ -46,6 +46,35 @@
       transform: translateY(0);
     }
   }
+
+  --animate-slot: slot 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+
+  @keyframes slot {
+    from {
+      opacity: 0;
+      transform: translateX(-24px) scaleX(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scaleX(1);
+    }
+  }
+
+  --animate-burst: burst 1.1s cubic-bezier(0.15, 0.7, 0.3, 1) both;
+
+  @keyframes burst {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) rotate(0deg) scale(0.4);
+    }
+    15% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--burst-x), var(--burst-y)) rotate(var(--burst-r)) scale(1);
+    }
+  }
 }
 
 @layer base {

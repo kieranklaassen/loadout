@@ -1,5 +1,6 @@
 class SessionsController < InertiaController
   allow_unauthenticated_access only: :new
+  skip_onboarding_gate
 
   def new
     return redirect_to root_path if authenticated?

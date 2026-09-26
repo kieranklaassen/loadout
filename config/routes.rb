@@ -32,6 +32,11 @@ Rails.application.routes.draw do
 
   # Onboarding, editing, and settings (U3 routes go here).
   get "welcome", to: "onboarding#show", as: :welcome
+  patch "welcome/handle", to: "onboarding#update_handle", as: :welcome_handle
+  patch "welcome/finish", to: "onboarding#finish", as: :welcome_finish
+  get "handles/check", to: "handles#check", as: :check_handle
+  resource :loadout, only: %i[edit update]
+  resource :settings, only: %i[show update destroy]
 
   # The Every map (U5 routes go here).
 

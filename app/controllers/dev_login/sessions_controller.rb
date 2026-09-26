@@ -3,6 +3,7 @@
 # action answers 404 in any other environment, two independent guards.
 class DevLogin::SessionsController < InertiaController
   allow_unauthenticated_access
+  skip_onboarding_gate
   before_action :require_development
 
   def create
