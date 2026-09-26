@@ -85,7 +85,7 @@ export default function CatalogSearch({
               setQuery('')
             }
           }}
-          className="w-full border-0 bg-transparent p-0 text-sm text-ink placeholder:text-ink-muted focus:ring-0"
+          className="w-full min-w-0 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-ink-muted focus:ring-0"
         />
       </div>
       {open && (

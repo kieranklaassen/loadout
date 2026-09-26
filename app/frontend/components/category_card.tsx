@@ -207,7 +207,7 @@ export default function CategoryCard({
     <section
       aria-labelledby={`category-${category.slug}`}
       style={style}
-      className={`card animate-rise p-5 transition sm:p-6 ${picks.length ? 'ring-1 ring-ink/10' : ''}`}
+      className={`card min-w-0 animate-rise p-5 transition sm:p-6 ${picks.length ? 'ring-1 ring-ink/10' : ''}`}
     >
       <header className="flex items-start justify-between gap-4">
         <div>
