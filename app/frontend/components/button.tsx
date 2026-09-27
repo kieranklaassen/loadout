@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react'
 import type { ComponentProps, ReactNode } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'blue'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'blue'
 
 const PRIMARY = 'bg-sky text-on-light hover:bg-sky/85'
 
@@ -9,6 +9,7 @@ const VARIANTS: Record<Variant, string> = {
   primary: PRIMARY,
   secondary: 'border border-line bg-panel text-fg hover:border-line-strong',
   ghost: 'text-fg hover:bg-fg/5',
+  danger: 'bg-coral text-on-light hover:bg-coral/85',
   blue: PRIMARY, // v1 name for the primary button; U13 drops it with the last v1 page
 }
 

@@ -25,6 +25,12 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveClass('border', 'border-line', 'bg-panel')
   })
 
+  it('draws the danger button in coral, for the step that cannot be undone', () => {
+    render(<Button variant="danger">Revoke</Button>)
+
+    expect(screen.getByRole('button', { name: 'Revoke' })).toHaveClass('bg-coral', 'text-on-light')
+  })
+
   it('has 2px corners on every variant and size', () => {
     render(
       <>
@@ -33,10 +39,11 @@ describe('Button', () => {
           Secondary
         </Button>
         <Button variant="ghost">Ghost</Button>
+        <Button variant="danger">Danger</Button>
       </>,
     )
 
-    for (const name of ['Primary', 'Secondary', 'Ghost']) {
+    for (const name of ['Primary', 'Secondary', 'Ghost', 'Danger']) {
       expect(screen.getByRole('button', { name })).toHaveClass('rounded-sharp')
     }
   })

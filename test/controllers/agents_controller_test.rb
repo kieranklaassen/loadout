@@ -25,6 +25,7 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "agents/index", inertia.component
     assert_equal [ "Claude Code", "Cursor" ], inertia.props[:agents].map { |agent| agent[:name] }.sort
+    assert_equal %i[connected_at id known_key last_used_at name open_suggestions redirect_host], inertia.props[:agents].first.keys.map(&:to_sym).sort
     assert_equal "http://www.example.com/mcp", inertia.props[:mcp_url]
     assert_match(/Ask me before you guess/, inertia.props[:suggested_prompt])
     assert_equal Agents::Capabilities.to_prop.deep_stringify_keys, inertia.props[:capabilities].deep_stringify_keys
@@ -84,6 +85,7 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(@user)
     delete agent_path(client_id)
     assert_redirected_to agents_path
+    assert_response :see_other
     assert_equal "Disconnected Cursor.", flash[:notice]
 
     [ first, second ].each do |tokens|
@@ -97,6 +99,27 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
 
     get agents_path
     assert_empty inertia.props[:agents]
+  end
+
+  test "revoking goes back to the page it was sent from, so Revoke in Settings stays in Settings" do
+    client_id, = connect_agent(user: @user, client_name: "Cursor")
+    sign_in_as(@user)
+
+    delete agent_path(client_id), headers: { "HTTP_REFERER" => settings_url }
+
+    assert_redirected_to settings_url
+    assert_response :see_other
+    assert_equal "Disconnected Cursor.", flash[:notice]
+    assert_empty OauthGrant.active.where(user: @user)
+  end
+
+  test "revoking never redirects to another host, whatever the referer says" do
+    client_id, = connect_agent(user: @user, client_name: "Cursor")
+    sign_in_as(@user)
+
+    delete agent_path(client_id), headers: { "HTTP_REFERER" => "https://evil.example/agents" }
+
+    assert_redirected_to agents_path
   end
 
   test "revoking a client withdraws that client's open suggestions and no other client's (AE9)" do

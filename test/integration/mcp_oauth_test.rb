@@ -79,6 +79,7 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "oauth/consent", inertia.component
     assert_equal "Claude Code", inertia.props.dig(:client, :name)
+    assert_equal %i[known mark name redirect_host], inertia.props[:client].keys.map(&:to_sym).sort
     assert_equal "127.0.0.1", inertia.props[:redirect_host]
     assert_equal Agents::Capabilities.to_prop.deep_stringify_keys, inertia.props[:capabilities].deep_stringify_keys
     assert_equal "DENY", response.headers["X-Frame-Options"]

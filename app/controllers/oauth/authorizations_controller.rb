@@ -22,11 +22,7 @@ class Oauth::AuthorizationsController < InertiaController
   def new
     known = Agents::KnownClients.key_for(@redirect_uri)
     render inertia: "oauth/consent", props: {
-      client: {
-        name: @client.client_name, uri: @client.client_uri,
-        hue: Tool.hue_for(@client.client_name), monogram: Tool.monogram_for(@client.client_name),
-        redirect_host:, mark: Agents::KnownClients.mark_for(known), known: known.present?
-      },
+      client: { name: @client.client_name, redirect_host:, mark: Agents::KnownClients.mark_for(known), known: known.present? },
       redirect_host:,
       authorization: authorization_params,
       authenticity_token: form_authenticity_token,

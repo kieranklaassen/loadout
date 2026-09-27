@@ -10,8 +10,6 @@ export const LEGACY_FILES: string[] = [
   'components/category_card.tsx',
   'components/map_rank.tsx',
   'components/tool_mark.tsx',
-  'pages/agents/index.tsx',
-  'pages/oauth/consent.tsx',
 ]
 
 // The design brief's text minimums: 12px for uppercase mono labels, 13px for everything else.
