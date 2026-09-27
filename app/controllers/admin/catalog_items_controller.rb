@@ -8,6 +8,8 @@ module Admin
     KINDS = { "tool" => Tool, "model" => AiModel }.freeze
     STATUS_FILTERS = %w[all pending approved hidden].freeze
     KIND_FILTERS = %w[all tool model].freeze
+    # Editing any of these hands the item to the admin: Catalog::Sync stops refreshing it.
+    ADMIN_OWNED_FIELDS = %w[name maker released_on vibe_check_url].freeze
 
     before_action :require_admin
     before_action :set_item, only: %i[update destroy merge]
@@ -18,13 +20,13 @@ module Admin
         items: filtered_items,
         filters: { kind: kind_filter, status: status_filter, q: params[:q].to_s },
         counts: CatalogItem::STATUSES.index_with { |status| KINDS.values.sum { |klass| klass.where(status:).count } },
-        merge_targets: KINDS.transform_values { |klass| klass.approved.ordered.map { |item| { id: item.id, name: item.name, hue: item.hue, monogram: item.monogram } } }
+        merge_targets: KINDS.transform_values { |klass| klass.approved.ordered.map { |item| { id: item.id, name: item.name } } }
       }
     end
 
     def update
       @item.assign_attributes(item_params)
-      @item.admin_edited_at = Time.current if (@item.changed & %w[name maker hue monogram]).any?
+      @item.admin_edited_at = Time.current if (@item.changed & ADMIN_OWNED_FIELDS).any?
       if @item.save
         redirect_back_or_to admin_catalog_items_path, notice: "#{@item.name} #{update_verb}."
       else
@@ -59,7 +61,9 @@ module Admin
     end
 
     def item_params
-      params.expect(item: %i[name maker hue monogram status])
+      fields = %i[name maker status]
+      fields += %i[released_on vibe_check_url] if @item.is_a?(AiModel)
+      params.expect(item: fields)
     end
 
     def update_verb
@@ -88,21 +92,23 @@ module Admin
       end
     end
 
+    # No usage counts, and the creator only while the item waits for review: an admin
+    # sees who added a pending item, never who uses an approved one.
     def item_prop(item, kind)
       item.to_prop.merge(
         id: item.id,
         kind:,
         status: item.status,
         family: item.try(:family),
-        people: people_counts(kind).fetch(item.id, 0),
-        created_by: item.created_by && { name: item.created_by.display_name, handle: item.created_by.handle },
+        created_by: item.pending? && item.created_by ? { name: item.created_by.display_name, handle: item.created_by.handle } : nil,
         created_at: item.created_at.iso8601
-      )
+      ).merge(launch_props(item))
     end
 
-    def people_counts(kind)
-      @people_counts ||= {}
-      @people_counts[kind] ||= Entry.group(kind == "tool" ? :tool_id : :ai_model_id).distinct.count(:user_id)
+    def launch_props(item)
+      return {} unless item.is_a?(AiModel)
+
+      { released_on: item.released_on&.iso8601, vibe_check_url: item.vibe_check_url }
     end
   end
 end

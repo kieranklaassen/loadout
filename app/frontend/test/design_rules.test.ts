@@ -10,7 +10,6 @@ export const LEGACY_FILES: string[] = [
   'components/category_card.tsx',
   'components/map_rank.tsx',
   'components/tool_mark.tsx',
-  'pages/admin/catalog.tsx',
   'pages/agents/index.tsx',
   'pages/auth/sign_in.tsx',
   'pages/home/index.tsx',

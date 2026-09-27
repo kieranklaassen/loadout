@@ -165,18 +165,19 @@ export type MapPerson = ProfileSummary & {
 export type CatalogKind = 'tool' | 'model'
 export type CatalogStatus = 'approved' | 'pending' | 'hidden'
 
-/** A catalog item as the admin review page receives it. */
-export type AdminCatalogItem = CatalogItem & {
+/** A catalog item as the admin review page receives it. Launch fields are models only; the creator is shown only while an item is pending. */
+export type AdminCatalogItem = MarkItem & {
   id: number
-  kind: CatalogKind
+  maker: string | null
   status: CatalogStatus
   family: string | null
-  people: number
+  released_on?: string | null
+  vibe_check_url?: string | null
   created_by: { name: string; handle: string | null } | null
   created_at: string
 }
 
-export type MergeTarget = Pick<CatalogItem, 'name' | 'hue' | 'monogram'> & { id: number }
+export type MergeTarget = { id: number; name: string }
 
 /** An MCP client the member approved, as the agents page receives it. */
 export type ConnectedAgent = {
