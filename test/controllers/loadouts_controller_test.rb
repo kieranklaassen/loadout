@@ -13,6 +13,16 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     patch loadout_path, params: { operations: }, headers:, as: :json
   end
 
+  def inertia_catalog_tools
+    get edit_loadout_path
+    inertia.props[:catalog][:tools]
+  end
+
+  def inertia_errors_after_redirect
+    follow_redirect!
+    inertia.props[:errors]
+  end
+
   def fill_coding
     Loadouts::Update.call(user: @ana, operations: [ { op: "set_pick", category: "coding", rank: 3, tool: Tool.create!(name: "Windsurf", status: "approved").slug } ], source: "web")
   end
@@ -29,6 +39,42 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ 1, "claude-opus-5-5", "1m", "high" ], [ coding[:picks].first[:rank], coding[:picks].first[:model][:slug], coding[:picks].first[:context], coding[:picks].first[:effort] ]
     assert_equal [ "runway", 1, 1, "WebMCP" ], video[:suggestions].sole.then { |s| [ s[:tool][:slug], s[:slot_hint], s[:target_rank], s[:suggested_by] ] }
     assert_equal 1, video[:to_confirm]
+  end
+
+  test "the editor also gets the catalog, the choices, the open kind, who can see the page and what the team uses" do
+    get edit_loadout_path(kind: "video")
+
+    props = inertia.props
+    assert_equal %w[catalog enums kinds selected_kind team_top visibility], (props.keys & %w[kinds catalog enums selected_kind visibility team_top]).sort
+    assert_equal "video", props[:selected_kind]
+    assert_equal "link", props[:visibility]
+    assert_equal [ %w[200k 1m], %w[low medium high] ], props[:enums].values_at(:context, :effort)
+    assert_equal [ Entry::CONTEXTS, Entry::EFFORTS ], props[:enums].values_at(:context, :effort)
+    assert_equal %w[cursor claude-code claude runway], props[:catalog][:tools].map { |tool| tool[:slug] }
+    assert_equal [ "claude-opus-5-5", [ "coding", "knowledge-work" ] ], props[:catalog][:models].first.values_at(:slug, :suggested_for)
+
+    coding = props[:team_top]["coding"]
+    assert_equal [ [ "claude-code", 2 ], [ "cursor", 1 ] ], coding[:tools].map { |tool| [ tool[:item][:slug], tool[:yours_rank] ] }
+    assert_equal [ [ "claude-opus-5-5", 2, 1, true ], [ "gpt-6-astra", 1, nil, false ] ], coding[:models].map { |model| [ model[:item][:slug], model[:count][:n], model[:yours_rank], model[:launched] ] }
+    assert_equal [ 2, 2 ], coding[:tools].first[:count].values_at(:n, :of)
+  end
+
+  test "the open kind defaults to the first with room and ignores an unknown one" do
+    get edit_loadout_path
+    assert_equal "coding", inertia.props[:selected_kind]
+
+    get edit_loadout_path(kind: "made-up")
+    assert_equal "coding", inertia.props[:selected_kind]
+  end
+
+  test "a member who shares with nobody sees their own picks counted and is told only they can see them" do
+    sign_in_as users(:every_cy)
+
+    get edit_loadout_path
+
+    assert_equal "only_me", inertia.props[:visibility]
+    cursor = inertia.props[:team_top]["coding"][:tools].find { |tool| tool[:item][:slug] == "cursor" }
+    assert_equal [ 3, 3, 1 ], [ cursor[:count][:n], cursor[:count][:of], cursor[:yours_rank] ]
   end
 
   test "setting a pick persists rank, context and effort, drops unknown fields, and redirects back" do
@@ -163,6 +209,73 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
 
     assert_equal "open", suggestion.reload.status
+  end
+
+  test "adding a tool the catalog lacks creates a pending one for the member, offered to them and to nobody else" do
+    assert_difference -> { Tool.pending.count }, 1 do
+      post loadout_catalog_items_path, params: { kind: "tool", name: "  Zed  " }, headers: BACK, as: :json
+    end
+
+    assert_redirected_to EDITOR
+    zed = Tool.find_by!(slug: "zed")
+    assert_equal [ "Zed", "pending", @ana ], [ zed.name, zed.status, zed.created_by ]
+    assert_match(/Added Zed/, flash[:notice])
+    assert_equal [ true ], inertia_catalog_tools.select { |tool| tool[:slug] == "zed" }.pluck(:pending)
+    assert_not @ana.entries.exists?(tool: zed), "adding an item never picks it"
+
+    sign_in_as users(:every_dee)
+    get edit_loadout_path
+    assert_not_includes inertia.props[:catalog][:tools].pluck(:slug), "zed"
+  end
+
+  test "adding a model creates a pending model" do
+    assert_difference -> { AiModel.pending.count }, 1 do
+      post loadout_catalog_items_path, params: { kind: "model", name: "Beta Model" }, headers: BACK, as: :json
+    end
+
+    assert_equal [ "Beta Model", @ana ], AiModel.pending.sole.then { |model| [ model.name, model.created_by ] }
+  end
+
+  test "an item the member can already pick is not added again" do
+    assert_no_difference [ "Tool.count", "AiModel.count" ] do
+      post loadout_catalog_items_path, params: { kind: "tool", name: "cursor" }, headers: BACK, as: :json
+      assert_equal "Already in the list.", follow_redirect!.then { inertia.props[:errors][:name] }
+      post loadout_catalog_items_path, params: { kind: "model", name: "CLAUDE OPUS 5.5" }, headers: BACK, as: :json
+      assert_equal "Already in the list.", follow_redirect!.then { inertia.props[:errors][:name] }
+    end
+  end
+
+  test "a name that is with the admins already, or was hidden, is not added" do
+    Tool.create!(name: "Windsurf", status: "pending", created_by: users(:every_dee))
+
+    assert_no_difference "Tool.count" do
+      post loadout_catalog_items_path, params: { kind: "tool", name: "Windsurf" }, headers: BACK, as: :json
+      assert_match(/with the admins/, follow_redirect!.then { inertia.props[:errors][:name] })
+      post loadout_catalog_items_path, params: { kind: "tool", name: "Old Thing" }, headers: BACK, as: :json
+      assert_match(/with the admins/, follow_redirect!.then { inertia.props[:errors][:name] })
+    end
+  end
+
+  test "a name must be two to sixty characters and the kind a tool or a model" do
+    assert_no_difference [ "Tool.count", "AiModel.count" ] do
+      [ [ "tool", "Z" ], [ "tool", " " ], [ "model", "x" * 61 ], [ "prompt", "Zed" ], [ nil, "Zed" ] ].each do |kind, name|
+        post loadout_catalog_items_path, params: { kind:, name: }, headers: BACK, as: :json
+        assert_redirected_to EDITOR
+        assert inertia_errors_after_redirect[:name].present?, "#{kind.inspect} #{name.inspect} was accepted"
+      end
+    end
+
+    post loadout_catalog_items_path, params: { kind: "tool", name: "x" * 60 }, headers: BACK, as: :json
+    assert Tool.pending.exists?(created_by: @ana)
+  end
+
+  test "signed-out visitors cannot add an item" do
+    sign_out
+
+    assert_no_difference "Tool.count" do
+      post loadout_catalog_items_path, params: { kind: "tool", name: "Zed" }, as: :json
+    end
+    assert_redirected_to new_session_path
   end
 
   test "signed-out visitors are sent to sign in" do

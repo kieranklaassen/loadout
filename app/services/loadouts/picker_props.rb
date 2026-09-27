@@ -1,51 +1,53 @@
 # frozen_string_literal: true
 
-# What the web pickers (onboarding step two and /loadout/edit) need: every
-# category with its suggested tools and models, the approved catalog for search,
-# and the member's current picks per category.
+# What the Rank editor's selects are built from, beside the member's own kinds
+# (Presenter#kinds): the catalog they may pick from, the context and effort choices,
+# and which kind is open.
+#
+#   Loadouts::PickerProps.new(user, kinds: presenter.kinds, kind: params[:kind]).to_h
+#
+# catalog   { tools: [...], models: [...] }: approved items in catalog order, then the
+#           member's own items still waiting for review (marked pending), each a
+#           CatalogItem#to_prop plus suggested_for, the slugs of the kinds it suits.
+#           Another member's pending item is never here.
+# enums     { context: Entry::CONTEXTS, effort: Entry::EFFORTS }, the only choices a slot accepts.
+# selected_kind  the slug asked for, else the first kind with fewer than three confirmed
+#           picks, else the first kind.
 module Loadouts
   class PickerProps
-    def initialize(user)
+    def initialize(user, kinds:, kind: nil)
       @user = user
+      @kinds = kinds
+      @kind = kind
     end
 
     def to_h
-      { categories:, catalog:, picks: }
+      { catalog:, enums: { context: Entry::CONTEXTS, effort: Entry::EFFORTS }, selected_kind: }
     end
 
     private
 
-    def categories
-      Category.all.map do |category|
-        category.to_prop.merge(
-          tool_slugs: suggested(tools, category),
-          model_slugs: suggested(models, category)
-        )
-      end
-    end
-
     def catalog
-      { tools: tools.map(&:to_prop), models: models.map(&:to_prop) }
+      { tools: items(Tool), models: items(AiModel) }
     end
 
-    def picks
-      Presenter.new(@user).entries.group_by { |entry| entry.category.slug }.transform_values do |entries|
-        entries.map do |entry|
-          { tool: entry.tool.to_prop, model: entry.ai_model&.to_prop, primary: entry.primary, note: entry.note }
-        end
-      end
+    def items(klass)
+      own = klass.pending.where(created_by: @user).order(:created_at, :id)
+      (klass.pickable.ordered.to_a + own.to_a).map { |item| item.to_prop.merge(suggested_for: suggested_for(item)) }
     end
 
-    def suggested(items, category)
-      items.select { |item| Array(item.category_slugs).include?(category.slug) }.map(&:slug)
+    def suggested_for(item)
+      Array(item.category_slugs) & slugs
     end
 
-    def tools
-      @tools ||= Tool.pickable.ordered.to_a
+    def selected_kind
+      return @kind if slugs.include?(@kind)
+
+      (@kinds.find { |kind| kind[:picks].size < Entry::MAX_RANK } || @kinds.first)[:category][:slug]
     end
 
-    def models
-      @models ||= AiModel.pickable.ordered.to_a
+    def slugs
+      @slugs ||= @kinds.map { |kind| kind[:category][:slug] }
     end
   end
 end

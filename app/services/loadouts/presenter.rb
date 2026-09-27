@@ -9,21 +9,27 @@ module Loadouts
       @user = user
     end
 
-    # Every kind in catalog order, for the Rank editor: the confirmed picks by rank, the
-    # open suggestions with the slot each would land in, and how many wait on the member.
+    # Every kind in catalog order, for the Rank editor: the confirmed picks by rank as
+    # the shared PersonPicks builder shows them to their owner (pending items marked),
+    # the open suggestions with the slot each would land in, and how many wait on the member.
     def kinds
-      picks = entries.group_by(&:category_id)
-      waiting = open_suggestions.group_by(&:category_id)
-      Category.all.map do |category|
-        confirmed = picks.fetch(category.id, [])
-        suggestions = waiting.fetch(category.id, [])
+      confirmed = entries.group_by { |entry| entry.category.slug }
+      waiting = open_suggestions.group_by { |suggestion| suggestion.category.slug }
+      PersonPicks.new(viewer: @user).for(@user)[:kinds].map do |kind|
+        slug = kind[:category][:slug]
+        suggestions = waiting.fetch(slug, [])
         {
-          category: category.to_prop,
-          picks: confirmed.map(&:to_prop),
-          suggestions: suggestions.map { |suggestion| suggestion_prop(suggestion, confirmed) },
+          category: kind[:category],
+          picks: kind[:picks],
+          suggestions: suggestions.map { |suggestion| suggestion_prop(suggestion, confirmed.fetch(slug, [])) },
           to_confirm: suggestions.size
         }
       end
+    end
+
+    # What the audience uses per kind, as the member sees it (TeamRankings#team_top).
+    def team_top
+      TeamRankings.new(viewer: @user).team_top
     end
 
     # [{ slug:, name:, blurb:, entries: [Entry#to_prop, ...] }, ...] for categories with entries.

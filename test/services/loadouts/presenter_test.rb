@@ -26,6 +26,26 @@ class Loadouts::PresenterTest < ActiveSupport::TestCase
     assert_empty kinds.second[:suggestions]
   end
 
+  test "the owner's picks are the ones their profile shows, with a pending tool or model marked" do
+    user = users(:one)
+    update(user, { op: "set_pick", category: "coding", rank: 1, tool: "Zed", model: "Beta Model" }, { op: "set_pick", category: "coding", rank: 2, tool: "cursor" })
+
+    picks = kind(user, "coding")[:picks]
+    assert_equal [ [ 1, "zed", true, "beta-model", true ], [ 2, "cursor", false, nil, nil ] ],
+      picks.map { |pick| [ pick[:rank], pick[:tool][:slug], pick[:tool][:pending], pick[:model]&.dig(:slug), pick[:model]&.dig(:pending) ] }
+
+    profile = PersonPicks.new(viewer: user).for(user)[:kinds].find { |profile_kind| profile_kind[:category][:slug] == "coding" }
+    assert_equal profile[:picks], picks
+  end
+
+  test "team_top is what the member's own audience uses, keyed by kind" do
+    top = Loadouts::Presenter.new(users(:every_ana)).team_top
+
+    assert_equal %w[coding knowledge-work video], top.keys
+    assert_equal [ [ "claude-code", 2 ], [ "cursor", 1 ] ], top["coding"][:tools].map { |tool| [ tool[:item][:slug], tool[:yours_rank] ] }
+    assert_equal({ tools: [], models: [] }, top["video"])
+  end
+
   test "an open suggestion shows where it would land, who suggested it and how many wait" do
     video = kind(users(:every_ana), "video")
 
