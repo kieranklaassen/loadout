@@ -19,7 +19,7 @@ module ActiveSupport
 
     # Rate limits live in owned in-process stores; never let counts leak between tests.
     setup do
-      [ Oauth::RegistrationsController, Oauth::TokensController, Oauth::RevocationsController, McpController, HandlesController ].each do |controller|
+      [ Oauth::RegistrationsController, Oauth::TokensController, Oauth::RevocationsController, McpController, HandlesController, HomeController ].each do |controller|
         controller::RATE_LIMIT_STORE.clear
       end
     end

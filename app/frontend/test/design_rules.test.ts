@@ -12,8 +12,6 @@ export const LEGACY_FILES: string[] = [
   'components/tool_mark.tsx',
   'pages/agents/index.tsx',
   'pages/home/index.tsx',
-  'pages/map/explainer.tsx',
-  'pages/map/index.tsx',
   'pages/map/show.tsx',
   'pages/oauth/consent.tsx',
   'pages/profiles/show.tsx',
