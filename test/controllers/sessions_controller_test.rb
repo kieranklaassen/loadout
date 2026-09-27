@@ -7,6 +7,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_inertia_component "auth/sign_in"
     assert_not inertia.props.key?(:dev_login_people)
+    assert_equal "https://every.to", inertia.props[:join_every_url]
   end
 
   test "there is no password sign-in" do

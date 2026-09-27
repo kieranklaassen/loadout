@@ -1,24 +1,20 @@
 # frozen_string_literal: true
 
-# Account settings: the profile link (handle), bio, visibility, and deleting the
-# account. Changing the handle retires the old link immediately.
+# Account settings: the profile link (handle), bio, who can see the page, connected
+# agents, and deleting the account. Changing the handle retires the old link
+# immediately. Name comes from the Every account and is read-only.
 class SettingsController < InertiaController
   def show
     user = Current.user
     render inertia: "settings/show", props: {
-      account: {
-        handle: user.handle,
-        bio: user.bio.to_s,
-        public: user.public?,
-        email: user.email_address,
-        every_member: user.every_member?
-      }
+      account: { name: user.display_name, handle: user.handle, bio: user.bio.to_s, visibility: user.visibility },
+      agents: connected_agents
     }
   end
 
   def update
     user = Current.user
-    attributes = params.permit(:handle, :bio, :public)
+    attributes = params.permit(:handle, :bio, :visibility)
 
     if attributes.key?(:handle)
       availability = User.handle_availability(attributes[:handle], except: user)
@@ -26,16 +22,13 @@ class SettingsController < InertiaController
     end
 
     if user.update(attributes)
-      # A profile page may ask to go public; a handle change must not return to the retired link.
-      return redirect_to settings_path, status: :see_other, notice: saved_message(user) if user.saved_change_to_handle?
-
-      redirect_back_or_to settings_path, status: :see_other, notice: saved_message(user)
+      redirect_to settings_path, status: :see_other, notice: saved_message(user)
     else
       field = user.errors.attribute_names.first
       settings_error(field, user.errors.full_messages_for(field).first)
     end
   rescue ActiveRecord::RecordNotUnique
-    settings_error(:handle, "loadout.every.to/#{attributes[:handle]} was just taken. Try another.")
+    settings_error(:handle, "#{LoadoutHost.host}/#{attributes[:handle]} was just taken. Try another.")
   end
 
   def destroy
@@ -52,16 +45,23 @@ class SettingsController < InertiaController
   private
 
   def saved_message(user)
-    if user.saved_change_to_handle?
-      "Your profile now lives at loadout.every.to/#{user.handle}."
-    elsif user.saved_change_to_public?
-      user.public? ? "Your profile is public." : "Your profile is private."
-    else
-      "Saved."
-    end
+    user.saved_change_to_handle? ? "Your profile now lives at #{LoadoutHost.host}/#{user.handle}." : "Saved."
   end
 
   def settings_error(field, message)
     redirect_to settings_path, status: :see_other, inertia: { errors: { field => message } }
+  end
+
+  # The clients the member approved, one row each, newest activity first. Revoking is
+  # DELETE /agents/:id with the client id.
+  def connected_agents
+    Current.user.oauth_grants.active.includes(:oauth_client).group_by(&:oauth_client).map do |client, grants|
+      {
+        id: client.client_id,
+        name: client.client_name,
+        connected_at: grants.map(&:created_at).min.iso8601,
+        last_used_at: grants.filter_map(&:last_used_at).max&.iso8601
+      }
+    end.sort_by { |agent| agent[:last_used_at] || agent[:connected_at] }.reverse
   end
 end

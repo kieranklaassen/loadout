@@ -1,55 +1,48 @@
 # frozen_string_literal: true
 
-# First-run flow, one page in three steps: claim a handle, pick tools per
-# category (saved through PATCH /loadout), choose visibility. Finishing lands on
-# the new profile with a "you're live" moment.
+# First-run flow, one page: claim a handle and choose who sees the page, then rank
+# the first tools in the editor. Abandoning it leaves a valid, empty, private
+# member, and the onboarding gate sends them back here until they finish.
 class OnboardingController < InertiaController
   skip_onboarding_gate
-  before_action :redirect_onboarded, only: :show
+  before_action :redirect_onboarded
+
+  PREVIEW_KINDS = 2
 
   def show
     user = Current.user
     render inertia: "onboarding/show", props: {
-      step: params[:step] == "handle" || user.handle.blank? ? "handle" : "picks",
-      handle: user.handle,
       suggested_handle: user.handle || User.suggest_handle(from: user.name.presence || user.email_address, except: user),
-      first_name: user.name.to_s.split.first,
-      every_member: user.every_member?,
-      public: user.public?,
-      picker: -> { Loadouts::PickerProps.new(user).to_h }
+      name: user.display_name,
+      avatar_url: user.avatar_url,
+      visibility: user.visibility,
+      preview_kinds: Category.limit(PREVIEW_KINDS).pluck(:name)
     }
   end
 
-  def update_handle
-    availability = User.handle_availability(params[:handle], except: Current.user)
-    return handle_error(availability[:message]) unless availability[:available]
-
-    Current.user.update!(handle: availability[:handle])
-    redirect_to welcome_path, status: :see_other
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
-    handle_error("loadout.every.to/#{availability[:handle]} is taken.")
-  end
-
-  def finish
+  def update
     user = Current.user
-    return redirect_to welcome_path(step: "handle"), alert: "Claim a handle first." if user.handle.blank?
+    availability = User.handle_availability(params[:handle], except: user)
+    return onboarding_error(:handle, availability[:message]) unless availability[:available]
 
-    user.update!(public: ActiveModel::Type::Boolean.new.cast(params[:public]) || false, onboarded_at: user.onboarded_at || Time.current)
-
-    if params[:next] == "agents"
-      redirect_to "/agents", status: :see_other, notice: "You're live. Now let your agent fill in your loadout."
+    visibility = params[:visibility].presence || user.visibility
+    if user.update(handle: availability[:handle], visibility:, onboarded_at: user.onboarded_at || Time.current)
+      redirect_to edit_loadout_path, status: :see_other
     else
-      redirect_to "/#{user.handle}", status: :see_other, flash: { welcome: true }
+      field = user.errors.attribute_names.first
+      onboarding_error(field, user.errors.full_messages_for(field).first)
     end
+  rescue ActiveRecord::RecordNotUnique
+    onboarding_error(:handle, "#{LoadoutHost.host}/#{availability[:handle]} was just taken. Try another.")
   end
 
   private
 
   def redirect_onboarded
-    redirect_to "/#{Current.user.handle}" if Current.user.onboarded?
+    redirect_to edit_loadout_path, status: :see_other if Current.user.onboarded?
   end
 
-  def handle_error(message)
-    redirect_to welcome_path(step: "handle"), status: :see_other, inertia: { errors: { handle: message } }
+  def onboarding_error(field, message)
+    redirect_to welcome_path, status: :see_other, inertia: { errors: { field => message } }
   end
 end

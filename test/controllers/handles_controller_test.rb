@@ -34,6 +34,31 @@ class HandlesControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
+  test "each address gets 60 checks a minute; the next answer still reaches the page as an unavailable handle" do
+    60.times do
+      get check_handle_path, params: { handle: "fresh" }, headers: partial_headers("onboarding/show")
+      assert response.parsed_body["props"]["availability"]["available"]
+    end
+
+    get check_handle_path, params: { handle: "Fresh" }, headers: partial_headers("onboarding/show")
+
+    assert_response :too_many_requests
+    availability = response.parsed_body["props"]["availability"]
+    assert_equal false, availability["available"]
+    assert_equal "fresh", availability["handle"]
+    assert_match(/too many checks/i, availability["message"])
+  end
+
+  test "one address running out of checks does not limit another" do
+    61.times { get check_handle_path, params: { handle: "fresh" }, headers: partial_headers("onboarding/show") }
+    assert_response :too_many_requests
+
+    get check_handle_path, params: { handle: "fresh" }, headers: partial_headers("onboarding/show"), env: { "REMOTE_ADDR" => "203.0.113.9" }
+
+    assert_response :success
+    assert response.parsed_body["props"]["availability"]["available"]
+  end
+
   private
 
   def partial_headers(component)

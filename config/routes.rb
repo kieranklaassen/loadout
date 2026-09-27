@@ -43,14 +43,15 @@ Rails.application.routes.draw do
 
   # Onboarding, editing, and settings (U3 routes go here).
   get "welcome", to: "onboarding#show", as: :welcome
-  patch "welcome/handle", to: "onboarding#update_handle", as: :welcome_handle
-  patch "welcome/finish", to: "onboarding#finish", as: :welcome_finish
+  patch "welcome", to: "onboarding#update"
   get "handles/check", to: "handles#check", as: :check_handle
   resource :loadout, only: %i[edit update]
   post "loadout/suggestions/:id/confirm" => "loadouts#confirm", as: :confirm_loadout_suggestion, constraints: { id: /\d+/ }
   delete "loadout/suggestions/:id" => "loadouts#dismiss", as: :loadout_suggestion, constraints: { id: /\d+/ }
   post "loadout/catalog_items" => "loadouts#add_item", as: :loadout_catalog_items
-  resource :settings, only: %i[show update destroy]
+  resource :settings, only: %i[show update destroy] do
+    resource :history, only: :show, module: :settings
+  end
 
   # The Every map (U5 routes go here).
   get "map" => "maps#index", as: :map
