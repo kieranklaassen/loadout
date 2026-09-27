@@ -282,6 +282,14 @@ reads the session cookie) and **frontend** (layout and Vite entrypoint).
 
 ## Decisions & gotchas
 
+- **Loadout has no flags today.** `config/flipper_flag_defaults.yml` is empty, so
+  `FlipperFlagName` in `app/frontend/lib/flipper_flags.ts` has no members, and
+  `bin/rails runner 'puts Flipper.features.map(&:name)'` prints nothing on a fresh
+  database. The one flag it had, `public_map` (open the Every map to people outside Every),
+  was removed with the map: Home is now a page everyone can read, and visibility is a
+  per-member setting, not a rollout. The reader, the layout's script tag, the test helper and the
+  `/admin/flipper` dashboard stay, so the next flag is a YAML entry and a union member. A
+  database that already has a `public_map` row can drop it the way "Clean up at 100%" describes.
 - **Notify on change.** Cora subscribes to `feature_operation.flipper` and posts
   every `enable`, `disable`, `add`, and `remove` (with gate and value) to Slack
   from a job. Add it once more than one person flips flags.

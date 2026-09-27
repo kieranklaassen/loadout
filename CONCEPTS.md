@@ -39,3 +39,8 @@ this file is the tie-breaker. Keep entries short; link to module docs for depth.
   or agent tool is taken over the audience, so it is "N of M" for that viewer.
 - **Launch** — a model with a release date and a Vibe Check link, shown in
   "Latest model launches" on Home.
+- **Mark** — the light tile that stands for a tool (square) or a model (round):
+  its real single-colour logo when the catalog has one, else the first letter of
+  its name in the serif face.
+- **Every dark** — the app's design system: a near-black page, #111111 panels and
+  three sparing accents. See [docs/modules/frontend.md](docs/modules/frontend.md).

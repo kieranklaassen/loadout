@@ -21,6 +21,44 @@ with SSR wired but off by default.
   (tsc ×2 + Vitest). TypeScript pinned to `^5.7` (the stable end of the fleet's
   drift), not the generator's 7.x.
 
+## Design system in this app: Every dark
+
+Loadout is dark and Every-branded. The tokens live in `app/frontend/entrypoints/application.css`
+(`@theme`), and the design of record is `docs/design/every-loadout/` (`DESIGN-BRIEF.md` and the
+page mocks, which are layout truth only: their names, counts and dates are placeholders). Tailwind
+scans only `app/frontend`, so utility classes never go in ERB.
+
+- **Colour tokens**, each a Tailwind utility (`bg-*`, `text-*`, `border-*`, `ring-*`): `page`
+  `#020202`, `panel` `#111111`, `field`, `raised`, the `line`, `line-strong` and `line-quiet`
+  borders, the text ladder `fg`, `fg-soft` and `fg-muted` (never dimmer), and `on-light` for text on
+  a light mark. Three accents, each for one job: `sky` is only the primary call to action, the
+  active filter and the italic brand word; `yellow` only NEWEST and rank 1; `coral` only stale and
+  danger. Corners are `rounded-sharp` (2px) or `rounded-soft` (4px). There is no other palette.
+- **Type**: Newsreader for headings, Hanken Grotesk for the UI and Geist Mono for captions, all
+  self-hosted through `@fontsource` packages. Text is at least 13px (`text-caption`); only an
+  uppercase mono label may be 12px (`text-xs`).
+- **Marks** (`components/mark.tsx`, `lib/marks.ts`): a tool is a square light tile and a model a
+  round one. `<Mark item={{ name, kind, mark }} size="md" />` draws the real single-colour SVG when
+  the catalog item has a `mark` key, and the first letter of its name in the serif face otherwise.
+  The SVGs are in `app/frontend/assets/marks/` and are named by catalog key; `markSvg` resolves a
+  key against that list of files, never a path built from it, and its test allows only `path` and
+  `g` elements. The share card reads the same folder. Keys are set in `config/catalog.yml`.
+- **Building blocks**: `Count` writes every "N of M" the same way (`<Count count={{ n: 5, of: 6 }}
+  label="use it" />`), and a page shows an empty state instead of "0 of 0". Also `Chip`,
+  `SectionLabel`, `Button` and `ButtonLink`, `Avatar`, `Wordmark` and `AppShell`. The CSS
+  classes `dot-grid`, `panel`, `text-link`, `field-box` and `radio-card` cover the page, cards, links,
+  form controls and radio cards. Page-specific pieces live in `components/{team,kind,profile,rank}/`.
+- **Responsive helpers**: there is one breakpoint, 768px (`md:`). Below it `stack-table` and
+  `stack-row` turn a table or a grid row into stacked cards (a cell's `data-label` shows above its
+  value), `slot-fields` becomes a 2 x 2 grid, and interactive targets stay at least 44px tall
+  (`min-h-11 md:min-h-0`). Motion is CSS only and still under `prefers-reduced-motion`; the Home
+  hero also has a pause control.
+- **Hosts**: pages print the display host from the `public_host` shared prop (`usePublicHost()`),
+  never a literal.
+- **Design-rules test** (`app/frontend/test/design_rules.test.ts`): scans every shipped source
+  file and fails on text below the minimums and on any class or token from the removed v1 light
+  palette. Its list of exempt legacy files is empty; keep it that way.
+
 ## Files (the module boundary)
 
 - `app/frontend/**` (entrypoints, pages, lib, styles, ssr, types, test setup)
