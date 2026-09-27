@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_100400) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_110000) do
   create_table "ai_models", force: :cascade do |t|
     t.string "slug", null: false
     t.string "name", null: false
