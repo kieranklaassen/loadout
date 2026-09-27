@@ -165,6 +165,62 @@ describe('registerTools', () => {
     expect(stub.tools.size).toBe(0)
   })
 
+  describe('reloading after a write', () => {
+    const writeManifest: WebmcpManifest = {
+      endpoint: '/webmcp/tools',
+      tools: [
+        { name: 'get_my_loadout', description: 'Reads', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
+        { name: 'suggest_picks', description: 'Suggests', inputSchema: { type: 'object' }, annotations: { readOnlyHint: false } },
+        { name: 'no_hint', description: 'Says nothing about writes', inputSchema: { type: 'object' } },
+      ],
+    }
+
+    it('calls onWrite once a tool that is not read-only succeeds, and returns its result unchanged', async () => {
+      const stub = installModelContext('current')
+      stubFetch(200, { result: okResult })
+      const onWrite = vi.fn()
+      registerTools(stub, writeManifest, new AbortController().signal, onWrite)
+
+      await expect(stub.invoke('suggest_picks', { picks: [] })).resolves.toEqual(okResult)
+
+      expect(onWrite).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not call onWrite for a read-only tool', async () => {
+      const stub = installModelContext('current')
+      stubFetch(200, { result: okResult })
+      const onWrite = vi.fn()
+      registerTools(stub, writeManifest, new AbortController().signal, onWrite)
+
+      await stub.invoke('get_my_loadout')
+
+      expect(onWrite).not.toHaveBeenCalled()
+    })
+
+    it('does not call onWrite when the call fails', async () => {
+      const stub = installModelContext('current')
+      stubFetch(422, { error: 'Bad arguments' })
+      const onWrite = vi.fn()
+      registerTools(stub, writeManifest, new AbortController().signal, onWrite)
+
+      const result = (await stub.invoke('suggest_picks')) as { isError: boolean }
+
+      expect(result.isError).toBe(true)
+      expect(onWrite).not.toHaveBeenCalled()
+    })
+
+    it('treats a tool with no read-only hint as a write', async () => {
+      const stub = installModelContext('current')
+      stubFetch(200, { result: okResult })
+      const onWrite = vi.fn()
+      registerTools(stub, writeManifest, new AbortController().signal, onWrite)
+
+      await stub.invoke('no_hint')
+
+      expect(onWrite).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('warns on a duplicate name instead of throwing', async () => {
     const stub = installModelContext('current')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})

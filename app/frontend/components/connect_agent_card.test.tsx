@@ -33,6 +33,12 @@ describe('ConnectAgentCard', () => {
     expect(screen.getByText(/until you confirm it/i)).toBeInTheDocument()
   })
 
+  it('mentions WebMCP, the way an agent browser can work on the page directly', () => {
+    render(<ConnectAgentCard compact />)
+
+    expect(screen.getByText(/agent browser that supports WebMCP/)).toBeInTheDocument()
+  })
+
   it('copies the suggested prompt from a button and says so', async () => {
     render(<ConnectAgentCard />)
 

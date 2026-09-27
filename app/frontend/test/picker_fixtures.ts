@@ -67,6 +67,7 @@ export const suggestion = (overrides: Partial<Suggestion> = {}): Suggestion => (
   context: null,
   effort: null,
   slot_hint: null,
+  target_rank: null,
   replaces: null,
   suggested_by: 'Claude',
   suggested_at: '2026-09-20T12:00:00Z',

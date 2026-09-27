@@ -97,20 +97,24 @@ export async function callTool(
 
 /**
  * Registers every manifest tool on `context`; aborting `signal` unregisters
- * them all and cancels in-flight calls. Registration failures are logged, not
- * thrown: AbortError is the expected result of React StrictMode's immediate
- * cleanup, and a duplicate name must not take the page down.
+ * them all and cancels in-flight calls. `onWrite` runs after a tool that is not
+ * read-only succeeds, so the page can reload the props the tool changed. Registration
+ * failures are logged, not thrown: AbortError is the expected result of React
+ * StrictMode's immediate cleanup, and a duplicate name must not take the page down.
  */
-export function registerTools(context: ModelContext, manifest: WebmcpManifest, signal: AbortSignal): void {
+export function registerTools(context: ModelContext, manifest: WebmcpManifest, signal: AbortSignal, onWrite?: () => void): void {
   for (const tool of manifest.tools) {
+    const readOnly = tool.annotations?.readOnlyHint ?? false
     const definition: ModelContextTool = {
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema,
-      annotations: { readOnlyHint: tool.annotations?.readOnlyHint ?? false },
-      execute: (input, options) => {
+      annotations: { readOnlyHint: readOnly },
+      execute: async (input, options) => {
         const callSignal = options?.signal ? AbortSignal.any([signal, options.signal]) : signal
-        return callTool(manifest.endpoint, tool.name, input ?? {}, callSignal)
+        const result = await callTool(manifest.endpoint, tool.name, input ?? {}, callSignal)
+        if (!readOnly && !result.isError) onWrite?.()
+        return result
       },
     }
 

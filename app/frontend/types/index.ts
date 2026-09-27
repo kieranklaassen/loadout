@@ -242,6 +242,8 @@ export type Suggestion = {
   context: PickContext | null
   effort: PickEffort | null
   slot_hint: number | null
+  /** The slot it would land in; null when the kind is full and the member picks the pick to replace. */
+  target_rank: number | null
   replaces: { rank: number; tool: MarkItem; model: MarkItem | null } | null
   suggested_by: string
   suggested_at: string

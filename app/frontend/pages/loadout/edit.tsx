@@ -1,73 +1,52 @@
-import { Head, Link, router } from '@inertiajs/react'
-import { useEffect, useState } from 'react'
+import { Head, Link } from '@inertiajs/react'
 import AppShell from '../../components/app_shell'
-import Button from '../../components/button'
-import ConnectAgentCard from '../../components/connect_agent_card'
-import ToolPicker from '../../components/tool_picker'
-import { changedCategories, countPicks, toOperations } from '../../lib/picks'
-import type { PickerData, PicksByCategory } from '../../types'
+import KindPanel from '../../components/rank/kind_panel'
+import KindSidebar from '../../components/rank/kind_sidebar'
+import { startedCount, type Catalog, type EditorKind, type Enums, type TeamTop } from '../../lib/ranking'
+import { VISIBILITY_STATUS } from '../../lib/visibility_copy'
+import type { Visibility } from '../../types'
 
-type Props = PickerData & { handle: string }
+type Props = {
+  kinds: EditorKind[]
+  catalog: Catalog
+  enums: Enums
+  selected_kind: string
+  visibility: Visibility
+  team_top: TeamTop
+}
 
-export default function LoadoutEdit({ categories, catalog, picks: saved, handle }: Props) {
-  const [picks, setPicks] = useState<PicksByCategory>(saved)
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => setPicks(saved), [saved])
-
-  const order = categories.map((category) => category.slug)
-  const changed = changedCategories(saved, picks, order)
-  const names = changed.map((slug) => categories.find((category) => category.slug === slug)?.name ?? slug)
-  const counts = countPicks(picks)
-
-  const save = () => {
-    router.patch('/loadout', { operations: toOperations(picks, changed) }, {
-      preserveScroll: true,
-      preserveState: true,
-      onStart: () => setSaving(true),
-      onFinish: () => setSaving(false),
-    })
-  }
+export default function LoadoutEdit({ kinds, catalog, enums, selected_kind, visibility, team_top }: Props) {
+  const kind = kinds.find((candidate) => candidate.category.slug === selected_kind) ?? kinds[0]!
 
   return (
-    <AppShell wide>
-      <Head title="Edit your loadout" />
+    <AppShell>
+      <Head title="Rank your tools" />
 
-      <div className="grid animate-rise items-end gap-8 lg:grid-cols-[1fr_22rem]">
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="eyebrow">Your loadout</p>
-          <h1 className="display mt-3 text-5xl text-ink sm:text-6xl">Keep it current.</h1>
-          <p className="mt-4 max-w-xl text-lg text-ink-soft">
-            {counts.picks === 0
-              ? 'Nothing here yet. Tap the tools you use, category by category.'
-              : `${counts.picks} ${counts.picks === 1 ? 'pick' : 'picks'} across ${counts.categories} ${counts.categories === 1 ? 'category' : 'categories'}. Swap models, star your go-to, and say why in a line.`}
+          <h1 className="font-serif text-[40px] leading-[1.02] tracking-[-0.02em] md:text-[56px]">Rank your tools</h1>
+          <p className="mt-3 max-w-[640px] text-lg text-fg-soft">
+            Pick your top three tools for each kind of work, and how you run them. Your first pick counts most. Skip any you like.
           </p>
-          <Link href={`/${handle}`} className="mt-5 inline-block text-sm text-ink underline decoration-rule underline-offset-4 hover:decoration-ink">
-            View your profile →
-          </Link>
         </div>
-        <ConnectAgentCard compact />
+        <div className="md:max-w-[340px] md:text-right">
+          <p className="font-mono text-sm text-fg-soft">
+            <span className="text-fg">{startedCount(kinds)}</span> of {kinds.length} kinds started
+          </p>
+          <p className="mt-1 text-caption text-fg-muted">Changes save as you go. Suggested picks stay private until you confirm.</p>
+          <p className="mt-2 text-caption text-fg-soft">
+            {VISIBILITY_STATUS[visibility]}{' '}
+            <Link href="/settings" className="text-link">
+              Change who can see it
+            </Link>
+          </p>
+        </div>
       </div>
 
-      <div className="mt-12">
-        <ToolPicker categories={categories} catalog={catalog} value={picks} onChange={setPicks} mode="full" />
+      <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:gap-12">
+        <KindSidebar kinds={kinds} selected={kind.category.slug} />
+        <KindPanel key={kind.category.slug} kind={kind} catalog={catalog} enums={enums} teamTop={team_top} />
       </div>
-
-      {changed.length > 0 && (
-        <div className="sticky bottom-4 z-20 mt-8 animate-rise">
-          <div className="mx-auto flex max-w-2xl items-center gap-3 rounded-full bg-ink py-2 pl-5 pr-2 text-paper shadow-[var(--shadow-lift)]">
-            <span className="min-w-0 flex-1 truncate text-sm text-paper/80" aria-live="polite">
-              Unsaved changes in {names.join(', ')}
-            </span>
-            <button type="button" onClick={() => setPicks(saved)} className="rounded-full px-3 py-2 text-sm text-paper/60 hover:text-paper">
-              Discard
-            </button>
-            <Button variant="secondary" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </Button>
-          </div>
-        </div>
-      )}
     </AppShell>
   )
 }
