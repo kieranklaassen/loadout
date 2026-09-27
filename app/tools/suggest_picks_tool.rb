@@ -18,9 +18,9 @@ class SuggestPicksTool < ApplicationTool
     item flagged for review, so check spelling first). A member ranks up to three picks
     per kind of work and a tool appears once per kind. Read get_my_loadout first so you
     suggest a change instead of a duplicate, ask the member before you guess, and do not
-    suggest again something they dismissed: the error says when. You have at most three open
-    suggestions per kind, and a newer one from you for the same tool replaces your older one.
-    Returns what was suggested and where the member confirms it.
+    suggest again something they dismissed: the error says when. A kind holds at most three
+    open suggestions (the oldest gives way), and a newer one from you for the same tool
+    replaces your older one. Returns what was suggested and where the member confirms it.
   TEXT
   input_schema(
     properties: {

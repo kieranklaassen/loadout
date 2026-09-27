@@ -15,7 +15,9 @@ class GetTeamRankingsTool < ApplicationTool
     not scores. `audience` picks who is counted: `team` (Every team members who share with the
     member, the default) or `others` (everyone else who shares with the member); `subscribers`
     is not available yet. Only people who chose to share with the member are counted, plus the
-    member's own picks; when nobody is, `people` is 0 and `reason` is nobody_shared. #{DATA_NOTICE}
+    member's own picks (`includes_your_private_picks` is true when those are private, so
+    colleagues do not see them); when nobody is counted, `people` is 0 and `reason` is
+    nobody_shared. #{DATA_NOTICE}
   TEXT
   input_schema(
     properties: {
