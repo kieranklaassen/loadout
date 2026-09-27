@@ -112,6 +112,23 @@ class ToolRegistryTest < ActiveSupport::TestCase
     end
   end
 
+  test "no read tool returns an email address, a bio, an avatar or an Every user id" do
+    calls = [
+      [ "list_categories", {} ], [ "search_catalog", { query: "cursor" } ], [ "get_my_loadout", {} ], [ "get_recent_changes", {} ],
+      [ "get_team_rankings", {} ], [ "get_team_rankings", { category: "coding" } ], [ "get_team_rankings", { audience: "others" } ]
+    ]
+
+    %i[every_ana every_dee outside_eli].each do |name|
+      calls.each do |tool, arguments|
+        result = ToolRegistry.call(tool, arguments:, user: users(name), source: "webmcp")
+        text = result[:content].first[:text]
+
+        assert_equal false, result[:isError], "#{tool}: #{text}"
+        assert_no_match(/@(every\.to|example\.com|gmail\.com)|avatar|\bbio\b|every[_-]user/i, text, "#{tool} for #{name}")
+      end
+    end
+  end
+
   test "no description enumerates the kinds of work or mentions the retired surface" do
     kinds = YAML.safe_load_file(Rails.root.join("config/catalog.yml"), permitted_classes: [ Date ])["categories"].map { |category| category["slug"] }
     text = ([ ToolRegistry::INSTRUCTIONS ] + ToolRegistry.tools.map(&:description) + ToolRegistry.tools.map { |tool| tool.input_schema.to_h.to_json }).join(" ")

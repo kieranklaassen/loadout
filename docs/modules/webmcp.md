@@ -15,13 +15,17 @@ agent driving a signed-in user's tab can call them.
   returns a String or anything JSON-serializable; raising
   `ApplicationTool::Error` returns an `isError` result the agent can read.
 - **`ToolRegistry`** is the one list (`ToolRegistry::TOOLS`). Both surfaces read it:
-  - `ToolRegistry.mcp_server(user:, source:, client_name:)` → an `MCP::Server`
+  - `ToolRegistry.mcp_server(user:, source:, client_name:, oauth_client_id:)` → an `MCP::Server`
     for whatever MCP transport the app mounts (Loadout mounts it at `/mcp`).
-    `source` (`"mcp"` or `"webmcp"`) and `client_name` reach every tool and are
-    recorded on the changes it writes.
+    `source` (`"mcp"` or `"webmcp"`), `client_name` and the numeric
+    `oauth_client_id` (WebMCP has neither) reach every tool and are recorded on
+    the suggestions it writes. Agents are told apart by the client id, never by
+    the display name, which any client can choose freely.
   - `ToolRegistry.manifest` → the `webmcp` shared Inertia prop
     (`{ endpoint, tools: [{ name, description, inputSchema, annotations }] }`),
-    present only when signed in, `nil` otherwise.
+    present only when signed in, `nil` otherwise. `endpoint` is a same-origin
+    path (`ToolRegistry.endpoint`), built with `LoadoutHost.path_to`, so it
+    follows the path the app is served under.
   - `ToolRegistry.call(name, arguments:, user:, source:)` → runs a tool through that same
     `MCP::Server` (`tools/call`), so a browser call and an MCP call return the
     identical `CallToolResult`.
@@ -63,7 +67,10 @@ signed-in user, so they use the session and a CSRF token.
 - `Gemfile`: `gem "mcp", "~> 1.6"`
 - `app/tools/application_tool.rb`, `app/tools/tool_registry.rb`,
   and Loadout's tools (`list_categories`, `search_catalog`, `get_my_loadout`,
-  `update_loadout`, `get_recent_changes`)
+  `get_team_rankings`, `get_recent_changes`, `suggest_picks`)
+- `app/services/agents/capabilities.rb` and `known_clients.rb`: the "can / can't"
+  copy for the consent screen and the Agents page (tied to the registry by test),
+  and the https hosts whose OAuth clients earn a real mark
 - `app/controllers/webmcp_tools_controller.rb`
 - `config/routes.rb`: the `webmcp_tool` route (`post "webmcp/tools/:name"`)
 - `app/controllers/inertia_controller.rb`: the `webmcp` `inertia_share`
@@ -75,7 +82,8 @@ signed-in user, so they use the session and a CSRF token.
   `app/frontend/entrypoints/inertia.tsx`
 - `lib/generators/tool/` (`bin/rails g tool Name`) and `generators` in
   `config.autoload_lib(ignore:)` in `config/application.rb`
-- Tests: `test/tools/`, `test/controllers/webmcp_tools_controller_test.rb`,
+- Tests: `test/tools/`, `test/services/agents/`,
+  `test/controllers/webmcp_tools_controller_test.rb`,
   `test/integration/webmcp_test.rb`, `test/generators/tool_generator_test.rb`,
   `app/frontend/lib/webmcp.test.ts`, `app/frontend/lib/webmcp_provider.test.tsx`,
   `app/frontend/test/model_context_stub.ts`
@@ -143,7 +151,7 @@ end
 
 ## Verify adoption
 
-- `bin/rails test test/tools test/controllers/webmcp_tools_controller_test.rb test/integration/webmcp_test.rb test/generators/tool_generator_test.rb`
+- `bin/rails test test/tools test/services/agents test/controllers/webmcp_tools_controller_test.rb test/integration/webmcp_test.rb test/generators/tool_generator_test.rb`
   and `npm run check` are green.
 - In Chrome with `chrome://flags/#enable-webmcp-testing` (or on an origin with
   a trial token), sign in: DevTools → Application → WebMCP lists `get_my_loadout`, and
@@ -158,11 +166,39 @@ end
   Keep destructive actions out of the registry, or require an argument that
   names the target explicitly, until the product decides how agent actions
   are confirmed.
+- **Loadout's answer: agents only suggest.** The one write tool, `suggest_picks`,
+  can run only `Loadouts::Update::AGENT_OPERATIONS` (`suggest`, `withdraw`), and
+  the write path refuses every other operation for a source other than `web`.
+  Confirming, dismissing, removing, moving and reordering picks, visibility,
+  handle, bio, the history export, account deletion and revoking agents are web
+  controller actions with no registry tool, and a registry test fails if one
+  appears. The guarantee is per tool: WebMCP carries the member's session, so a
+  browser agent that drives the page can still press Confirm, approve an OAuth
+  client or revoke agents. The Agents page says so; do not promise more.
+- **Tell the member what an agent can do from one place.** `Agents::Capabilities`
+  holds the consent and Agents-page lines; each "can" names the tools that back
+  it, each "can't" the words no tool may be named after, and
+  `test/services/agents/capabilities_test.rb` ties both to `ToolRegistry`. A new
+  tool needs a line before the suite passes.
+- **Identify agents by OAuth client id.** Clients register dynamically under any
+  display name. Suggestions and their supersede rules key on `oauth_client_id`;
+  a real mark shows only for an https redirect on an `Agents::KnownClients` host,
+  never for a loopback or private-use-scheme redirect.
 - **Tool output can reach the model as instructions.** If a tool returns text
-  other users wrote (comments, documents), say so in the description so the
-  agent treats it as data.
+  other users wrote (names, client names, comments), say so in the description
+  (`ApplicationTool::DATA_NOTICE`) so the agent treats it as data, and pass person
+  and client names through `clean` (control and format characters stripped,
+  80 characters). Read tools return allowlisted fields only: no email, bio or
+  avatar URL.
+- **Read tools go through the page's query objects.** `get_team_rankings` builds
+  `TeamRankings` with the acting member as the viewer, so its population, counts
+  and names cannot differ from Home and Kind. Do not write a second query for a
+  tool.
 - **Keep names stable.** Agents and MCP clients cache tool names. Rename a tool
   by adding the new one and removing the old one in a later release.
+  `update_loadout` became `suggest_picks` outright because no agent was connected
+  yet; with connected agents, keep an old name that only suggests, or revoke the
+  grants (`loadout:revoke_agent_grants`) so clients reconnect.
 - **The spec is still moving.** The draft moved the model context from `navigator` to
   `document` and dropped `provideContext`/`unregisterTool`. `lib/webmcp.ts` and
   `types/webmcp.d.ts` are the only files that know the browser surface.

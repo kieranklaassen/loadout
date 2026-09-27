@@ -48,11 +48,21 @@ surfaces** (see [docs/modules/webmcp.md](docs/modules/webmcp.md)):
 - Tools run as the signed-in `user`: scope every query to it, keep
   `additionalProperties: false`, and set `read_only_hint: true` only when the
   tool never writes.
+- **Agent writes are suggestions.** The one write tool, `suggest_picks`, goes
+  through `Loadouts::Update`, where sources `mcp` and `webmcp` may run only
+  `suggest` and `withdraw`; the member confirms on the web. Confirm, dismiss,
+  remove, move, visibility, handle, bio, history export, account deletion and
+  agent revocation are web-only: never add a registry tool for them. Read tools
+  call the shared query objects (`TeamRankings`, `Audience`) as the acting
+  member, so an agent sees what the member sees on the site.
+  `Agents::Capabilities` is the one source for the consent and Agents-page
+  "can / can't" copy, and its test ties each line to the registry.
 - Signed-in pages get the manifest as the `webmcp` shared prop, and
   `WebmcpProvider` registers it on the browser's model context. The
   browser calls `POST /webmcp/tools/:name` (session + CSRF). That endpoint is
-  the one sanctioned exception to "no parallel JSON API"; do not add others for tools.
-- MCP clients get the same tools from `ToolRegistry.mcp_server(user:, source: "mcp", client_name:)`,
+  the one sanctioned exception to "no parallel JSON API"; the history download
+  is the second sanctioned non-Inertia response. Do not add others for tools.
+- MCP clients get the same tools from `ToolRegistry.mcp_server(user:, source: "mcp", client_name:, oauth_client_id:)`,
   served at `/mcp` behind the in-app OAuth 2.1 server (`McpController`).
 
 ## Deploying
