@@ -22,7 +22,7 @@ module CatalogItem
     validates :name, length: { maximum: 60 }
 
     before_validation :fill_derived_fields
-    after_update_commit :refresh_share_cards, if: -> { saved_change_to_name? || saved_change_to_monogram? || saved_change_to_hue? }
+    after_update_commit :refresh_share_cards, if: -> { saved_change_to_name? || saved_change_to_mark? || saved_change_to_monogram? || saved_change_to_hue? }
 
     scope :approved, -> { where(status: "approved") }
     scope :pending, -> { where(status: "pending") }

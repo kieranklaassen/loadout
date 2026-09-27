@@ -2,7 +2,8 @@ namespace :loadout do
   desc "Render the site-wide share card to public/og-default.png"
   task default_og: :environment do
     path = Rails.public_path.join("og-default.png")
-    File.binwrite(path, ProfileCard.site.render)
+    # The file is committed, so it is quantised to a palette: a quarter of the size, same picture.
+    Vips::Image.new_from_buffer(ProfileCard.site.render, "").write_to_file(path.to_s, palette: true, Q: 90)
     puts "Wrote #{path.relative_path_from(Rails.root)}"
   end
 
