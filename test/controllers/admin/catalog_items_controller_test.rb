@@ -167,34 +167,52 @@ class Admin::CatalogItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil tools(:cursor).reload.admin_edited_at, "hiding is not an edit that sync has to respect"
   end
 
-  test "merging repoints entries and history, then deletes the pending item" do
+  test "merging repoints picks and history, then deletes the pending item" do
     suggested = Tool.resolve_or_suggest!("Claude-Code CLI", user: @member)
-    Loadouts::Update.call(user: @member, operations: [ { op: "add", category: "coding", tool: suggested.name } ], source: "web")
+    Loadouts::Update.call(user: @member, operations: [ { op: "set_pick", category: "coding", rank: 2, tool: suggested.slug } ], source: "web")
     sign_in_as @admin
 
     post merge_admin_catalog_item_path(suggested, kind: "tool"), params: { target_id: tools(:claude_code).id }
 
     assert_redirected_to admin_catalog_items_path
     assert_not Tool.exists?(suggested.id)
-    assert @member.entries.exists?(tool: tools(:claude_code), ai_model: nil)
-    assert_equal [ tools(:claude_code).id ], @member.entry_changes.where(action: "added").pluck(:tool_id).uniq
+    assert_equal [ [ 1, tools(:cursor) ], [ 2, tools(:claude_code) ] ], @member.entries.order(:rank).map { |entry| [ entry.rank, entry.tool ] }
+    assert_equal [ tools(:claude_code).id ], @member.entry_changes.where(action: "set", rank: 2).pluck(:tool_id)
+    assert_replays_to_entries @member
   end
 
-  test "merging drops an entry that would collide with one already on the target" do
-    suggested = AiModel.resolve_or_suggest!("Opus Five", user: @member)
-    Loadouts::Update.call(user: @member, operations: [ { op: "add", category: "coding", tool: "cursor", model: suggested.name, note: "Fast." } ], source: "web")
+  test "merging keeps the higher pick when a member ranked both tools" do
+    suggested = Tool.resolve_or_suggest!("Claude-Code CLI", user: @member)
+    Loadouts::Update.call(user: @member, source: "web", operations: [
+      { op: "set_pick", category: "coding", rank: 2, tool: suggested.slug },
+      { op: "set_pick", category: "coding", rank: 3, tool: tools(:claude_code).slug }
+    ])
     sign_in_as @admin
 
     assert_difference -> { Entry.count }, -1 do
-      post merge_admin_catalog_item_path(suggested, kind: "model"), params: { target_id: ai_models(:opus_5).id }
+      post merge_admin_catalog_item_path(suggested, kind: "tool"), params: { target_id: tools(:claude_code).id }
+    end
+
+    assert_not Tool.exists?(suggested.id)
+    assert_equal [ [ 1, tools(:cursor) ], [ 2, tools(:claude_code) ] ], @member.entries.order(:rank).map { |entry| [ entry.rank, entry.tool ] }
+    assert_equal [ [ "removed", 3 ] ], @member.entry_changes.where(source: "system").map { |change| [ change.action, change.rank ] }
+    assert_replays_to_entries @member
+  end
+
+  test "merging a model repoints the picks that use it and keeps their ranks" do
+    suggested = AiModel.resolve_or_suggest!("Opus Five", user: @member)
+    Loadouts::Update.call(user: @member, operations: [ { op: "set_pick", category: "coding", rank: 1, model: suggested.slug } ], source: "web")
+    sign_in_as @admin
+
+    assert_no_difference -> { Entry.count } do
+      post merge_admin_catalog_item_path(suggested, kind: "model"), params: { target_id: ai_models(:opus_5_5).id }
     end
 
     assert_not AiModel.exists?(suggested.id)
     kept = entries(:cy_cursor).reload
-    assert_equal ai_models(:opus_5), kept.ai_model
-    assert kept.primary
-    assert_equal "Fast.", kept.note
+    assert_equal [ 1, tools(:cursor), ai_models(:opus_5_5) ], [ kept.rank, kept.tool, kept.ai_model ]
     assert_equal 0, EntryChange.where(ai_model_id: suggested.id).count
+    assert_replays_to_entries @member
   end
 
   test "merging across kinds or into itself is refused" do
