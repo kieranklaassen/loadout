@@ -139,8 +139,7 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
     test "AE2, R13: a profile or card #{label} may not open is the same not-found as a handle nobody claimed" do
       sign_in_or_out(viewer_handle && User.find_by!(handle: viewer_handle))
       unknown_page = not_found_answer("/nobody-here")
-      get "/nobody-here/og.png"
-      unknown_card = [ response.status, response.body ]
+      unknown_card = card_answer("/nobody-here/og.png")
       assert_equal 404, unknown_card.first
 
       PEOPLE.each do |handle, person|
@@ -151,6 +150,7 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
           get "/#{handle}"
           assert_response :success, where
           assert_inertia_component "profiles/show"
+          assert_never_shared_cacheable where
         else
           assert_equal unknown_page, not_found_answer("/#{handle}"), where
           assert_not_includes response.body, name, where
@@ -158,12 +158,11 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
 
         # The card is drawn for a visitor whoever asks: served for a link profile with a
         # confirmed pick, and the unknown handle's 404 for everything else, the owner included.
-        get "/#{handle}/og.png"
+        card = card_answer("/#{handle}/og.png")
         if person[:visibility] == "link" && person[:picks]
-          assert_response :success, "card of #{where}"
-          assert_equal "image/png", response.media_type
+          assert_equal [ 200, "image/png" ], [ card.first, response.media_type ], "card of #{where}"
         else
-          assert_equal unknown_card, [ response.status, response.body ], "card of #{where}"
+          assert_equal unknown_card, card, "card of #{where}"
         end
       end
     end
@@ -198,17 +197,25 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
       .pluck(column, :rank, "users.handle").group_by(&:first).transform_values { |rows| rows.map { |_id, rank, handle| [ rank, handle ] } }
   end
 
+  # The status, body and caching headers of a share card request.
+  def card_answer(path)
+    get path
+    [ response.status, response.body, response.headers.slice("Content-Type", "Cache-Control") ]
+  end
+
   # Reading the pages
 
   def read_home(**params)
     get root_path, params: params
     assert_response :success
+    assert_never_shared_cacheable "Home"
     page_props
   end
 
   def read_kind(category, show)
     get kind_path(category.slug), params: { show: }
     assert_response :success
+    assert_never_shared_cacheable "Kind #{category.slug}"
     page_props
   end
 

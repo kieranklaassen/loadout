@@ -31,10 +31,18 @@ module SurfaceHelper
   # are compared with it masked.
   def masked_body(path) = response.body.gsub(%r{#{Regexp.escape(path)}(?![\w-])}, "/PATH")
 
+  # Everything a client could tell two not-found answers apart by: the page, and how it may be cached.
   def not_found_answer(path)
     get path
     assert_response :not_found
-    [ inertia.component, page_props, masked_body(path) ]
+    [ inertia.component, page_props, masked_body(path), response.headers.slice("Content-Type", "Cache-Control", "Vary") ]
+  end
+
+  # R13: what varies by viewer is never kept by a shared cache.
+  def assert_never_shared_cacheable(message = nil)
+    assert_not_includes response.headers["Cache-Control"].to_s.split(/,\s*/), "public", message
+    assert_includes response.headers["Cache-Control"].to_s.split(/,\s*/), "private", message
+    assert_includes response.headers["Vary"].to_s.split(/,\s*/), "Cookie", message
   end
 
   # The link-preview tags a crawler reads: the layout renders them server-side from page meta.
