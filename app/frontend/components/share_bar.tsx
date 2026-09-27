@@ -47,8 +47,8 @@ function XIcon() {
   )
 }
 
-/** Copy link + share on X for a profile URL. */
-export default function ShareBar({ url, text, className = '' }: { url: string; text: string; className?: string }) {
+/** The Copy link button: copies the URL and says so for two seconds. */
+export function CopyLinkButton({ url }: { url: string }) {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -67,18 +67,27 @@ export default function ShareBar({ url, text, className = '' }: { url: string; t
   }
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+    <>
       <button type="button" onClick={copy} className={`${buttonClasses('primary')} min-w-[8.5rem]`}>
         {copied ? <CheckIcon /> : <LinkIcon />}
         <span>{copied ? 'Link copied' : 'Copy link'}</span>
       </button>
+      <span role="status" aria-live="polite" className="sr-only">
+        {copied ? 'Link copied to clipboard' : ''}
+      </span>
+    </>
+  )
+}
+
+/** Copy link + share on X for a profile URL. */
+export default function ShareBar({ url, text, className = '' }: { url: string; text: string; className?: string }) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+      <CopyLinkButton url={url} />
       <a href={xIntentUrl(url, text)} target="_blank" rel="noopener noreferrer" className={buttonClasses('secondary')}>
         <XIcon />
         <span>Share on X</span>
       </a>
-      <span role="status" aria-live="polite" className="sr-only">
-        {copied ? 'Link copied to clipboard' : ''}
-      </span>
     </div>
   )
 }
