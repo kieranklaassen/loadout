@@ -25,3 +25,17 @@ this file is the tie-breaker. Keep entries short; link to module docs for depth.
   only, and each call goes through `POST /webmcp/tools/:name`.
 - **Born-complete** — a fresh clone of the template already lists every module in
   its manifest, so it starts fully adopted.
+- **Kind of work** — one of the 11 areas a person ranks tools for (coding, writing,
+  research, and so on). Stored as a `Category`.
+- **Pick** — one ranked slot in a kind of work: a tool, an optional model, an
+  optional context size (`200k`, `1m`) and an optional effort. A person keeps up
+  to three per kind, at ranks 1 to 3.
+- **Suggestion** — a pick an agent proposed over MCP or WebMCP. It lives in
+  `pick_suggestions`, is visible only to its owner, and becomes a pick only when
+  the owner confirms it on the web.
+- **Visibility** — who may open a person's page: `only_me` (default), `team` or
+  `link`. Every span in which a person shared is kept as a visibility period.
+- **Audience** — the set of people a given viewer may open. Every count on a page
+  or agent tool is taken over the audience, so it is "N of M" for that viewer.
+- **Launch** — a model with a release date and a Vibe Check link, shown in
+  "Latest model launches" on Home.
