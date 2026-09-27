@@ -1,58 +1,94 @@
 require "test_helper"
 
+# One person's page at /:handle, read as the viewer. Expectations come from the fixture
+# facts in test/fixtures (users.yml, entries.yml): ana shares with anyone with the link and
+# ranks Cursor (with Claude Opus 5.5, 1M, high) then Claude Code for coding, and Claude for
+# knowledge work; dee shares with the Every team; cy is only me; eli and fay share with
+# anyone with the link.
 class ProfilesControllerTest < ActionDispatch::IntegrationTest
-  setup do
-    @ana = users(:every_ana)
-    @cy = users(:every_cy)
+  def props = inertia.props.deep_symbolize_keys
+  def kind(slug) = props[:kinds].find { |kind| kind[:category][:slug] == slug }
+  def slugs(picks) = picks.map { |pick| [ pick[:tool][:slug], pick.dig(:model, :slug) ] }
+
+  # The same request path is in every not-found body (the page url and og:url), so bodies
+  # are compared with it masked.
+  def masked_body(path) = response.body.gsub(%r{#{Regexp.escape(path)}(?![\w-])}, "/PATH")
+
+  def not_found_answer(path)
+    get path
+    assert_response :not_found
+    [ inertia.component, inertia.props.deep_symbolize_keys, masked_body(path) ]
   end
 
-  test "a public profile renders for a signed-out visitor" do
+  # A member who finished onboarding and has ranked nothing.
+  def newcomer = add_person("newcomer", visibility: "only_me", team: true)
+
+  # Who sees what
+
+  test "a link profile renders for a visitor: the person, every kind, and the picks in rank order" do
     get "/ana"
 
     assert_response :success
     assert_inertia_component "profiles/show"
-    assert_inertia_props is_owner: false
-    assert_equal "ana", inertia.props[:profile][:handle]
-    assert inertia.props[:profile][:every_member]
-    assert_equal %w[coding knowledge-work], inertia.props[:categories].map { |category| category[:slug] }
+    assert_equal({ handle: "ana", name: "Ana Every", avatar_url: "https://every.to/avatars/ana.png" }, props[:person])
+    assert_equal 2, props[:ranked_count]
+    assert_equal %w[coding knowledge-work video], props[:kinds].map { |kind| kind[:category][:slug] }
+    assert_equal [ [ "cursor", "claude-opus-5-5" ], [ "claude-code", nil ] ], slugs(kind("coding")[:picks])
+    first = kind("coding")[:picks].first
+    assert_equal [ 1, "1m", "high" ], first.values_at(:rank, :context, :effort)
+    assert_empty kind("video")[:picks]
+    assert_equal "http://www.example.com/ana", props[:copy_url]
   end
 
-  test "a private profile is a 404 for a signed-out visitor, like an unknown handle (AE1)" do
-    get "/cy"
-    assert_response :not_found
+  test "the Profile carries no team notes, launches, recent changes, notes or owner flags" do
+    get "/ana"
 
-    get "/nobody-here"
-    assert_response :not_found
+    assert props[:kinds].all? { |kind| kind[:team_uses].nil? }
+    assert_empty props[:new_in_loadout]
+    assert_empty props.keys & %i[recent_changes categories is_owner profile]
   end
 
-  test "a private profile is a 404 for another signed-in member" do
-    sign_in_as @ana
+  test "bio is the Profile's alone: present here, absent from the read layer's person and from Home's Person view" do
+    users(:every_ana).update!(bio: "Writes code and essays.")
 
-    get "/cy"
+    get "/ana"
+    assert_equal "Writes code and essays.", props[:bio]
+    assert_not_includes all_keys(props.slice(:person, :kinds, :new_in_loadout, :you)), :bio
 
-    assert_response :not_found
+    sign_in_as users(:every_dee)
+    get root_path, params: { person: "ana" }
+    assert_equal "ana", props[:person][:person][:handle]
+    assert_not_includes all_keys(props[:person]), :bio
   end
 
-  test "the owner sees their private profile" do
-    sign_in_as @cy
+  test "no field on the page carries an email address" do
+    users(:every_ana).update!(bio: "Writes code and essays.")
+    sign_in_as users(:every_dee)
+
+    get "/ana"
+
+    assert_no_private_fields(props.slice(:person, :kinds, :new_in_loadout, :you, :copy_url))
+  end
+
+  test "a team profile opens for a team viewer, and a link profile for any signed-in member" do
+    sign_in_as users(:every_ana)
+    get "/dee"
+    assert_response :success
+    assert_equal [ [ "claude-code", "claude-opus-5-5" ], [ "cursor", "gpt-6-astra" ] ], slugs(kind("coding")[:picks])
+
+    sign_in_as users(:outside_eli)
+    get "/ana"
+    assert_response :success
+  end
+
+  test "the owner opens their own only-me profile" do
+    sign_in_as users(:every_cy)
 
     get "/cy"
 
     assert_response :success
-    assert_inertia_props is_owner: true
-    assert_equal false, inertia.props[:profile][:public]
-  end
-
-  test "after the owner goes public, the profile and its card render (AE1)" do
-    get "/cy"
-    assert_response :not_found
-
-    @cy.update!(public: true)
-
-    get "/cy"
-    assert_response :success
-    get "/cy/og.png"
-    assert_response :success
+    assert_equal [ [ "cursor", "claude-opus-5" ] ], slugs(kind("coding")[:picks])
+    assert_equal "200k", kind("coding")[:picks].first[:context]
   end
 
   test "handles are case-sensitive lowercase and reserved paths still route elsewhere" do
@@ -66,19 +102,206 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "link preview meta tags describe a public profile" do
+  # AE2, R13: nothing tells a hidden page from a handle nobody claimed
+
+  test "AE2: an only-me or team profile answers a visitor and a colleague exactly like an unknown handle" do
+    hidden = {
+      "/cy" => [ nil, users(:outside_eli), users(:every_fay), users(:every_dee) ],
+      "/dee" => [ nil, users(:outside_eli), users(:every_fay) ]
+    }
+
+    hidden.each do |path, viewers|
+      viewers.each do |viewer|
+        viewer ? sign_in_as(viewer) : sign_out
+        who = viewer&.email_address || "a visitor"
+        unknown = not_found_answer("/nobody-here")
+        answer = not_found_answer(path)
+
+        assert_equal "errors/not_found", answer.first, "#{path} for #{who}"
+        assert_equal unknown, answer, "#{path} for #{who}"
+        assert_not_includes response.body, User.find_by!(handle: path.delete_prefix("/")).name
+      end
+    end
+  end
+
+  test "AE2: a person who narrows their visibility disappears at once, and comes back when they share again" do
+    get "/ana"
+    assert_response :success
+
+    users(:every_ana).update!(visibility: "only_me")
+    assert_equal not_found_answer("/nobody-here"), not_found_answer("/ana")
+
+    users(:every_ana).update!(visibility: "link")
+    get "/ana"
+    assert_response :success
+  end
+
+  test "a signed-out team member on a team profile gets the not-found page, and sign-in brings them back to the profile" do
+    configure_every_oauth
+    https!
+    stub_every_token
+    stub_every_userinfo(every_payload("userinfo", user_id: "every-user-dee", email: "dee@every.to", name: "Dee Every", email_verified: true))
+
+    get "/dee"
+    assert_response :not_found
+    assert_inertia_component "errors/not_found"
+
+    get "/auth/every"
+    state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+    get "/auth/every/callback", params: { code: "authorization-code", state: state }
+
+    assert_redirected_to "https://www.example.com/dee"
+    follow_redirect!
+    assert_response :success
+    assert_inertia_component "profiles/show"
+    assert_equal "dee", props[:person][:handle]
+  ensure
+    restore_every_oauth
+  end
+
+  test "the way back is the page the visitor asked for, never an address they supplied, and an unknown handle sets it the same way" do
+    get "/dee", params: { return_to: "https://evil.example/steal", next: "https://evil.example/steal" }
+    assert_response :not_found
+    assert_not_includes inertia.props.to_json, "evil.example"
+    assert_equal [ "www.example.com", "/dee" ], URI(session[:return_to_after_authenticating]).then { |uri| [ uri.host, uri.path ] }
+
+    get "/nobody-here"
+    assert_equal "http://www.example.com/nobody-here", session[:return_to_after_authenticating]
+  end
+
+  # Empty profiles
+
+  test "a link profile with no picks renders the empty state and the site default image" do
+    add_person("newbie", visibility: "link", name: "Newbie Person")
+
+    get "/newbie"
+
+    assert_response :success
+    assert_equal 0, props[:ranked_count]
+    assert props[:kinds].all? { |kind| kind[:picks].empty? }
+    assert_select "meta[property='og:image'][content$='/og-default.png']"
+    assert_select "meta[property='og:image'][content*='/newbie/og.png']", count: 0
+    assert_select "meta[name=robots]", count: 0
+  end
+
+  test "a team profile with no picks renders the empty state for a team viewer" do
+    add_person("quiet", visibility: "team", team: true)
+    sign_in_as users(:every_dee)
+
+    get "/quiet"
+
+    assert_response :success
+    assert_equal 0, props[:ranked_count]
+  end
+
+  # Compare with mine
+
+  test "a signed-in member with picks can compare: their own picks by kind" do
+    sign_in_as users(:every_dee)
+
     get "/ana"
 
-    assert_select "title", text: "Ana Every's AI loadout"
-    assert_select "meta[property='og:title'][content=?]", "Ana Every's AI loadout"
-    assert_select "meta[property='og:description'][content*=?]", "Cursor with Claude Opus 5.5 for coding"
-    assert_select "meta[property='og:image'][content=?]", "http://www.example.com/ana/og.png?v=#{@ana.loadout_updated_at.to_i}"
+    assert props[:viewer_can_compare]
+    assert_equal %w[coding knowledge-work], props[:you].keys.map(&:to_s)
+    assert_equal [ [ "claude-code", "claude-opus-5-5" ], [ "cursor", "gpt-6-astra" ] ], slugs(props[:you][:coding])
+    assert_equal "medium", props[:you][:coding].first[:effort]
+  end
+
+  test "only the kinds the viewer ranked are in you" do
+    sign_in_as users(:outside_eli)
+
+    get "/ana"
+
+    assert_equal %w[coding video], props[:you].keys.map(&:to_s)
+  end
+
+  test "a visitor, a member with nothing ranked and the owner cannot compare" do
+    get "/ana"
+    assert_equal [ false, {} ], [ props[:viewer_can_compare], props[:you] ]
+
+    sign_in_as newcomer
+    get "/ana"
+    assert_equal [ false, {} ], [ props[:viewer_can_compare], props[:you] ]
+
+    sign_in_as users(:every_ana)
+    get "/ana"
+    assert_equal [ false, {} ], [ props[:viewer_can_compare], props[:you] ]
+  end
+
+  test "the viewer's pending picks are their own to compare with" do
+    secret = add_tool("Secret Tool", status: "pending")
+    add_pick(users(:every_dee), :video, 1, secret)
+    sign_in_as users(:every_dee)
+
+    get "/ana"
+
+    pick = props[:you][:video].first
+    assert_equal [ "secret-tool", true ], [ pick[:tool][:slug], pick[:tool][:pending] ]
+  end
+
+  # Pending catalog items
+
+  test "a pick on a pending tool or model shows to its owner, marked, and to nobody else" do
+    secret_tool = add_tool("Secret Tool", status: "pending")
+    secret_model = add_model("Secret Model", status: "pending")
+    add_pick(users(:every_ana), :coding, 3, secret_tool)
+    add_pick(users(:every_ana), :video, 1, tools(:runway), model: secret_model)
+
+    get "/ana"
+    assert_equal [ [ "cursor", "claude-opus-5-5" ], [ "claude-code", nil ] ], slugs(kind("coding")[:picks])
+    assert_equal [ [ "runway", nil ] ], slugs(kind("video")[:picks])
+    assert_not_includes response.body, "Secret"
+
+    sign_in_as users(:every_dee)
+    get "/ana"
+    assert_not_includes response.body, "Secret"
+
+    sign_in_as users(:every_ana)
+    get "/ana"
+    assert_equal [ "secret-tool", true ], kind("coding")[:picks].last[:tool].values_at(:slug, :pending)
+    assert_equal [ "secret-model", true ], kind("video")[:picks].first[:model].values_at(:slug, :pending)
+  end
+
+  # KTD19
+
+  test "responses are private, revalidated and vary by cookie, found or not" do
+    [ "/ana", "/nobody-here" ].each do |path|
+      get path
+
+      cache_control = response.headers["Cache-Control"].split(/,\s*/)
+      assert_includes cache_control, "private", path
+      assert_includes cache_control, "must-revalidate", path
+      assert_not_includes cache_control, "public", path
+      assert_includes response.headers["Vary"].split(/,\s*/), "Cookie", path
+    end
+  end
+
+  # Link preview
+
+  test "link preview meta tags describe a link-visible profile and point at its card" do
+    get "/ana"
+
+    assert_select "title", text: "Ana Every's loadout"
+    assert_select "meta[property='og:title'][content=?]", "Ana Every's loadout"
+    assert_select "meta[property='og:description'][content=?]",
+      "Ana Every's top picks: Cursor with Claude Opus 5.5 for coding and Claude with Claude Opus 5.5 for knowledge work."
+    assert_select "meta[property='og:image'][content=?]", "http://www.example.com/ana/og.png?v=#{users(:every_ana).loadout_updated_at.to_i}"
+    assert_select "meta[property='og:url'][content=?]", "http://www.example.com/ana"
     assert_select "meta[name='twitter:card'][content='summary_large_image']"
     assert_select "meta[name=robots]", count: 0
   end
 
-  test "a private profile is noindex and does not point at its card" do
-    sign_in_as @cy
+  test "a profile shared with the team is noindex and does not point at a card" do
+    sign_in_as users(:every_ana)
+
+    get "/dee"
+
+    assert_select "meta[name=robots][content=noindex]"
+    assert_select "meta[property='og:image'][content$='/og-default.png']"
+  end
+
+  test "an only-me profile is noindex and does not point at a card, even for its owner" do
+    sign_in_as users(:every_cy)
 
     get "/cy"
 
@@ -86,26 +309,21 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "meta[property='og:image'][content$='/og-default.png']"
   end
 
-  test "recent changes tell the story of a model switch from an agent (AE2)" do
-    Loadouts::Update.call(
-      user: @ana,
-      operations: [ { op: "replace_category", category: "coding", picks: [ { tool: "cursor", model: "claude-opus-5", primary: true } ] } ],
-      source: "web"
-    )
-    result = Loadouts::Update.call(
-      user: @ana,
-      operations: [ { op: "replace_category", category: "coding", picks: [ { tool: "cursor", model: "claude-opus-5-5", primary: true } ] } ],
-      source: "mcp", client_name: "Claude Code"
-    )
-    assert_equal [ [ "added", "Claude Opus 5.5" ], [ "removed", "Claude Opus 5" ] ],
-      result.changes.reject { |change| change.action == "made_primary" }.map { |change| [ change.action, change.ai_model.name ] }.sort
-    assert result.changes.all? { |change| change.source == "mcp" && change.client_name == "Claude Code" }
+  test "the preview of a profile with no picks says so" do
+    add_person("newbie", visibility: "link", name: "Newbie Person")
 
+    get "/newbie"
+
+    assert_select "meta[property='og:description'][content=?]", "Newbie Person hasn't ranked their AI tools yet."
+  end
+
+  test "the preview does not depend on who is looking" do
+    tags = "meta[name=description], meta[property^='og:'], meta[name^='twitter:'], meta[name=robots]"
+    get "/ana"
+    visitor = css_select(tags).map(&:to_s)
+    sign_in_as users(:every_dee)
     get "/ana"
 
-    latest = inertia.props[:recent_changes].first
-    assert_equal "Switched coding model from Claude Opus 5 to Claude Opus 5.5 in Cursor", latest[:sentence]
-    assert_equal "Claude Code", latest[:client_name]
-    assert_operator inertia.props[:recent_changes].size, :<=, ProfilesController::RECENT_CHANGES
+    assert_equal visitor, css_select(tags).map(&:to_s)
   end
 end
