@@ -84,7 +84,8 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     entry = @ana.entries.find_by!(category: categories(:video))
     assert_equal [ 1, tools(:runway), nil, "1m", "low" ], [ entry.rank, entry.tool, entry.ai_model, entry.context, entry.effort ]
     assert_equal "web", @ana.entry_changes.order(:id).last.source
-    assert_equal "Saved.", flash[:notice]
+    assert_nil flash[:notice], "the editor shows a save on the slot, not in a banner"
+    assert_nil flash[:alert]
     assert_replays_to_entries @ana
   end
 
@@ -113,6 +114,14 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Nothing is ranked 1st for video/, flash[:alert])
   end
 
+  test "saving what the slot already holds says nothing changed" do
+    assert_no_difference -> { EntryChange.count } do
+      patch_operations({ op: "set_pick", category: "coding", rank: 2, tool: "claude-code" })
+    end
+
+    assert_equal "Nothing changed.", flash[:notice]
+  end
+
   test "no operations saves nothing" do
     patch loadout_path, params: {}, as: :json
 
@@ -139,7 +148,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     post confirm_loadout_suggestion_path(suggestion), headers: BACK, as: :json
 
     assert_redirected_to EDITOR
-    assert_equal "Confirmed.", flash[:notice]
+    assert_nil flash[:notice]
     entry = @ana.entries.find_by!(category: categories(:video))
     assert_equal [ 1, tools(:runway) ], [ entry.rank, entry.tool ]
     assert_equal "confirmed", suggestion.reload.status
@@ -152,7 +161,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
 
     post confirm_loadout_suggestion_path(suggestion), params: { rank: 2, expected: { tool: "claude-code", model: nil } }, headers: BACK, as: :json
 
-    assert_equal "Confirmed.", flash[:notice]
+    assert_nil flash[:alert]
     assert_equal %w[cursor runway windsurf], @ana.entries.where(category: categories(:coding)).order(:rank).map { |entry| entry.tool.slug }
   end
 
@@ -219,7 +228,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to EDITOR
     zed = Tool.find_by!(slug: "zed")
     assert_equal [ "Zed", "pending", @ana ], [ zed.name, zed.status, zed.created_by ]
-    assert_match(/Added Zed/, flash[:notice])
+    assert_nil flash[:notice]
     assert_equal [ true ], inertia_catalog_tools.select { |tool| tool[:slug] == "zed" }.pluck(:pending)
     assert_not @ana.entries.exists?(tool: zed), "adding an item never picks it"
 

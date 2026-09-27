@@ -3,7 +3,9 @@
 # The Rank editor for the signed-in member, and the web endpoints that write a
 # loadout. PATCH /loadout takes slot operations (Loadouts::Update); confirming and
 # dismissing an agent's suggestion are their own POST and DELETE, addressed by
-# suggestion id. All of them run as source "web": the member's own decisions.
+# suggestion id. All of them run as source "web": the member's own decisions. The
+# editor shows a save as it happens, on the slot, so a success carries no flash;
+# only a no-op ("Nothing changed.") and a refusal (the alert) do.
 class LoadoutsController < InertiaController
   SLOT_OPERATIONS = %w[set_pick remove_pick move_pick].freeze
   OPERATION_FIELDS = %i[op category rank tool model context effort direction].freeze
@@ -25,15 +27,15 @@ class LoadoutsController < InertiaController
     return redirect_back_or_to edit_loadout_path, status: :see_other, notice: "Nothing to save." if operations.empty?
     return redirect_back_or_to edit_loadout_path, status: :see_other, alert: "Use one of: #{SLOT_OPERATIONS.join(", ")}." unless operations.all? { |operation| SLOT_OPERATIONS.include?(operation["op"]) }
 
-    apply(operations, "Saved.")
+    apply(operations)
   end
 
   def confirm
-    apply([ { op: "confirm", suggestion_id: params[:id], rank: params[:rank], expected: expected_param } ], "Confirmed.")
+    apply([ { op: "confirm", suggestion_id: params[:id], rank: params[:rank], expected: expected_param } ])
   end
 
   def dismiss
-    apply([ { op: "dismiss", suggestion_id: params[:id] } ], "Removed the suggestion.")
+    apply([ { op: "dismiss", suggestion_id: params[:id] } ])
   end
 
   # "Add a tool or model": a name the catalog lacks becomes a pending item the member can
@@ -44,15 +46,15 @@ class LoadoutsController < InertiaController
     problem = item_problem(klass, name)
     return redirect_back_or_to edit_loadout_path, status: :see_other, inertia: { errors: { name: problem } } if problem
 
-    item = klass.resolve_or_suggest!(name, user: Current.user)
-    redirect_back_or_to edit_loadout_path, status: :see_other, notice: "Added #{item.name}. It shows up for you now and an admin reviews it."
+    klass.resolve_or_suggest!(name, user: Current.user)
+    redirect_back_or_to edit_loadout_path, status: :see_other
   end
 
   private
 
-  def apply(operations, notice)
+  def apply(operations)
     result = Loadouts::Update.call(user: Current.user, operations:, source: "web")
-    redirect_back_or_to edit_loadout_path, status: :see_other, notice: result.changes.any? ? notice : "Nothing changed."
+    redirect_back_or_to edit_loadout_path, status: :see_other, notice: ("Nothing changed." if result.changes.empty?)
   rescue Loadouts::Update::Error => e
     redirect_back_or_to edit_loadout_path, status: :see_other, alert: e.message
   end
