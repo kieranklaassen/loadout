@@ -1,10 +1,10 @@
 type Size = 'sm' | 'md' | 'lg' | 'xl'
 
 const SIZES: Record<Size, string> = {
-  sm: 'h-7 w-7 text-xs',
-  md: 'h-10 w-10 text-sm',
-  lg: 'h-16 w-16 text-xl',
-  xl: 'h-28 w-28 text-4xl',
+  sm: 'size-7 text-[13px]',
+  md: 'size-9 text-[13px]',
+  lg: 'size-16 text-xl',
+  xl: 'size-28 text-4xl',
 }
 
 export function initials(name: string) {
@@ -24,7 +24,7 @@ export default function Avatar({
   size?: Size
   className?: string
 }) {
-  const classes = `inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper-deep font-serif text-ink ring-1 ring-rule ${SIZES[size]} ${className}`
+  const classes = `inline-flex shrink-0 items-center justify-center overflow-hidden rounded-soft bg-raised font-mono text-fg-soft ring-1 ring-line ${SIZES[size]} ${className}`
   if (src) return <img src={src} alt="" className={`${classes} object-cover`} />
   return (
     <span aria-hidden="true" className={classes}>

@@ -3,16 +3,18 @@ import type { ComponentProps, ReactNode } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'blue'
 
+const PRIMARY = 'bg-sky text-on-light hover:bg-sky/85'
+
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-ink text-paper hover:bg-ink-soft shadow-[0_10px_24px_-14px_rgb(18_18_18/0.8)]',
-  secondary: 'bg-white text-ink ring-1 ring-rule hover:ring-ink/30',
-  ghost: 'text-ink hover:bg-ink/5',
-  blue: 'bg-every-blue text-white hover:bg-every-blue/90 shadow-[0_10px_24px_-14px_rgb(22_82_234/0.9)]',
+  primary: PRIMARY,
+  secondary: 'border border-line bg-panel text-fg hover:border-line-strong',
+  ghost: 'text-fg hover:bg-fg/5',
+  blue: PRIMARY, // v1 name for the primary button; U13 drops it with the last v1 page
 }
 
 export function buttonClasses(variant: Variant = 'primary', size: 'md' | 'lg' = 'md') {
   const sizing = size === 'lg' ? 'px-6 py-3.5 text-base' : 'px-4 py-2.5 text-sm'
-  return `inline-flex items-center justify-center gap-2 rounded-full font-medium transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${sizing} ${VARIANTS[variant]}`
+  return `inline-flex min-h-11 items-center justify-center gap-2 rounded-sharp font-semibold transition-colors md:min-h-0 disabled:pointer-events-none disabled:opacity-50 ${sizing} ${VARIANTS[variant]}`
 }
 
 type ButtonProps = ComponentProps<'button'> & { variant?: Variant; size?: 'md' | 'lg'; children: ReactNode }

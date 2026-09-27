@@ -11,5 +11,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./app/frontend/test/setup.ts'],
     include: ['app/frontend/**/*.{test,spec}.{ts,tsx}'],
+    // Vitest blanks CSS imports, raw ones included; test/styles.test.ts reads the app stylesheet's source.
+    css: { include: [/entrypoints\/application\.css/] },
   },
 })

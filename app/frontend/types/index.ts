@@ -10,13 +10,16 @@ export type CurrentUser = {
   avatar_url: string | null
   every_member: boolean
   admin: boolean
-  public: boolean
+  visibility: Visibility
+  email_verified: boolean
   onboarded: boolean
 }
 
 export type SharedProps = {
   current_user: CurrentUser | null
   flash: FlashData
+  /** Display host for links and the footer; read it through usePublicHost(). */
+  public_host?: string
 }
 
 /** A tool (Cursor, Claude Code, Runway) or a model (Claude Opus 5.5) as pages receive it. */
@@ -195,4 +198,67 @@ export type OauthAuthorizationParams = {
   state?: string
   resource?: string
   scope?: string
+}
+
+// Every dark redesign: shapes shared by several pages (plan Contracts). Page-specific
+// props live in their page file. The v1 types above stay until U13.
+
+export type Visibility = 'only_me' | 'team' | 'link'
+
+/** A tool or a model as the Every dark pages show it: `mark` is a key in assets/marks, or null for a serif initial. */
+export type MarkItem = {
+  slug: string
+  name: string
+  kind: CatalogKind
+  mark: string | null
+  pending: boolean
+}
+
+/** "N of M": one definition on every surface (R15). */
+export type Count = {
+  n: number
+  of: number
+}
+
+export type PickContext = '200k' | '1m'
+export type PickEffort = 'low' | 'medium' | 'high'
+
+/** One confirmed pick at rank 1 to 3. (Not `Pick`: that is a TypeScript utility type.) */
+export type RankedPick = {
+  rank: number
+  tool: MarkItem
+  model: MarkItem | null
+  context: PickContext | null
+  effort: PickEffort | null
+}
+
+/** An agent's proposed pick, waiting for its owner to confirm it in the Rank editor. */
+export type Suggestion = {
+  id: number
+  category: string
+  tool: MarkItem
+  model: MarkItem | null
+  context: PickContext | null
+  effort: PickEffort | null
+  slot_hint: number | null
+  replaces: { rank: number; tool: MarkItem; model: MarkItem | null } | null
+  suggested_by: string
+  suggested_at: string
+}
+
+/** A stretch of time the team's number-one tool and model stayed the same; `to` is null for the current era. */
+export type Era = {
+  from: string
+  to: string | null
+  tool: MarkItem
+  model: MarkItem
+}
+
+export type Launch = {
+  model: MarkItem
+  released_on: string
+  vibe_check_url: string
+  newest: boolean
+  adoption: Count
+  mostly_in: MarkItem | null
 }
