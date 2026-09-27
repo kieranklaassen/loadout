@@ -15,12 +15,14 @@ agent driving a signed-in user's tab can call them.
   returns a String or anything JSON-serializable; raising
   `ApplicationTool::Error` returns an `isError` result the agent can read.
 - **`ToolRegistry`** is the one list (`ToolRegistry::TOOLS`). Both surfaces read it:
-  - `ToolRegistry.mcp_server(user:)` → an `MCP::Server` for whatever MCP
-    transport the app mounts.
+  - `ToolRegistry.mcp_server(user:, source:, client_name:)` → an `MCP::Server`
+    for whatever MCP transport the app mounts (Loadout mounts it at `/mcp`).
+    `source` (`"mcp"` or `"webmcp"`) and `client_name` reach every tool and are
+    recorded on the changes it writes.
   - `ToolRegistry.manifest` → the `webmcp` shared Inertia prop
     (`{ endpoint, tools: [{ name, description, inputSchema, annotations }] }`),
     present only when signed in, `nil` otherwise.
-  - `ToolRegistry.call(name, arguments:, user:)` → runs a tool through that same
+  - `ToolRegistry.call(name, arguments:, user:, source:)` → runs a tool through that same
     `MCP::Server` (`tools/call`), so a browser call and an MCP call return the
     identical `CallToolResult`.
 - **`POST /webmcp/tools/:name`** (`WebmcpToolsController`) executes a tool for
@@ -60,7 +62,8 @@ signed-in user, so they use the session and a CSRF token.
 
 - `Gemfile`: `gem "mcp", "~> 1.6"`
 - `app/tools/application_tool.rb`, `app/tools/tool_registry.rb`,
-  `app/tools/whoami_tool.rb` (example; replace it)
+  and Loadout's tools (`list_categories`, `search_catalog`, `get_my_loadout`,
+  `update_loadout`, `get_recent_changes`)
 - `app/controllers/webmcp_tools_controller.rb`
 - `config/routes.rb`: the `webmcp_tool` route (`post "webmcp/tools/:name"`)
 - `app/controllers/inertia_controller.rb`: the `webmcp` `inertia_share`
@@ -110,7 +113,7 @@ can resolve a user from a request, mount one:
 # app/controllers/mcp_controller.rb — sketch; authenticate before this runs
 class McpController < ActionController::API
   def create
-    server = ToolRegistry.mcp_server(user: user_from_bearer_token)
+    server = ToolRegistry.mcp_server(user: user_from_bearer_token, source: "mcp")
     render json: server.handle_json(request.raw_post)
   end
 end
@@ -119,7 +122,7 @@ end
 ## Adopt into an existing app
 
 1. Add `gem "mcp", "~> 1.6"` and `bundle install`.
-2. Copy `app/tools/` (`application_tool.rb`, `tool_registry.rb`, `whoami_tool.rb`)
+2. Copy `app/tools/` (`application_tool.rb`, `tool_registry.rb`, and your tools)
    and `app/controllers/webmcp_tools_controller.rb`. If the app's session
    concern differs from the Rails 8 generator's `Authentication`, adapt
    `request_authentication` (must render 401 JSON) and `Current.session.user`.
@@ -143,9 +146,9 @@ end
 - `bin/rails test test/tools test/controllers/webmcp_tools_controller_test.rb test/integration/webmcp_test.rb test/generators/tool_generator_test.rb`
   and `npm run check` are green.
 - In Chrome with `chrome://flags/#enable-webmcp-testing` (or on an origin with
-  a trial token), sign in: DevTools → Application → WebMCP lists `whoami`, and
-  running it returns your email. Sign out and the list is empty.
-- Signed out, `curl -X POST localhost:<port>/webmcp/tools/whoami` answers
+  a trial token), sign in: DevTools → Application → WebMCP lists `get_my_loadout`, and
+  running it returns your loadout. Sign out and the list is empty.
+- Signed out, `curl -X POST localhost:<port>/webmcp/tools/get_my_loadout` answers
   `401` JSON.
 
 ## Gotchas

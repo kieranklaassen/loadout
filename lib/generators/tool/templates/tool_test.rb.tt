@@ -4,7 +4,7 @@ require "test_helper"
 
 class <%= class_name %>ToolTest < ActiveSupport::TestCase
   test "runs as the signed-in user" do
-    result = ToolRegistry.call("<%= tool_name %>", arguments: {}, user: users(:one))
+    result = ToolRegistry.call("<%= tool_name %>", arguments: {}, user: users(:one), source: "webmcp")
 
     assert_equal false, result[:isError], result[:content].first[:text]
   end

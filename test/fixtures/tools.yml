@@ -1,0 +1,48 @@
+cursor:
+  slug: cursor
+  name: Cursor
+  maker: Anysphere
+  hue: 220
+  monogram: Cu
+  status: approved
+  category_slugs: ["coding"]
+  position: 0
+
+claude_code:
+  slug: claude-code
+  name: Claude Code
+  maker: Anthropic
+  hue: 18
+  monogram: CC
+  status: approved
+  category_slugs: ["coding"]
+  position: 1
+
+claude:
+  slug: claude
+  name: Claude
+  maker: Anthropic
+  hue: 18
+  monogram: Cl
+  status: approved
+  category_slugs: ["knowledge-work"]
+  position: 2
+
+runway:
+  slug: runway
+  name: Runway
+  maker: Runway
+  hue: 345
+  monogram: Rw
+  status: approved
+  category_slugs: ["video"]
+  position: 3
+
+hidden_tool:
+  slug: old-thing
+  name: Old Thing
+  hue: 100
+  monogram: OT
+  status: hidden
+  category_slugs: []
+  position: 4

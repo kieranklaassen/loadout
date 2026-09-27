@@ -1,0 +1,12 @@
+{
+  "user_id": 4242,
+  "email": "bo@every.to",
+  "name": "Bo Every",
+  "first_name": "Bo",
+  "last_name": "Every",
+  "avatar_url": "https://every.to/avatars/bo.png",
+  "subscriber": true,
+  "tier": "all_access",
+  "viewer_state": "all_access",
+  "username": "bo"
+}

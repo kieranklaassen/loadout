@@ -1,0 +1,21 @@
+ana_cursor:
+  user: every_ana
+  category: coding
+  tool: cursor
+  ai_model: opus_5_5
+  primary: true
+
+ana_claude:
+  user: every_ana
+  category: knowledge_work
+  tool: claude
+  ai_model: opus_5_5
+  primary: true
+  note: My thinking partner.
+
+cy_cursor:
+  user: every_cy
+  category: coding
+  tool: cursor
+  ai_model: opus_5
+  primary: true

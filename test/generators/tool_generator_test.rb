@@ -23,7 +23,7 @@ class ToolGeneratorTest < Rails::Generators::TestCase
     end
     assert_file "test/tools/search_notes_tool_test.rb", /ToolRegistry\.call\("search_notes"/
     assert_file "app/tools/tool_registry.rb" do |content|
-      assert_match(/TOOLS = \[\n    SearchNotesTool,\n    WhoamiTool\n  \]/, content)
+      assert_match(/TOOLS = \[\n    SearchNotesTool,\n    ListCategoriesTool,/, content)
     end
 
     %w[app/tools/search_notes_tool.rb test/tools/search_notes_tool_test.rb app/tools/tool_registry.rb].each do |path|

@@ -10,7 +10,87 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_013702) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
+  create_table "ai_models", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "maker"
+    t.integer "hue", default: 220, null: false
+    t.string "monogram", null: false
+    t.string "status", default: "approved", null: false
+    t.json "category_slugs", default: [], null: false
+    t.integer "created_by_id"
+    t.integer "position", default: 0, null: false
+    t.string "family"
+    t.date "released_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "admin_edited_at"
+    t.index ["created_by_id"], name: "index_ai_models_on_created_by_id"
+    t.index ["slug"], name: "index_ai_models_on_slug", unique: true
+    t.index ["status"], name: "index_ai_models_on_status"
+  end
+
+  create_table "categories", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "blurb"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["slug"], name: "index_categories_on_slug", unique: true
+  end
+
+  create_table "entries", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "category_id", null: false
+    t.integer "tool_id", null: false
+    t.integer "ai_model_id"
+    t.string "note"
+    t.boolean "primary", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_entries_on_ai_model_id"
+    t.index ["category_id"], name: "index_entries_on_category_id"
+    t.index ["tool_id"], name: "index_entries_on_tool_id"
+    t.index ["user_id", "category_id", "tool_id", "ai_model_id"], name: "index_entries_uniqueness", unique: true
+    t.index ["user_id", "category_id", "tool_id"], name: "index_entries_uniqueness_without_model", unique: true, where: "ai_model_id IS NULL"
+    t.index ["user_id"], name: "index_entries_on_user_id"
+  end
+
+  create_table "entry_changes", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "category_id", null: false
+    t.integer "tool_id", null: false
+    t.integer "ai_model_id"
+    t.string "action", null: false
+    t.string "source", null: false
+    t.string "client_name"
+    t.json "details", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["ai_model_id"], name: "index_entry_changes_on_ai_model_id"
+    t.index ["category_id"], name: "index_entry_changes_on_category_id"
+    t.index ["tool_id"], name: "index_entry_changes_on_tool_id"
+    t.index ["user_id", "created_at"], name: "index_entry_changes_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_entry_changes_on_user_id"
+  end
+
+  create_table "flipper_features", force: :cascade do |t|
+    t.string "key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_flipper_features_on_key", unique: true
+  end
+
+  create_table "flipper_gates", force: :cascade do |t|
+    t.string "feature_key", null: false
+    t.string "key", null: false
+    t.text "value"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feature_key", "key", "value"], name: "index_flipper_gates_on_feature_key_and_key_and_value", unique: true
+  end
+
   create_table "geneva_drive_step_executions", force: :cascade do |t|
     t.datetime "canceled_at"
     t.datetime "completed_at"
@@ -63,6 +143,59 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_013702) do
     t.index ["type"], name: "index_geneva_drive_workflows_on_type"
   end
 
+  create_table "oauth_authorization_codes", force: :cascade do |t|
+    t.string "code_digest", null: false
+    t.integer "oauth_client_id", null: false
+    t.integer "user_id", null: false
+    t.integer "oauth_grant_id"
+    t.string "redirect_uri", null: false
+    t.string "code_challenge", null: false
+    t.string "resource", null: false
+    t.string "scope", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code_digest"], name: "index_oauth_authorization_codes_on_code_digest", unique: true
+    t.index ["oauth_client_id"], name: "index_oauth_authorization_codes_on_oauth_client_id"
+    t.index ["oauth_grant_id"], name: "index_oauth_authorization_codes_on_oauth_grant_id"
+    t.index ["user_id"], name: "index_oauth_authorization_codes_on_user_id"
+  end
+
+  create_table "oauth_clients", force: :cascade do |t|
+    t.string "client_id", null: false
+    t.string "client_name", null: false
+    t.json "redirect_uris", default: [], null: false
+    t.string "software_id"
+    t.string "software_version"
+    t.string "client_uri"
+    t.string "logo_uri"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_oauth_clients_on_client_id", unique: true
+  end
+
+  create_table "oauth_grants", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "oauth_client_id", null: false
+    t.string "resource", null: false
+    t.string "scope", null: false
+    t.string "access_digest", null: false
+    t.datetime "access_expires_at", null: false
+    t.string "refresh_digest", null: false
+    t.datetime "refresh_expires_at", null: false
+    t.string "previous_refresh_digest"
+    t.datetime "revoked_at"
+    t.datetime "last_used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_digest"], name: "index_oauth_grants_on_access_digest", unique: true
+    t.index ["oauth_client_id"], name: "index_oauth_grants_on_oauth_client_id"
+    t.index ["previous_refresh_digest"], name: "index_oauth_grants_on_previous_refresh_digest"
+    t.index ["refresh_digest"], name: "index_oauth_grants_on_refresh_digest", unique: true
+    t.index ["user_id"], name: "index_oauth_grants_on_user_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
@@ -72,14 +205,57 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_013702) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "tools", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.string "maker"
+    t.integer "hue", default: 220, null: false
+    t.string "monogram", null: false
+    t.string "status", default: "approved", null: false
+    t.json "category_slugs", default: [], null: false
+    t.integer "created_by_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "admin_edited_at"
+    t.index ["created_by_id"], name: "index_tools_on_created_by_id"
+    t.index ["slug"], name: "index_tools_on_slug", unique: true
+    t.index ["status"], name: "index_tools_on_status"
+  end
+
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email_address", null: false
-    t.string "password_digest", null: false
     t.datetime "updated_at", null: false
+    t.string "every_user_id"
+    t.string "name"
+    t.string "avatar_url"
+    t.string "handle"
+    t.string "bio"
+    t.boolean "public", default: false, null: false
+    t.boolean "admin", default: false, null: false
+    t.datetime "loadout_updated_at"
+    t.datetime "onboarded_at"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.index ["every_user_id"], name: "index_users_on_every_user_id", unique: true
+    t.index ["handle"], name: "index_users_on_handle", unique: true
   end
 
+  add_foreign_key "ai_models", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "entries", "ai_models"
+  add_foreign_key "entries", "categories"
+  add_foreign_key "entries", "tools"
+  add_foreign_key "entries", "users", on_delete: :cascade
+  add_foreign_key "entry_changes", "ai_models"
+  add_foreign_key "entry_changes", "categories"
+  add_foreign_key "entry_changes", "tools"
+  add_foreign_key "entry_changes", "users", on_delete: :cascade
   add_foreign_key "geneva_drive_step_executions", "geneva_drive_workflows", column: "workflow_id", on_delete: :cascade
+  add_foreign_key "oauth_authorization_codes", "oauth_clients"
+  add_foreign_key "oauth_authorization_codes", "oauth_grants"
+  add_foreign_key "oauth_authorization_codes", "users"
+  add_foreign_key "oauth_grants", "oauth_clients"
+  add_foreign_key "oauth_grants", "users"
   add_foreign_key "sessions", "users"
+  add_foreign_key "tools", "users", column: "created_by_id", on_delete: :nullify
 end

@@ -5,7 +5,7 @@ require "test_helper"
 class WebmcpTest < ActionDispatch::IntegrationTest
   test "signed-in pages share the ToolRegistry manifest as the webmcp prop" do
     sign_in_as(users(:one))
-    get root_path
+    get "/welcome"
 
     assert_equal ToolRegistry.manifest.deep_stringify_keys, inertia.props[:webmcp].deep_stringify_keys
   end

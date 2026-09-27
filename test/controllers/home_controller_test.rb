@@ -1,25 +1,27 @@
-# frozen_string_literal: true
-
 require "test_helper"
 
 class HomeControllerTest < ActionDispatch::IntegrationTest
-  test "GET / renders the home/index Inertia component" do
+  test "signed-out visitors get the landing page" do
     get root_path
 
     assert_response :success
     assert_inertia_component "home/index"
+    assert_equal [ "ana" ], inertia.props[:featured].map { |person| person[:handle] }, "only public profiles are featured"
   end
 
-  test "the home page passes the name prop" do
+  test "an onboarded member goes to their profile" do
+    sign_in_as users(:every_ana)
+
     get root_path
 
-    assert_inertia_props({ name: "Compound Stack" })
+    assert_redirected_to "/ana"
   end
 
-  test "InertiaController shares flash and locale with every page" do
+  test "a member without a handle goes to onboarding" do
+    sign_in_as users(:one)
+
     get root_path
 
-    assert inertia.props.key?("flash"), "flash should be shared on every Inertia page"
-    assert_inertia_props({ locale: "en" })
+    assert_redirected_to "/welcome"
   end
 end

@@ -3,7 +3,7 @@
   <head>
     <%# App identity comes from config/initializers/pwa.rb (pwa module) %>
     <% pwa = Rails.application.config.x.pwa %>
-    <title data-inertia><%= content_for(:title) || pwa.name %></title>
+    <title data-inertia><%= content_for(:title) || @page_meta&.dig(:title) || pwa.name %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="<%= pwa.name %>">
@@ -16,6 +16,7 @@
       <meta http-equiv="origin-trial" content="<%= token %>">
     <% end %>
 
+    <%= render "layouts/meta", meta: page_meta %>
     <%= yield :head %>
 
     <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
@@ -44,7 +45,8 @@
 
   </head>
 
-  <body>
+  <body class="bg-paper text-ink antialiased">
     <%= yield %>
+    <%= flipper_flags_script_tag %>
   </body>
 </html>

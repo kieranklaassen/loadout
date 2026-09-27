@@ -25,7 +25,7 @@ function navigate(props: Record<string, unknown>) {
 const manifest: WebmcpManifest = {
   endpoint: '/webmcp/tools',
   tools: [
-    { name: 'whoami', description: 'Who am I', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
+    { name: 'get_my_loadout', description: 'Reads my loadout', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
     { name: 'list_notes', description: 'List notes', inputSchema: { type: 'object' } },
   ],
 }
@@ -46,7 +46,7 @@ describe('WebmcpProvider', () => {
       </StrictMode>,
     )
 
-    expect([...stub.tools.keys()].sort()).toEqual(['list_notes', 'whoami'])
+    expect([...stub.tools.keys()].sort()).toEqual(['get_my_loadout', 'list_notes'])
     // StrictMode mounts twice; the first registration is aborted before the second.
     expect(register).toHaveBeenCalledTimes(4)
   })

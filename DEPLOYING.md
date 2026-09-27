@@ -20,6 +20,13 @@ silently reusing another app's config.
    export KAMAL_BUILDER_ARCH=amd64
    export KAMAL_SSH_USER=deploy
 
+   # Loadout (required).
+   export PUBLIC_BASE_URL=https://loadout.every.to
+   export EVERY_OAUTH_BASE_URL=https://every.to
+   export EVERY_OAUTH_CLIENT_ID=...       # Every OAuth client, redirect URI https://loadout.every.to/auth/every/callback
+   export EVERY_OAUTH_CLIENT_SECRET=...
+   export ADMIN_EMAILS=kieran@every.to
+
    # Optional — sensible defaults.
    # export KAMAL_REGISTRY_SERVER=ghcr.io
    # export RIFFREC_ENDPOINT=https://riffrec.example.com   # blank → capture off
@@ -35,6 +42,12 @@ silently reusing another app's config.
    ```
 
    Commit the new `credentials.yml.enc`; the key stays untracked.
+
+## DNS and Every OAuth (one time, before `kamal setup`)
+
+- Add an `A` record: `loadout.every.to` pointing at the server's IPv4 address (plus `AAAA` for IPv6 if present). kamal-proxy gets the certificate once DNS resolves.
+- Register an Every OAuth client with redirect URI `https://loadout.every.to/auth/every/callback` and scope `basic_profile`.
+- MCP clients discover the authorization server at `https://loadout.every.to/.well-known/oauth-authorization-server`. Nothing to register; clients self-register.
 
 ## Deploy
 

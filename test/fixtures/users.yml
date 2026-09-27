@@ -1,10 +1,24 @@
-<%# Plaintext for these fixtures is "Secret-Passw0rd" (>= MINIMUM_PASSWORD_LENGTH). %>
-<% password_digest = BCrypt::Password.create("Secret-Passw0rd") %>
-
 one:
   email_address: one@example.com
-  password_digest: <%= password_digest %>
 
 two:
   email_address: two@example.com
-  password_digest: <%= password_digest %>
+
+every_ana:
+  email_address: ana@every.to
+  every_user_id: every-user-ana
+  name: Ana Every
+  avatar_url: https://every.to/avatars/ana.png
+  handle: ana
+  public: true
+  loadout_updated_at: <%= 1.day.ago.to_fs(:db) %>
+  onboarded_at: <%= 2.days.ago.to_fs(:db) %>
+
+every_cy:
+  email_address: cy@every.to
+  every_user_id: every-user-cy
+  name: Cy Every
+  handle: cy
+  public: false
+  loadout_updated_at: <%= 1.day.ago.to_fs(:db) %>
+  onboarded_at: <%= 2.days.ago.to_fs(:db) %>

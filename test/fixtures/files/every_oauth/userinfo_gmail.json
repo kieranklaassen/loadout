@@ -1,0 +1,12 @@
+{
+  "user_id": 5151,
+  "email": "someone@gmail.com",
+  "name": "Some One",
+  "first_name": "Some",
+  "last_name": "One",
+  "avatar_url": null,
+  "subscriber": false,
+  "tier": "free",
+  "viewer_state": "free",
+  "username": "someone"
+}

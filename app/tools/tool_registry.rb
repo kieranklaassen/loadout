@@ -2,8 +2,8 @@
 
 # The one list of agent tools (docs/modules/webmcp.md). Both surfaces read it:
 #
-# - MCP clients: `ToolRegistry.mcp_server(user:)` is an MCP::Server for whatever
-#   transport the app mounts.
+# - MCP clients: `ToolRegistry.mcp_server(user:, source: "mcp", client_name:)`
+#   is the MCP::Server McpController mounts on Streamable HTTP.
 # - WebMCP browser agents: `ToolRegistry.manifest` is the shared Inertia prop the
 #   page registers on the browser's model context, and `ToolRegistry.call` runs
 #   a registered tool for WebmcpToolsController through that same MCP::Server,
@@ -14,11 +14,23 @@
 # tool nothing had referenced yet. `bin/rails g tool Name` appends here.
 module ToolRegistry
   TOOLS = [
-    WhoamiTool
+    ListCategoriesTool,
+    SearchCatalogTool,
+    GetMyLoadoutTool,
+    UpdateLoadoutTool,
+    GetRecentChangesTool
   ].freeze
 
   # Must match the `webmcp_tool` route in config/routes.rb.
   ENDPOINT = "/webmcp/tools"
+
+  INSTRUCTIONS = <<~TEXT.squish
+    Loadout is a profile of the AI tools and models a member uses for each kind of work
+    (coding, knowledge work, writing, research, image, video, and more). You act for the
+    signed-in member. Read their loadout with get_my_loadout, find catalog slugs with
+    search_catalog, and change it with update_loadout. Ask the member before you guess:
+    only record tools and models they confirm they use. Tell them what you changed.
+  TEXT
 
   module_function
 
@@ -30,11 +42,14 @@ module ToolRegistry
     TOOLS.find { |tool| tool.tool_name == name }
   end
 
-  def mcp_server(user:)
+  # `source` is "mcp" or "webmcp"; `client_name` names the OAuth client over MCP.
+  # Both are recorded on every change a tool writes.
+  def mcp_server(user:, source:, client_name: nil)
     MCP::Server.new(
       name: Rails.application.class.module_parent_name.underscore,
+      instructions: INSTRUCTIONS,
       tools: TOOLS,
-      server_context: { user: }
+      server_context: { user:, source:, client_name: }
     )
   end
 
@@ -49,10 +64,10 @@ module ToolRegistry
 
   # Returns the MCP `CallToolResult` hash (`content`, `isError`), or nil when no
   # tool has that name. Argument validation failures are `isError` results.
-  def call(name, arguments:, user:)
+  def call(name, arguments:, user:, source:, client_name: nil)
     return unless find(name)
 
-    response = mcp_server(user:).handle(
+    response = mcp_server(user:, source:, client_name:).handle(
       { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name:, arguments: } }
     )
     response[:result] || error_result(response.dig(:error, :message) || "Tool call failed")
