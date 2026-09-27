@@ -124,6 +124,15 @@ class UserTest < ActiveSupport::TestCase
     assert_not_includes User.visible_to(nil), person
   end
 
+  test "shared? is true when anyone besides the owner may open the page" do
+    assert users(:every_ana).shared?
+    assert users(:every_dee).shared?
+    assert_not users(:every_cy).shared?
+
+    users(:every_ana).update_column(:visibility, "everyone")
+    assert_not users(:every_ana).shared?, "an unknown value shares with no one"
+  end
+
   test "a team member needs a verified address, so an unverified @every.to viewer sees only link pages" do
     unverified = users(:every_fay)
 

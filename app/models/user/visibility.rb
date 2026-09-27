@@ -39,6 +39,11 @@ module User::Visibility
     viewer == self || self.class.levels_visible_to(viewer).include?(visibility)
   end
 
+  # Whether anyone besides the owner may open this page (false for only me and unknown values).
+  def shared?
+    SHARING_LEVELS.include?(visibility)
+  end
+
   private
 
   def record_visibility_period
