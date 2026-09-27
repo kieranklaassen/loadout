@@ -173,7 +173,7 @@ function Meta({ item }: { item: AdminCatalogItem }) {
   const added = formatDate(item.created_at, { month: 'short', day: 'numeric' })
   return (
     <p className="font-mono text-caption text-fg-muted">
-      {kindLabel(item.kind)}
+      {kindLabel(item.kind)} · {item.slug}
       {item.created_by && (
         <>
           {' '}
@@ -188,12 +188,10 @@ function Meta({ item }: { item: AdminCatalogItem }) {
 function PendingCard({ item, targets }: { item: AdminCatalogItem; targets: MergeTarget[] }) {
   return (
     <li className="panel p-5">
-      <div className="mb-4 flex items-start gap-3">
+      <div className="mb-4 flex flex-wrap items-start gap-3">
         <Mark item={item} size="lg" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-fg">
-            {item.name} <span className="font-mono text-caption font-normal text-fg-muted">{item.slug}</span>
-          </p>
+        <div className="min-w-0 flex-1 basis-40">
+          <p className="truncate font-medium text-fg">{item.name}</p>
           <Meta item={item} />
         </div>
         <StatusChip status={item.status} />
