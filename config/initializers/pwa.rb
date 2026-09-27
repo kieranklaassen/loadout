@@ -9,5 +9,5 @@
 Rails.application.config.x.pwa.name = "Loadout"
 Rails.application.config.x.pwa.short_name = "Loadout"
 Rails.application.config.x.pwa.description = "The AI tools and models people actually use, one profile at a time."
-Rails.application.config.x.pwa.theme_color = "#FAF8F3"
-Rails.application.config.x.pwa.background_color = "#FAF8F3"
+Rails.application.config.x.pwa.theme_color = "#020202"
+Rails.application.config.x.pwa.background_color = "#020202"

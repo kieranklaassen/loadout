@@ -9,6 +9,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, width=device-width">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#020202">
 
     <style>
 
@@ -25,8 +27,10 @@
       }
 
       body {
-        background: #FFF;
-        color: #261B23;
+        background-color: #020202;
+        background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.07) 0 1.5px, transparent 2px);
+        background-size: 28px 28px;
+        color: #fdfaf7;
         display: grid;
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Aptos, Roboto, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         font-size: clamp(1rem, 2.5vw, 2rem);
@@ -42,26 +46,11 @@
       }
 
       #error-description {
-        fill: #d30001;
+        fill: #fdfaf7;
       }
 
       #error-id {
-        fill: #f0eff0;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        body {
-          background: #101010;
-          color: #e0e0e0;
-        }
-
-        #error-description {
-          fill: #FF6161;
-        }
-
-        #error-id {
-          fill: #2c2c2c;
-        }
+        fill: #2a2a2a;
       }
 
       a {
@@ -102,7 +91,12 @@
       }
 
       main article p {
-        font-size: 75%;
+        color: #d0d0d0;
+        font-size: 90%;
+      }
+
+      main article strong {
+        color: #fdfaf7;
       }
 
       main article br {
