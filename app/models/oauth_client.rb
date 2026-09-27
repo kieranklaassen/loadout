@@ -10,7 +10,9 @@ class OauthClient < ApplicationRecord
   has_many :oauth_authorization_codes, dependent: :delete_all
   has_many :oauth_grants, dependent: :delete_all
 
-  normalizes :client_name, with: ->(name) { name.gsub(/[[:cntrl:]]/, " ").squish }
+  # The name is shown to members and agents, so control and format characters
+  # (bidi overrides, zero-width joiners) are dropped: they can make one name look like another.
+  normalizes :client_name, with: ->(name) { name.gsub(/[[:cntrl:]]/, " ").gsub(/\p{Cf}/, "").squish }
 
   before_validation -> { self.client_id ||= SecureRandom.urlsafe_base64(24) }, on: :create
 

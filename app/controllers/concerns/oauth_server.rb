@@ -8,7 +8,7 @@ module OauthServer
 
   private
     def public_base_url
-      Rails.application.config.x.public_base_url.presence || request.base_url
+      LoadoutHost.base_url(request)
     end
 
     def mcp_resource_url

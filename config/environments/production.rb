@@ -79,12 +79,14 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Enable DNS rebinding protection and other `Host` header attacks: only the public
+  # host may be served. The health check is exempt because the proxy calls /up on
+  # the container by IP. PUBLIC_BASE_URL is required at boot, except while the image
+  # build precompiles assets with a dummy secret.
+  if ENV["PUBLIC_BASE_URL"].present?
+    config.hosts = [ URI.parse(ENV["PUBLIC_BASE_URL"]).host ]
+    config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  elsif ENV["SECRET_KEY_BASE_DUMMY"].blank?
+    raise "PUBLIC_BASE_URL is required in production, for example https://loadout.every.to."
+  end
 end

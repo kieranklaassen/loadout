@@ -28,4 +28,12 @@ class OauthClientTest < ActiveSupport::TestCase
   test "client ids are random and unique" do
     assert_not_equal client("https://a.example/cb").client_id, client("https://a.example/cb").client_id
   end
+
+  test "client names lose control and format characters, so one name cannot pose as another" do
+    spoofed = "Cla\u200Dude \u202Edoce\u202C\u2066\uFEFF\u00AD Code\t\u0007"
+    agent = OauthClient.create!(client_name: spoofed, redirect_uris: [ "https://a.example/cb" ])
+
+    assert_equal "Claude doce Code", agent.client_name
+    assert_equal "Claude Code", OauthClient.create!(client_name: "  Claude \u200B Code ", redirect_uris: [ "https://a.example/cb" ]).client_name
+  end
 end

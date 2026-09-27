@@ -41,6 +41,9 @@ class InertiaController < ApplicationController
   # non-null and unregisters them when it turns null (sign-out).
   inertia_share webmcp: -> { ToolRegistry.manifest if authenticated? }
 
+  # The host printed on pages and cards ("loadout.every.to"), from configuration.
+  inertia_share public_host: -> { LoadoutHost.host }
+
   private
     def require_onboarding
       return unless request.get? && authenticated?
@@ -57,7 +60,8 @@ class InertiaController < ApplicationController
         avatar_url: user.avatar_url,
         every_member: user.every_member?,
         admin: user.admin?,
-        public: user.public?,
+        visibility: user.visibility,
+        email_verified: user.email_verified?,
         onboarded: user.onboarded?
       }
     end
