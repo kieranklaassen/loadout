@@ -1,12 +1,20 @@
 # The seeded catalog (Catalog::Sync, run by db:seed and on every deploy).
 #
-# Keyed by slug. Sync creates missing items and refreshes names, makers, hues,
+# Keyed by slug. Sync creates missing items and refreshes names, makers, marks,
 # and hints on seeded items, but never un-hides an item an admin hid and never
 # touches member-suggested items. Members add anything missing while picking.
+# Sync never deletes: a kind or item removed here has to be removed by a migration.
 #
-# hue: 0-359, the tile colour of the typographic mark (no third-party logos).
+# mark: the real single-colour mark to show, named by its file in
+#   app/frontend/assets/marks/ without the .svg (claude, claudecode, cursor,
+#   openai, perplexity, googlegemini, elevenlabs, suno, rive, google). Leave it
+#   out and the item shows the first letter of its name in the serif face.
+# hue, monogram: legacy columns the app no longer draws. monogram is required;
+#   quote it, because YAML reads a bare No, On or Off as a boolean.
 # categories: where the item is suggested first in pickers.
 # Models: list each family newest first; position within a family is recency.
+#   released_on and vibe_check_url (an https link on VIBE_CHECK_HOSTS) are admin-owned:
+#   Sync only fills them while they are blank on a model no admin has edited.
 
 categories:
   - { slug: coding, name: Coding, blurb: "Writing, reviewing, and shipping code." }
@@ -20,13 +28,12 @@ categories:
   - { slug: text-to-speech, name: Text to speech, blurb: "Voices, narration, and dubbing." }
   - { slug: speech-to-text, name: Speech to text, blurb: "Transcription and dictation." }
   - { slug: music, name: Music, blurb: "Songs, scores, and sound." }
-  - { slug: other, name: Other, blurb: "Everything else you use AI for." }
 
 tools:
   # Coding
-  - { slug: cursor, name: Cursor, maker: Anysphere, hue: 220, monogram: Cu, categories: [coding] }
-  - { slug: claude-code, name: Claude Code, maker: Anthropic, hue: 18, monogram: CC, categories: [coding, knowledge-work] }
-  - { slug: codex, name: Codex, maker: OpenAI, hue: 160, monogram: Cx, categories: [coding] }
+  - { slug: cursor, name: Cursor, maker: Anysphere, mark: cursor, hue: 220, monogram: Cu, categories: [coding] }
+  - { slug: claude-code, name: Claude Code, maker: Anthropic, mark: claudecode, hue: 18, monogram: CC, categories: [coding, knowledge-work] }
+  - { slug: codex, name: Codex, maker: OpenAI, mark: openai, hue: 160, monogram: Cx, categories: [coding] }
   - { slug: github-copilot, name: GitHub Copilot, maker: GitHub, hue: 265, monogram: GH, categories: [coding] }
   - { slug: windsurf, name: Windsurf, maker: Cognition, hue: 175, monogram: Ws, categories: [coding] }
   - { slug: zed, name: Zed, maker: Zed Industries, hue: 210, monogram: Ze, categories: [coding] }
@@ -36,12 +43,12 @@ tools:
   - { slug: v0, name: v0, maker: Vercel, hue: 0, monogram: v0, categories: [coding] }
   - { slug: lovable, name: Lovable, maker: Lovable, hue: 340, monogram: Lo, categories: [coding] }
   # Assistants
-  - { slug: claude, name: Claude, maker: Anthropic, hue: 18, monogram: Cl, categories: [knowledge-work, writing, research] }
-  - { slug: chatgpt, name: ChatGPT, maker: OpenAI, hue: 160, monogram: GP, categories: [knowledge-work, writing, research] }
-  - { slug: gemini, name: Gemini, maker: Google, hue: 225, monogram: Ge, categories: [knowledge-work, research] }
+  - { slug: claude, name: Claude, maker: Anthropic, mark: claude, hue: 18, monogram: Cl, categories: [knowledge-work, writing, research] }
+  - { slug: chatgpt, name: ChatGPT, maker: OpenAI, mark: openai, hue: 160, monogram: GP, categories: [knowledge-work, writing, research] }
+  - { slug: gemini, name: Gemini, maker: Google, mark: googlegemini, hue: 225, monogram: Ge, categories: [knowledge-work, research] }
   - { slug: grok, name: Grok, maker: xAI, hue: 0, monogram: Gk, categories: [knowledge-work, research] }
-  - { slug: perplexity, name: Perplexity, maker: Perplexity, hue: 185, monogram: Px, categories: [research] }
-  - { slug: notebooklm, name: NotebookLM, maker: Google, hue: 40, monogram: NL, categories: [research, knowledge-work] }
+  - { slug: perplexity, name: Perplexity, maker: Perplexity, mark: perplexity, hue: 185, monogram: Px, categories: [research] }
+  - { slug: notebooklm, name: NotebookLM, maker: Google, mark: google, hue: 40, monogram: NL, categories: [research, knowledge-work] }
   - { slug: cora, name: Cora, maker: Every, hue: 205, monogram: Co, categories: [knowledge-work] }
   - { slug: spiral, name: Spiral, maker: Every, hue: 280, monogram: Sp, categories: [writing] }
   - { slug: sparkle, name: Sparkle, maker: Every, hue: 50, monogram: Sk, categories: [knowledge-work] }
@@ -51,77 +58,77 @@ tools:
   - { slug: notion-ai, name: Notion AI, maker: Notion, hue: 0, monogram: "No", categories: [knowledge-work, writing] }
   # Classification and APIs
   - { slug: typesafe-jev, name: TypeSafe Jev, maker: TypeSafe, hue: 255, monogram: Jv, categories: [classification] }
-  - { slug: openai-api, name: OpenAI API, maker: OpenAI, hue: 160, monogram: OA, categories: [classification] }
-  - { slug: anthropic-api, name: Anthropic API, maker: Anthropic, hue: 18, monogram: AA, categories: [classification] }
-  - { slug: gemini-api, name: Gemini API, maker: Google, hue: 225, monogram: GA, categories: [classification] }
+  - { slug: openai-api, name: OpenAI API, maker: OpenAI, mark: openai, hue: 160, monogram: OA, categories: [classification] }
+  - { slug: anthropic-api, name: Anthropic API, maker: Anthropic, mark: claude, hue: 18, monogram: AA, categories: [classification] }
+  - { slug: gemini-api, name: Gemini API, maker: Google, mark: googlegemini, hue: 225, monogram: GA, categories: [classification] }
   - { slug: openrouter, name: OpenRouter, maker: OpenRouter, hue: 235, monogram: OR, categories: [classification] }
   # Image
   - { slug: midjourney, name: Midjourney, maker: Midjourney, hue: 250, monogram: MJ, categories: [image] }
-  - { slug: chatgpt-images, name: ChatGPT Images, maker: OpenAI, hue: 160, monogram: CI, categories: [image] }
-  - { slug: nano-banana, name: Nano Banana, maker: Google, hue: 52, monogram: NB, categories: [image] }
+  - { slug: chatgpt-images, name: ChatGPT Images, maker: OpenAI, mark: openai, hue: 160, monogram: CI, categories: [image] }
+  - { slug: nano-banana, name: Nano Banana, maker: Google, mark: google, hue: 52, monogram: NB, categories: [image] }
   - { slug: ideogram, name: Ideogram, maker: Ideogram, hue: 190, monogram: Id, categories: [image] }
   - { slug: krea, name: Krea, maker: Krea, hue: 290, monogram: Kr, categories: [image, video] }
   - { slug: figma-weave, name: Figma Weave, maker: Figma, hue: 12, monogram: FW, categories: [image, video] }
   - { slug: flux, name: Flux, maker: Black Forest Labs, hue: 30, monogram: Fx, categories: [image] }
   # Video and animation
   - { slug: runway, name: Runway, maker: Runway, hue: 345, monogram: Rw, categories: [video, animation] }
-  - { slug: sora, name: Sora, maker: OpenAI, hue: 160, monogram: So, categories: [video] }
-  - { slug: veo, name: Veo, maker: Google, hue: 200, monogram: Ve, categories: [video] }
+  - { slug: sora, name: Sora, maker: OpenAI, mark: openai, hue: 160, monogram: So, categories: [video] }
+  - { slug: veo, name: Veo, maker: Google, mark: google, hue: 200, monogram: Ve, categories: [video] }
   - { slug: kling, name: Kling, maker: Kuaishou, hue: 120, monogram: Kl, categories: [video, animation] }
   - { slug: pika, name: Pika, maker: Pika, hue: 320, monogram: Pi, categories: [video, animation] }
   - { slug: hedra, name: Hedra, maker: Hedra, hue: 270, monogram: He, categories: [video, animation] }
   - { slug: higgsfield, name: Higgsfield, maker: Higgsfield, hue: 60, monogram: Hf, categories: [video] }
   - { slug: luma-dream-machine, name: Luma Dream Machine, maker: Luma AI, hue: 240, monogram: Lu, categories: [video, animation] }
   - { slug: jitter, name: Jitter, maker: Jitter, hue: 275, monogram: Ji, categories: [animation] }
-  - { slug: rive, name: Rive, maker: Rive, hue: 350, monogram: Ri, categories: [animation] }
+  - { slug: rive, name: Rive, maker: Rive, mark: rive, hue: 350, monogram: Ri, categories: [animation] }
   # Voice and sound
-  - { slug: elevenlabs, name: ElevenLabs, maker: ElevenLabs, hue: 0, monogram: 11, categories: [text-to-speech, music] }
-  - { slug: openai-voice, name: OpenAI Voice, maker: OpenAI, hue: 160, monogram: OV, categories: [text-to-speech, speech-to-text] }
+  - { slug: elevenlabs, name: ElevenLabs, maker: ElevenLabs, mark: elevenlabs, hue: 0, monogram: "11", categories: [text-to-speech, music] }
+  - { slug: openai-voice, name: OpenAI Voice, maker: OpenAI, mark: openai, hue: 160, monogram: OV, categories: [text-to-speech, speech-to-text] }
   - { slug: cartesia, name: Cartesia, maker: Cartesia, hue: 205, monogram: Ca, categories: [text-to-speech] }
-  - { slug: whisper, name: Whisper, maker: OpenAI, hue: 160, monogram: Wh, categories: [speech-to-text] }
+  - { slug: whisper, name: Whisper, maker: OpenAI, mark: openai, hue: 160, monogram: Wh, categories: [speech-to-text] }
   - { slug: wispr-flow, name: Wispr Flow, maker: Wispr, hue: 230, monogram: WF, categories: [speech-to-text] }
   - { slug: superwhisper, name: Superwhisper, maker: Superwhisper, hue: 265, monogram: SW, categories: [speech-to-text] }
   - { slug: deepgram, name: Deepgram, maker: Deepgram, hue: 150, monogram: Dg, categories: [speech-to-text] }
   - { slug: macwhisper, name: MacWhisper, maker: Good Snooze, hue: 210, monogram: MW, categories: [speech-to-text] }
-  - { slug: suno, name: Suno, maker: Suno, hue: 45, monogram: Su, categories: [music] }
+  - { slug: suno, name: Suno, maker: Suno, mark: suno, hue: 45, monogram: Su, categories: [music] }
   - { slug: udio, name: Udio, maker: Udio, hue: 300, monogram: Ud, categories: [music] }
 
 models:
   # Anthropic
-  - { slug: claude-opus-5-5, name: Claude Opus 5.5, maker: Anthropic, family: claude-opus, hue: 18, monogram: O5, categories: [coding, knowledge-work, writing, research] }
-  - { slug: claude-opus-5, name: Claude Opus 5, maker: Anthropic, family: claude-opus, hue: 18, monogram: O5, categories: [coding, knowledge-work] }
-  - { slug: claude-fable-5-1, name: Claude Fable 5.1, maker: Anthropic, family: claude-fable, hue: 28, monogram: F5, categories: [writing, knowledge-work, coding] }
-  - { slug: claude-fable-5, name: Claude Fable 5, maker: Anthropic, family: claude-fable, hue: 28, monogram: F5, categories: [writing] }
-  - { slug: claude-sonnet-5, name: Claude Sonnet 5, maker: Anthropic, family: claude-sonnet, hue: 24, monogram: S5, categories: [coding, knowledge-work, classification] }
-  - { slug: claude-haiku-4-5, name: Claude Haiku 4.5, maker: Anthropic, family: claude-haiku, hue: 32, monogram: H4, categories: [classification] }
+  - { slug: claude-opus-5-5, name: Claude Opus 5.5, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O5, categories: [coding, knowledge-work, writing, research] }
+  - { slug: claude-opus-5, name: Claude Opus 5, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O5, categories: [coding, knowledge-work] }
+  - { slug: claude-fable-5-1, name: Claude Fable 5.1, maker: Anthropic, family: claude-fable, mark: claude, hue: 28, monogram: F5, categories: [writing, knowledge-work, coding] }
+  - { slug: claude-fable-5, name: Claude Fable 5, maker: Anthropic, family: claude-fable, mark: claude, hue: 28, monogram: F5, categories: [writing] }
+  - { slug: claude-sonnet-5, name: Claude Sonnet 5, maker: Anthropic, family: claude-sonnet, mark: claude, hue: 24, monogram: S5, categories: [coding, knowledge-work, classification] }
+  - { slug: claude-haiku-4-5, name: Claude Haiku 4.5, maker: Anthropic, family: claude-haiku, mark: claude, hue: 32, monogram: H4, categories: [classification] }
   # OpenAI
-  - { slug: gpt-6-astra, name: GPT-6 Astra, maker: OpenAI, family: gpt, hue: 160, monogram: G6, categories: [coding, knowledge-work, research, writing], released_on: 2026-09-04 }
-  - { slug: gpt-5-6, name: GPT-5.6, maker: OpenAI, family: gpt, hue: 160, monogram: G5, categories: [coding, knowledge-work, research] }
-  - { slug: gpt-5-6-mini, name: GPT-5.6 mini, maker: OpenAI, family: gpt-mini, hue: 165, monogram: Gm, categories: [classification] }
+  - { slug: gpt-6-astra, name: GPT-6 Astra, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G6, categories: [coding, knowledge-work, research, writing], released_on: 2026-09-04 }
+  - { slug: gpt-5-6, name: GPT-5.6, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G5, categories: [coding, knowledge-work, research] }
+  - { slug: gpt-5-6-mini, name: GPT-5.6 mini, maker: OpenAI, family: gpt-mini, mark: openai, hue: 165, monogram: Gm, categories: [classification] }
   # Google
-  - { slug: gemini-3-8-pro, name: Gemini 3.8 Pro, maker: Google, family: gemini-pro, hue: 225, monogram: G3, categories: [knowledge-work, research, coding] }
-  - { slug: gemini-3-8-flash, name: Gemini 3.8 Flash, maker: Google, family: gemini-flash, hue: 230, monogram: GF, categories: [classification, knowledge-work] }
+  - { slug: gemini-3-8-pro, name: Gemini 3.8 Pro, maker: Google, family: gemini-pro, mark: googlegemini, hue: 225, monogram: G3, categories: [knowledge-work, research, coding] }
+  - { slug: gemini-3-8-flash, name: Gemini 3.8 Flash, maker: Google, family: gemini-flash, mark: googlegemini, hue: 230, monogram: GF, categories: [classification, knowledge-work] }
   # Others
   - { slug: grok-4-7, name: Grok 4.7, maker: xAI, family: grok, hue: 0, monogram: G4, categories: [research, knowledge-work] }
-  - { slug: composer-2-5, name: Composer 2.5, maker: Cursor, family: composer, hue: 220, monogram: C2, categories: [coding] }
+  - { slug: composer-2-5, name: Composer 2.5, maker: Cursor, family: composer, mark: cursor, hue: 220, monogram: C2, categories: [coding] }
   - { slug: kimi-k3, name: Kimi K3, maker: Moonshot AI, family: kimi, hue: 200, monogram: K3, categories: [coding] }
   - { slug: deepseek-v4, name: DeepSeek V4, maker: DeepSeek, family: deepseek, hue: 215, monogram: D4, categories: [coding, classification] }
   - { slug: jev, name: Jev, maker: TypeSafe, family: jev, hue: 255, monogram: Jv, categories: [classification] }
   # Media
-  - { slug: veo-4, name: Veo 4, maker: Google, family: veo, hue: 200, monogram: V4, categories: [video] }
-  - { slug: veo-3, name: Veo 3, maker: Google, family: veo, hue: 200, monogram: V3, categories: [video] }
-  - { slug: sora-2, name: Sora 2, maker: OpenAI, family: sora, hue: 160, monogram: S2, categories: [video] }
+  - { slug: veo-4, name: Veo 4, maker: Google, family: veo, mark: google, hue: 200, monogram: V4, categories: [video] }
+  - { slug: veo-3, name: Veo 3, maker: Google, family: veo, mark: google, hue: 200, monogram: V3, categories: [video] }
+  - { slug: sora-2, name: Sora 2, maker: OpenAI, family: sora, mark: openai, hue: 160, monogram: S2, categories: [video] }
   - { slug: kling-3, name: Kling 3, maker: Kuaishou, family: kling, hue: 120, monogram: K3, categories: [video, animation] }
   - { slug: runway-gen-4-5, name: Runway Gen-4.5, maker: Runway, family: runway-gen, hue: 345, monogram: R4, categories: [video, animation] }
   - { slug: midjourney-v8, name: Midjourney V8, maker: Midjourney, family: midjourney, hue: 250, monogram: M8, categories: [image] }
   - { slug: midjourney-v7, name: Midjourney V7, maker: Midjourney, family: midjourney, hue: 250, monogram: M7, categories: [image] }
-  - { slug: gpt-image-2, name: GPT Image 2, maker: OpenAI, family: gpt-image, hue: 160, monogram: GI, categories: [image] }
-  - { slug: nano-banana-2, name: Nano Banana 2, maker: Google, family: nano-banana, hue: 52, monogram: N2, categories: [image] }
+  - { slug: gpt-image-2, name: GPT Image 2, maker: OpenAI, family: gpt-image, mark: openai, hue: 160, monogram: GI, categories: [image] }
+  - { slug: nano-banana-2, name: Nano Banana 2, maker: Google, family: nano-banana, mark: google, hue: 52, monogram: N2, categories: [image] }
   - { slug: flux-2, name: FLUX.2, maker: Black Forest Labs, family: flux, hue: 30, monogram: F2, categories: [image] }
-  - { slug: eleven-v3, name: Eleven v3, maker: ElevenLabs, family: eleven, hue: 0, monogram: E3, categories: [text-to-speech] }
+  - { slug: eleven-v3, name: Eleven v3, maker: ElevenLabs, family: eleven, mark: elevenlabs, hue: 0, monogram: E3, categories: [text-to-speech] }
   - { slug: sonic-3, name: Sonic 3, maker: Cartesia, family: sonic, hue: 205, monogram: S3, categories: [text-to-speech] }
-  - { slug: gpt-realtime, name: GPT Realtime, maker: OpenAI, family: gpt-realtime, hue: 160, monogram: RT, categories: [text-to-speech, speech-to-text] }
-  - { slug: whisper-large-v3, name: Whisper large-v3, maker: OpenAI, family: whisper, hue: 160, monogram: W3, categories: [speech-to-text] }
-  - { slug: gpt-transcribe, name: GPT Transcribe, maker: OpenAI, family: gpt-transcribe, hue: 160, monogram: GT, categories: [speech-to-text] }
+  - { slug: gpt-realtime, name: GPT Realtime, maker: OpenAI, family: gpt-realtime, mark: openai, hue: 160, monogram: RT, categories: [text-to-speech, speech-to-text] }
+  - { slug: whisper-large-v3, name: Whisper large-v3, maker: OpenAI, family: whisper, mark: openai, hue: 160, monogram: W3, categories: [speech-to-text] }
+  - { slug: gpt-transcribe, name: GPT Transcribe, maker: OpenAI, family: gpt-transcribe, mark: openai, hue: 160, monogram: GT, categories: [speech-to-text] }
   - { slug: nova-3, name: Nova-3, maker: Deepgram, family: nova, hue: 150, monogram: N3, categories: [speech-to-text] }
-  - { slug: suno-v5, name: Suno v5, maker: Suno, family: suno, hue: 45, monogram: S5, categories: [music] }
+  - { slug: suno-v5, name: Suno v5, maker: Suno, family: suno, mark: suno, hue: 45, monogram: S5, categories: [music] }
