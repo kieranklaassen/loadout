@@ -17,7 +17,6 @@ module ToolRegistry
     ListCategoriesTool,
     SearchCatalogTool,
     GetMyLoadoutTool,
-    UpdateLoadoutTool,
     GetRecentChangesTool
   ].freeze
 
@@ -27,9 +26,9 @@ module ToolRegistry
   INSTRUCTIONS = <<~TEXT.squish
     Loadout is a profile of the AI tools and models a member uses for each kind of work
     (coding, knowledge work, writing, research, image, video, and more). You act for the
-    signed-in member. Read their loadout with get_my_loadout, find catalog slugs with
-    search_catalog, and change it with update_loadout. Ask the member before you guess:
-    only record tools and models they confirm they use. Tell them what you changed.
+    signed-in member. Read their loadout with get_my_loadout and find catalog slugs with
+    search_catalog. Ask the member before you guess: only record tools and models they
+    confirm they use.
   TEXT
 
   module_function

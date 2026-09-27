@@ -47,6 +47,8 @@ Rails.application.routes.draw do
   patch "welcome/finish", to: "onboarding#finish", as: :welcome_finish
   get "handles/check", to: "handles#check", as: :check_handle
   resource :loadout, only: %i[edit update]
+  post "loadout/suggestions/:id/confirm" => "loadouts#confirm", as: :confirm_loadout_suggestion, constraints: { id: /\d+/ }
+  delete "loadout/suggestions/:id" => "loadouts#dismiss", as: :loadout_suggestion, constraints: { id: /\d+/ }
   resource :settings, only: %i[show update destroy]
 
   # The Every map (U5 routes go here).

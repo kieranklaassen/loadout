@@ -60,6 +60,23 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
     assert_empty inertia.props[:agents]
   end
 
+  test "revoking a client withdraws that client's open suggestions and no other client's (AE9)" do
+    ids = 2.times.map { connect_agent(user: @user, client_name: "Claude").first }
+    ours, theirs = ids.map { |client_id| OauthClient.find_by!(client_id:) }
+    suggest = lambda do |tool, client|
+      Loadouts::Update.call(
+        user: @user, operations: [ { op: "suggest", category: "video", tool: } ], source: client ? "mcp" : "webmcp",
+        client_name: client&.client_name, oauth_client_id: client&.id
+      ).suggestions.sole
+    end
+    ours_open, theirs_open, webmcp_open = suggest.("runway", ours), suggest.("Hedra", theirs), suggest.("Veo", nil)
+
+    sign_in_as(@user)
+    delete agent_path(ids.first)
+
+    assert_equal [ "withdrawn", "open", "open" ], [ ours_open, theirs_open, webmcp_open ].map { |suggestion| suggestion.reload.status }
+  end
+
   test "reconnecting after a revoke goes through consent again" do
     client_id, = connect_agent(user: @user, client_name: "Cursor")
     sign_in_as(@user)

@@ -15,12 +15,14 @@ class AgentsController < InertiaController
   end
 
   # Revokes every grant the member gave this client, so its next call is a 401
-  # and reconnecting means signing in and approving again.
+  # and reconnecting means signing in and approving again. Its open suggestions
+  # are withdrawn with it.
   def destroy
     client = OauthClient.find_by!(client_id: params[:id])
     grants = Current.user.oauth_grants.where(oauth_client: client, revoked_at: nil)
     revoked = grants.update_all(revoked_at: Time.current, updated_at: Time.current)
     Current.user.oauth_authorization_codes.where(oauth_client: client, used_at: nil).delete_all
+    Loadouts::Suggestions.withdraw_for_client(user: Current.user, oauth_client: client)
 
     redirect_to agents_path, notice: revoked.positive? ? "Disconnected #{client.client_name}." : "#{client.client_name} was already disconnected."
   end

@@ -52,8 +52,14 @@ class OauthGrant < ApplicationRecord
     rows == 1
   end
 
+  # Ends the grant and withdraws the suggestions its client still has open.
   def revoke!
-    update!(revoked_at: Time.current) if revoked_at.nil?
+    return unless revoked_at.nil?
+
+    transaction do
+      update!(revoked_at: Time.current)
+      Loadouts::Suggestions.withdraw_for_client(user:, oauth_client:)
+    end
   end
 
   def token_response
