@@ -317,6 +317,18 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "meta[property='og:description'][content=?]", "Newbie Person hasn't ranked their AI tools yet."
   end
 
+  test "the link to copy and the card come from the configured public address" do
+    Rails.configuration.x.public_base_url = "https://loadout.example.test"
+
+    get "/ana"
+
+    assert_equal "https://loadout.example.test/ana", props[:copy_url]
+    assert_select "meta[property='og:url'][content=?]", "https://loadout.example.test/ana"
+    assert_select "meta[property='og:image'][content^='https://loadout.example.test/ana/og.png']"
+  ensure
+    Rails.configuration.x.public_base_url = nil
+  end
+
   test "the preview does not depend on who is looking" do
     tags = "meta[name=description], meta[property^='og:'], meta[name^='twitter:'], meta[name=robots]"
     get "/ana"
