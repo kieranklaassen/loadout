@@ -30,6 +30,7 @@
 #   includes_private_picks?              the viewer is counted and nobody else can open them
 #   Audience.person(user)                the { handle:, name: } entry used everywhere a person is named
 #   Audience.sort_key(count, firsts, name)  the one ranking comparator: people, then 1st picks, then name
+#   Audience.name_key(name, handle)      the one order for people: name, then handle
 class Audience
   # The SHOW classes that have people in them, and everything SHOW offers (subscribers is a stub).
   CLASSES = %w[team others].freeze
@@ -50,6 +51,11 @@ class Audience
     # People first, then how many put it 1st, then name. One comparator on every surface.
     def sort_key(count, firsts, name)
       [ -count, -firsts, name.to_s.downcase ]
+    end
+
+    # Name, then handle. One order for every list of people.
+    def name_key(name, handle)
+      [ name.to_s.downcase, handle.to_s ]
     end
 
     # Picks that may count anywhere: an approved tool. (A model counts only if it is approved too.)
@@ -114,7 +120,7 @@ class Audience
     @members ||= begin
       openable = User.visible_to(viewer).where(id: self.class.counted_entries.select(:user_id))
       openable = team? ? openable.every_members : openable.where.not(id: User.every_members.select(:id))
-      openable.sort_by { |user| [ user.name.to_s.downcase, user.handle.to_s ] }
+      openable.sort_by { |user| self.class.name_key(user.name, user.handle) }
     end
   end
 

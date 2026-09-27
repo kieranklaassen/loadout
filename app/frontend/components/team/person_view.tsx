@@ -6,6 +6,7 @@ import type { Category, Launch, MarkItem, RankedPick } from '../../types'
 import Chip, { contextLabel, effortLabel } from '../chip'
 import Mark from '../mark'
 import SectionLabel, { sectionLabelClasses } from '../section_label'
+import VibeCheckLink from '../vibe_check_link'
 import { kindHref, type Show } from './filters'
 
 export type PersonKind = {
@@ -143,15 +144,7 @@ export function NewInLoadout({ data }: { data: PersonData }) {
             <p className="mt-3 text-[15px] leading-[1.5] text-fg-soft">
               {placement(data, launch)}Out {shortDate(launch.released_on)}.
             </p>
-            <a
-              href={launch.vibe_check_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Vibe Check for ${launch.model.name}`}
-              className="text-link mt-3 inline-block text-sm"
-            >
-              Vibe Check <span aria-hidden="true">↗</span>
-            </a>
+            <VibeCheckLink url={launch.vibe_check_url} modelName={launch.model.name} className="mt-3 inline-block" />
           </li>
         ))}
       </ul>

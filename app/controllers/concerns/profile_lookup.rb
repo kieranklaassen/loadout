@@ -15,16 +15,7 @@ module ProfileLookup
     user
   end
 
-  def owner?(user)
-    authenticated?.present? && Current.user == user
-  end
-
   def public_base_url
     LoadoutHost.base_url(request)
-  end
-
-  # The host as printed on the page and the card.
-  def public_host
-    LoadoutHost.host
   end
 end

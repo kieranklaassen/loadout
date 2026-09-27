@@ -3,6 +3,7 @@ import type { Launch } from '../../types'
 import Chip from '../chip'
 import Count from '../count'
 import Mark from '../mark'
+import VibeCheckLink from '../vibe_check_link'
 
 /** A model launch: name, date, how many use it, and the fixed-text Vibe Check link-out. Nothing here is invented; the server lists a launch only with a date and a valid link. */
 export default function LaunchRow({ launch }: { launch: Launch }) {
@@ -28,15 +29,7 @@ export default function LaunchRow({ launch }: { launch: Launch }) {
           </>
         )}
       </span>
-      <a
-        href={vibe_check_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Vibe Check for ${model.name}`}
-        className="text-link mt-3 inline-block text-sm md:mt-0"
-      >
-        Vibe Check <span aria-hidden="true">↗</span>
-      </a>
+      <VibeCheckLink url={vibe_check_url} modelName={model.name} className="mt-3 inline-block md:mt-0" />
     </li>
   )
 }

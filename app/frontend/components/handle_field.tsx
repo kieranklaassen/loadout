@@ -6,6 +6,26 @@ import type { HandleAvailability } from '../types'
 
 export type HandleStatus = { tone: 'ok' | 'bad' | 'wait'; message: string }
 
+function describeHandle({
+  handle,
+  initial,
+  host,
+  error,
+  checked,
+}: {
+  handle: string
+  initial: string
+  host: string
+  error?: string
+  checked: HandleAvailability | null
+}): HandleStatus {
+  if (!handle) return { tone: 'bad', message: 'Pick a handle.' }
+  if (error) return { tone: 'bad', message: error }
+  if (handle === initial) return { tone: 'ok', message: `${host}/${handle} is yours.` }
+  if (checked) return { tone: checked.available ? 'ok' : 'bad', message: checked.message }
+  return { tone: 'wait', message: 'Checking…' }
+}
+
 /**
  * The live answer for a handle being typed: yours as it stands, or checked against the
  * server through a partial reload of /handles/check (the answer arrives as the page's
@@ -34,17 +54,8 @@ export function useHandleStatus({
   }, [handle, initial])
 
   const checked = availability?.handle === handle ? availability : null
-  const status: HandleStatus = !handle
-    ? { tone: 'bad', message: 'Pick a handle.' }
-    : error
-      ? { tone: 'bad', message: error }
-      : handle === initial
-        ? { tone: 'ok', message: `${host}/${handle} is yours.` }
-        : checked
-          ? { tone: checked.available ? 'ok' : 'bad', message: checked.message }
-          : { tone: 'wait', message: 'Checking…' }
 
-  return { handle, status }
+  return { handle, status: describeHandle({ handle, initial, host, error, checked }) }
 }
 
 const TONE: Record<HandleStatus['tone'], string> = { ok: 'text-fg', bad: 'text-coral', wait: 'text-fg-muted' }

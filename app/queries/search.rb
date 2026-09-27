@@ -25,13 +25,18 @@ class Search
   MAX_QUERY_LENGTH = 60
   LIMIT = 10
 
+  # What was typed, squished and cut to MAX_QUERY_LENGTH.
+  def self.clean(query)
+    query.to_s.squish.first(MAX_QUERY_LENGTH)
+  end
+
   def initialize(viewer:, show: nil)
     @rankings = TeamRankings.new(viewer:, show:)
     @audience = @rankings.audience
   end
 
   def call(query)
-    query = query.to_s.squish.first(MAX_QUERY_LENGTH)
+    query = self.class.clean(query)
     return { query:, people: [], items: [] } if query.length < MIN_LENGTH
 
     pattern = "%#{User.sanitize_sql_like(query)}%"
@@ -46,7 +51,7 @@ class Search
     User.where(id: audience.ids)
       .where("name LIKE :q ESCAPE '\\' OR handle LIKE :q ESCAPE '\\'", q: pattern)
       .map { |user| Audience.person(user) }
-      .sort_by { |person| [ person[:name].to_s.downcase, person[:handle].to_s ] }
+      .sort_by { |person| Audience.name_key(person[:name], person[:handle]) }
       .first(LIMIT)
   end
 

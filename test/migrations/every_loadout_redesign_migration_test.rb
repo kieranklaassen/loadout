@@ -32,7 +32,7 @@ class EveryLoadoutRedesignMigrationTest < ActiveSupport::TestCase
     FileUtils.remove_entry(@dir)
   end
 
-  test "the redesign migrations keep every user, session, grant and tool and drop only what the plan says" do
+  test "the redesign migrations keep every user, session, grant, tool and model row, and lose no kind but Other" do
     migrate_through(LAST_V1_VERSION)
     populate_v1_database
     before = counts(%w[users sessions oauth_clients oauth_grants tools ai_models])
@@ -285,7 +285,9 @@ class EveryLoadoutRedesignMigrationTest < ActiveSupport::TestCase
     insert(:entries, id:, user_id:, category_id:, tool_id:, ai_model_id: nil, rank:, context: nil, effort: nil, created_at: @started_at, updated_at: @started_at)
   end
 
-  # Six people, the way the v1 schema and code leave them (see the plan's AE8).
+  # A v1 database as the v1 schema and code leave it, holding what the migrations must keep or reshape (AE8): five members, sessions, a grant,
+  # tools with a creator, more than three picks in a kind with a go-to and a note, the same tool twice in a kind, and picks in the retired
+  # Other kind with change rows.
   def populate_v1_database
     at = ->(day) { Time.utc(2026, 9, day, 12) }
 

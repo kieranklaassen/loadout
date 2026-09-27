@@ -1,7 +1,8 @@
 import type { Page, VisitOptions } from '@inertiajs/core'
 import { router } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
-import { movedMessage, ordinal } from '../../lib/ranking'
+import { rankLabel } from '../../lib/rank_label'
+import { movedMessage } from '../../lib/ranking'
 import type { PickContext, PickEffort, RankedPick, SharedProps, Suggestion } from '../../types'
 
 // Every write the Rank editor makes goes through here: a slot save, a move, a removal,
@@ -99,7 +100,7 @@ export function useEditorActions(category: string) {
     run((options) => router.patch(LOADOUT, { operations: [{ op: 'remove_pick', category, rank: pick.rank }] }, options), {
       onSaved: () => {
         status(pick.rank, null)
-        setAnnouncement(`Removed ${pick.tool.name} from your ${ordinal(pick.rank)} pick`)
+        setAnnouncement(`Removed ${pick.tool.name} from your ${rankLabel(pick.rank)} pick`)
         focusSlot(pick.rank)
       },
       onFailed: (message) => status(pick.rank, { state: 'error', message, retry: () => removeSlot(pick) }),
@@ -111,7 +112,7 @@ export function useEditorActions(category: string) {
     setSuggestionError(null)
     run((visit) => router.post(`${LOADOUT}/suggestions/${suggestion.id}/confirm`, options, visit), {
       onSaved: () => {
-        setAnnouncement(`Confirmed ${suggestion.tool.name} as your ${ordinal(landing)} pick`)
+        setAnnouncement(`Confirmed ${suggestion.tool.name} as your ${rankLabel(landing)} pick`)
         focusSlot(landing)
       },
       onFailed: setSuggestionError,

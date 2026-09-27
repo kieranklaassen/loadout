@@ -1,4 +1,5 @@
 import type { Category, Count, MarkItem, PickContext, PickEffort, RankedPick, Suggestion } from '../types'
+import { rankLabel } from './rank_label'
 
 // The Rank editor's shapes and the rules that place picks and suggestions in its three
 // slots. Pure functions of the props, so the page, its sidebar and the team list agree.
@@ -33,10 +34,6 @@ export type TeamStanding = {
 }
 
 export type TeamTop = Record<string, { tools: TeamStanding[]; models: (TeamStanding & { launched: boolean })[] }>
-
-const ORDINALS = ['1st', '2nd', '3rd']
-
-export const ordinal = (rank: number) => ORDINALS[rank - 1] ?? `${rank}th`
 
 export const contextOptionLabel = (context: PickContext) => context.toUpperCase()
 
@@ -76,7 +73,7 @@ export function progressLabel(kind: EditorKind) {
 
 export const startedCount = (kinds: EditorKind[]) => kinds.filter((kind) => progress(kind).filled > 0).length
 
-export const firstEmptyRank = (kind: EditorKind) => RANKS.find((rank) => !kind.picks.some((pick) => pick.rank === rank)) ?? null
+const firstEmptyRank = (kind: EditorKind) => RANKS.find((rank) => !kind.picks.some((pick) => pick.rank === rank)) ?? null
 
 export type TeamAction = { type: 'have'; text: string } | { type: 'use'; label: string; rank: number }
 
@@ -92,10 +89,10 @@ export function teamCountText(standing: TeamStanding, launched = false) {
 /** What a team-list tool row offers: nothing on a full kind, else "You have it 1st" or a button for the first empty slot. */
 export function toolAction(kind: EditorKind, standing: TeamStanding): TeamAction | null {
   const own = kind.picks.find((pick) => pick.tool.slug === standing.item.slug)
-  if (own) return { type: 'have', text: `You have it ${ordinal(own.rank)}` }
+  if (own) return { type: 'have', text: `You have it ${rankLabel(own.rank)}` }
 
   const rank = firstEmptyRank(kind)
-  return rank ? { type: 'use', label: `Use as ${ordinal(rank)} pick`, rank } : null
+  return rank ? { type: 'use', label: `Use as ${rankLabel(rank)} pick`, rank } : null
 }
 
 /** A model row: "You use it", or a button for the first pick that has a tool and no model. A model needs a tool, so an empty slot never qualifies. */
@@ -104,7 +101,7 @@ export function modelAction(kind: EditorKind, standing: TeamStanding): TeamActio
   if (kind.picks.length >= MAX_RANK) return null
 
   const target = kind.picks.find((pick) => !pick.model)
-  return target ? { type: 'use', label: `Use in ${ordinal(target.rank)} pick`, rank: target.rank } : null
+  return target ? { type: 'use', label: `Use in ${rankLabel(target.rank)} pick`, rank: target.rank } : null
 }
 
 /** A select's options: those that suit the kind first, then the rest. The saved item stays offered even if the catalog no longer lists it. */
@@ -121,4 +118,4 @@ export const toolsUsedElsewhere = (kind: EditorKind, rank: number) =>
   new Set(kind.picks.filter((pick) => pick.rank !== rank).map((pick) => pick.tool.slug))
 
 /** What a screen reader hears after a row changes. */
-export const movedMessage = (name: string, rank: number) => `${name} is now ${ordinal(rank)}`
+export const movedMessage = (name: string, rank: number) => `${name} is now ${rankLabel(rank)}`

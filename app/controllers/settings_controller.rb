@@ -55,13 +55,6 @@ class SettingsController < InertiaController
   # The clients the member approved, one row each, newest activity first. Revoking is
   # DELETE /agents/:id with the client id.
   def connected_agents
-    Current.user.oauth_grants.active.includes(:oauth_client).group_by(&:oauth_client).map do |client, grants|
-      {
-        id: client.client_id,
-        name: client.client_name,
-        connected_at: grants.map(&:created_at).min.iso8601,
-        last_used_at: grants.filter_map(&:last_used_at).max&.iso8601
-      }
-    end.sort_by { |agent| agent[:last_used_at] || agent[:connected_at] }.reverse
+    Current.user.oauth_grants.connected_clients
   end
 end

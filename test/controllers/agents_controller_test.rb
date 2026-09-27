@@ -101,6 +101,17 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
     assert_empty inertia.props[:agents]
   end
 
+  test "revoking a client that is already disconnected says so" do
+    client_id, = connect_agent(user: @user, client_name: "Cursor")
+    sign_in_as(@user)
+    delete agent_path(client_id)
+
+    delete agent_path(client_id)
+
+    assert_redirected_to agents_path
+    assert_equal "Cursor was already disconnected.", flash[:notice]
+  end
+
   test "revoking goes back to the page it was sent from, so Revoke in Settings stays in Settings" do
     client_id, = connect_agent(user: @user, client_name: "Cursor")
     sign_in_as(@user)

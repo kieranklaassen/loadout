@@ -5,8 +5,9 @@ require "test_helper"
 # class, which holds ana and dee (M = 2); a visitor reads ana alone (M = 1); the "others"
 # class holds eli and fay; cy is only me and must never be named to a colleague.
 class KindsControllerTest < ActionDispatch::IntegrationTest
-  def props = inertia.props.deep_symbolize_keys
-  def page_props = props.slice(:filters, :notice, :category, :ranked, :tools, :models, :setups, :takes, :last_update_at, :eras, :cta)
+  include SurfaceHelper
+
+  def kind_props = page_props.slice(:filters, :notice, :category, :ranked, :tools, :models, :setups, :takes, :last_update_at, :eras, :cta)
   def listing(list, slug) = list.find { |entry| entry[:item][:slug] == slug }
   def slugs(list) = list.map { |entry| entry[:item][:slug] }
 
@@ -59,15 +60,15 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_inertia_component "kinds/show"
-    assert_equal({ n: 5, of: 6 }, props[:ranked], "ana, dee, bob, cyd and eve have a Coding pick; fred does not")
-    cursor = listing(props[:tools], "cursor")
+    assert_equal({ n: 5, of: 6 }, page_props[:ranked], "ana, dee, bob, cyd and eve have a Coding pick; fred does not")
+    cursor = listing(page_props[:tools], "cursor")
     assert_equal({ n: 4, of: 6 }, cursor[:count])
     assert_equal({ 1 => [ "Ana Every", "Bob" ], 2 => [ "Dee Every" ], 3 => [ "Cyd" ] }, names_by_rank(cursor))
     assert_equal cursor[:count][:n], names_by_rank(cursor).values.sum(&:size)
-    props[:tools].each { |tool| assert_equal tool[:count][:n], names_by_rank(tool).values.sum(&:size), "#{tool[:item][:name]} names add up" }
+    page_props[:tools].each { |tool| assert_equal tool[:count][:n], names_by_rank(tool).values.sum(&:size), "#{tool[:item][:name]} names add up" }
 
     get root_path
-    home = props[:rows].find { |row| row[:category][:slug] == "coding" }
+    home = page_props[:rows].find { |row| row[:category][:slug] == "coding" }
     assert_equal({ n: 5, of: 6 }, home[:ranked])
     assert_equal({ n: 4, of: 6 }, home[:top_tool][:count])
     assert_equal "cursor", home[:top_tool][:item][:slug]
@@ -78,18 +79,18 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding")
 
-    assert_equal({ show: "team" }, props[:filters])
-    assert_equal({ slug: "coding", name: "Coding", blurb: "Writing, reviewing, and shipping code." }, props[:category])
-    assert_equal({ n: 2, of: 2 }, props[:ranked])
-    assert_equal %w[claude-code cursor], slugs(props[:tools]), "two people each, one 1st each, then by name"
-    assert_equal({ 1 => [ "Dee Every" ], 2 => [ "Ana Every" ], 3 => [] }, names_by_rank(props[:tools].first))
-    assert_equal({ 1 => [ "Ana Every" ], 2 => [ "Dee Every" ], 3 => [] }, names_by_rank(listing(props[:tools], "cursor")))
-    assert_equal %w[claude-opus-5-5 gpt-6-astra], slugs(props[:models])
-    assert_equal({ n: 2, of: 2 }, props[:models].first[:count])
-    assert_equal({ 1 => [ "Ana Every", "Dee Every" ], 2 => [], 3 => [] }, names_by_rank(props[:models].first))
-    assert_equal({ 1 => [], 2 => [ "Dee Every" ], 3 => [] }, names_by_rank(props[:models].last))
-    assert_nil props[:notice]
-    assert_not_nil props[:last_update_at]
+    assert_equal({ show: "team" }, page_props[:filters])
+    assert_equal({ slug: "coding", name: "Coding", blurb: "Writing, reviewing, and shipping code." }, page_props[:category])
+    assert_equal({ n: 2, of: 2 }, page_props[:ranked])
+    assert_equal %w[claude-code cursor], slugs(page_props[:tools]), "two people each, one 1st each, then by name"
+    assert_equal({ 1 => [ "Dee Every" ], 2 => [ "Ana Every" ], 3 => [] }, names_by_rank(page_props[:tools].first))
+    assert_equal({ 1 => [ "Ana Every" ], 2 => [ "Dee Every" ], 3 => [] }, names_by_rank(listing(page_props[:tools], "cursor")))
+    assert_equal %w[claude-opus-5-5 gpt-6-astra], slugs(page_props[:models])
+    assert_equal({ n: 2, of: 2 }, page_props[:models].first[:count])
+    assert_equal({ 1 => [ "Ana Every", "Dee Every" ], 2 => [], 3 => [] }, names_by_rank(page_props[:models].first))
+    assert_equal({ 1 => [], 2 => [ "Dee Every" ], 3 => [] }, names_by_rank(page_props[:models].last))
+    assert_nil page_props[:notice]
+    assert_not_nil page_props[:last_update_at]
   end
 
   test "setups group people by tool, model, context and effort" do
@@ -103,7 +104,7 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
         [ "cursor", "claude-opus-5-5", "1m", "high", { n: 1, of: 2 } ],
         [ "cursor", "gpt-6-astra", nil, nil, { n: 1, of: 2 } ]
       ],
-      props[:setups].map { |setup| [ setup[:tool][:slug], setup[:model][:slug], setup[:context], setup[:effort], setup[:count] ] }
+      page_props[:setups].map { |setup| [ setup[:tool][:slug], setup[:model][:slug], setup[:context], setup[:effort], setup[:count] ] }
     )
   end
 
@@ -111,9 +112,9 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
     get kind_path("coding")
 
     assert_response :success
-    assert_equal({ n: 1, of: 1 }, props[:ranked])
-    assert_equal({ 1 => [ "Ana Every" ], 2 => [], 3 => [] }, names_by_rank(listing(props[:tools], "cursor")))
-    assert_equal({ 1 => [], 2 => [ "Ana Every" ], 3 => [] }, names_by_rank(listing(props[:tools], "claude-code")))
+    assert_equal({ n: 1, of: 1 }, page_props[:ranked])
+    assert_equal({ 1 => [ "Ana Every" ], 2 => [], 3 => [] }, names_by_rank(listing(page_props[:tools], "cursor")))
+    assert_equal({ 1 => [], 2 => [ "Ana Every" ], 3 => [] }, names_by_rank(listing(page_props[:tools], "claude-code")))
   end
 
   test "show=others reads Everyone else" do
@@ -121,12 +122,12 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding"), params: { show: "others" }
 
-    assert_equal({ show: "others" }, props[:filters])
-    assert_equal({ n: 2, of: 2 }, props[:ranked])
-    assert_equal %w[claude-code cursor], slugs(props[:tools])
-    assert_equal({ 1 => [ "Fay Every" ], 2 => [ "Eli Outside" ], 3 => [] }, names_by_rank(listing(props[:tools], "claude-code")))
-    assert_equal({ n: 1, of: 2 }, listing(props[:tools], "cursor")[:count])
-    assert_equal({ 1 => [ "Eli Outside" ], 2 => [], 3 => [] }, names_by_rank(listing(props[:tools], "cursor")))
+    assert_equal({ show: "others" }, page_props[:filters])
+    assert_equal({ n: 2, of: 2 }, page_props[:ranked])
+    assert_equal %w[claude-code cursor], slugs(page_props[:tools])
+    assert_equal({ 1 => [ "Fay Every" ], 2 => [ "Eli Outside" ], 3 => [] }, names_by_rank(listing(page_props[:tools], "claude-code")))
+    assert_equal({ n: 1, of: 2 }, listing(page_props[:tools], "cursor")[:count])
+    assert_equal({ 1 => [ "Eli Outside" ], 2 => [], 3 => [] }, names_by_rank(listing(page_props[:tools], "cursor")))
   end
 
   test "show=subscribers falls back to the team with a notice" do
@@ -134,9 +135,9 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding"), params: { show: "subscribers" }
 
-    assert_equal({ show: "team" }, props[:filters])
-    assert_equal Audience::SUBSCRIBERS_NOTICE, props[:notice]
-    assert_equal({ n: 2, of: 2 }, props[:ranked])
+    assert_equal({ show: "team" }, page_props[:filters])
+    assert_equal Audience::SUBSCRIBERS_NOTICE, page_props[:notice]
+    assert_equal({ n: 2, of: 2 }, page_props[:ranked])
   end
 
   # Unknown and empty kinds
@@ -156,10 +157,10 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
     get kind_path("video")
 
     assert_response :success
-    assert_equal({ n: 0, of: 2 }, props[:ranked])
-    assert_equal [ [], [], [], [] ], props.values_at(:tools, :models, :setups, :takes)
-    assert_nil props[:eras]
-    assert_not_nil props[:cta]
+    assert_equal({ n: 0, of: 2 }, page_props[:ranked])
+    assert_equal [ [], [], [], [] ], page_props.values_at(:tools, :models, :setups, :takes)
+    assert_nil page_props[:eras]
+    assert_not_nil page_props[:cta]
   end
 
   test "with nobody sharing at all every kind is empty and none reports zero of zero" do
@@ -168,9 +169,9 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
     get kind_path("coding")
 
     assert_response :success
-    assert_equal({ n: 0, of: 0 }, props[:ranked], "the page renders the empty state instead of this count")
-    assert_empty props[:tools]
-    assert_nil props[:last_update_at]
+    assert_equal({ n: 0, of: 0 }, page_props[:ranked], "the page renders the empty state instead of this count")
+    assert_empty page_props[:tools]
+    assert_nil page_props[:last_update_at]
   end
 
   # Takes: link-outs to the Vibe Checks of launched models ranked in this kind
@@ -180,7 +181,7 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding")
 
-    assert_equal [ [ "claude-opus-5-5", "https://checks.every.to/vibe-checks/claude-opus-5-5" ] ], props[:takes].map { |take| [ take[:model][:slug], take[:url] ] }
+    assert_equal [ [ "claude-opus-5-5", "https://checks.every.to/vibe-checks/claude-opus-5-5" ] ], page_props[:takes].map { |take| [ take[:model][:slug], take[:url] ] }
   end
 
   test "a launched model nobody ranked in the kind gives no take, and a kind with none has an empty list" do
@@ -188,13 +189,13 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:every_dee)
 
     get kind_path("coding")
-    assert_equal %w[gpt-6-astra claude-opus-5-5], props[:takes].map { |take| take[:model][:slug] }, "newest launch first"
+    assert_equal %w[gpt-6-astra claude-opus-5-5], page_props[:takes].map { |take| take[:model][:slug] }, "newest launch first"
 
     get kind_path("knowledge-work")
-    assert_equal %w[claude-opus-5-5], props[:takes].map { |take| take[:model][:slug] }, "only Opus 5.5 is ranked in knowledge work"
+    assert_equal %w[claude-opus-5-5], page_props[:takes].map { |take| take[:model][:slug] }, "only Opus 5.5 is ranked in knowledge work"
 
     get kind_path("video")
-    assert_empty props[:takes]
+    assert_empty page_props[:takes]
   end
 
   # AE2: a hidden person is nobody's business
@@ -205,7 +206,7 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding")
 
-    everything = page_props.to_json
+    everything = kind_props.to_json
     assert_not_includes everything, "Cy Every"
     assert_not_includes everything, '"cy"'
     assert_not_includes everything, "claude-opus-5\""
@@ -214,10 +215,10 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:every_cy)
     get kind_path("coding")
 
-    assert_equal({ n: 3, of: 3 }, props[:ranked])
-    assert_equal({ 1 => [ "Ana Every", "Cy Every" ], 2 => [ "Dee Every" ], 3 => [] }, names_by_rank(listing(props[:tools], "cursor")))
-    assert_includes slugs(props[:models]), "claude-opus-5"
-    assert_includes props[:takes].map { |take| take[:model][:slug] }, "claude-opus-5"
+    assert_equal({ n: 3, of: 3 }, page_props[:ranked])
+    assert_equal({ 1 => [ "Ana Every", "Cy Every" ], 2 => [ "Dee Every" ], 3 => [] }, names_by_rank(listing(page_props[:tools], "cursor")))
+    assert_includes slugs(page_props[:models]), "claude-opus-5"
+    assert_includes page_props[:takes].map { |take| take[:model][:slug] }, "claude-opus-5"
   end
 
   # The call to action follows the viewer
@@ -225,32 +226,32 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
   test "a visitor is asked to sign in to rank the kind" do
     get kind_path("coding")
 
-    assert_equal({ label: "Sign in to rank coding", href: "/loadout/edit?kind=coding" }, props[:cta])
+    assert_equal({ label: "Sign in to rank coding", href: "/loadout/edit?kind=coding" }, page_props[:cta])
   end
 
   test "a member with no pick in the kind is asked to rank it, and one with a pick to edit it" do
     sign_in_as newcomer
     get kind_path("knowledge-work")
-    assert_equal({ label: "Rank your knowledge work picks", href: "/loadout/edit?kind=knowledge-work" }, props[:cta])
+    assert_equal({ label: "Rank your knowledge work picks", href: "/loadout/edit?kind=knowledge-work" }, page_props[:cta])
 
     sign_in_as users(:every_dee)
     get kind_path("coding")
-    assert_equal({ label: "Edit your coding picks", href: "/loadout/edit?kind=coding" }, props[:cta])
+    assert_equal({ label: "Edit your coding picks", href: "/loadout/edit?kind=coding" }, page_props[:cta])
 
     get kind_path("video")
-    assert_equal({ label: "Rank your video picks", href: "/loadout/edit?kind=video" }, props[:cta])
+    assert_equal({ label: "Rank your video picks", href: "/loadout/edit?kind=video" }, page_props[:cta])
   end
 
   test "the call to action link only selects a kind in the editor" do
     sign_in_as users(:every_dee)
     get kind_path("coding")
-    cta = props[:cta]
+    cta = page_props[:cta]
 
     get cta[:href]
 
     assert_response :success
     assert_inertia_component "loadout/edit"
-    assert_equal "coding", props[:selected_kind]
+    assert_equal "coding", page_props[:selected_kind]
     assert_equal 2, users(:every_dee).entries.where(category: categories(:coding)).count, "visiting the link changed nothing"
   end
 
@@ -265,7 +266,7 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
     get kind_path("coding")
 
     assert_response :success
-    assert_nil props[:eras]
+    assert_nil page_props[:eras]
   end
 
   test "the history section is present with two eras, the last one current" do
@@ -277,10 +278,10 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding")
 
-    eras = props[:eras]
+    eras = page_props[:eras]
     assert_equal [ "cursor", "claude-code" ], eras.map { |era| era[:tool][:slug] }
     assert_equal [ [ "2026-01-05", "2026-03-01" ], [ "2026-03-02", nil ] ], eras.map { |era| [ era[:from], era[:to] ] }
-    assert_equal props[:tools].first[:item], eras.last[:tool], "the current era is today's number one"
+    assert_equal page_props[:tools].first[:item], eras.last[:tool], "the current era is today's number one"
   end
 
   test "the history follows the SHOW class" do
@@ -291,7 +292,7 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding"), params: { show: "others" }
 
-    assert_nil props[:eras], "nobody in Everyone else ranked before"
+    assert_nil page_props[:eras], "nobody in Everyone else ranked before"
   end
 
   # KTD19 and page meta
@@ -301,20 +302,16 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
 
     get kind_path("coding")
 
-    assert_includes response.headers["Cache-Control"].split(/,\s*/), "private"
+    assert_never_shared_cacheable
     assert_includes response.headers["Cache-Control"].split(/,\s*/), "must-revalidate"
-    assert_not_includes response.headers["Cache-Control"], "public"
-    assert_includes response.headers["Vary"].split(/,\s*/), "Cookie"
   end
 
   test "page meta names the kind and does not depend on who is signed in" do
-    tags = "meta[name=description], meta[property='og:description'], meta[property='og:title'], meta[property='og:url']"
-
     get kind_path("coding")
-    visitor = css_select(tags).map(&:to_s)
+    visitor = preview_meta
     sign_in_as users(:every_cy)
     get kind_path("coding")
-    member = css_select(tags).map(&:to_s)
+    member = preview_meta
 
     assert_equal visitor, member
     assert_includes member.join, "Coding"

@@ -1,13 +1,13 @@
 import { Link, router } from '@inertiajs/react'
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
-import type { Category, Count as CountValue, MarkItem } from '../../types'
+import type { CatalogKind, Category, Count as CountValue, MarkItem } from '../../types'
 import Count from '../count'
 import Mark from '../mark'
 import SectionLabel from '../section_label'
 import { homeParams, kindHref, type HomeFilters, type PersonOption, type Show } from './filters'
 
 export type SearchItem = {
-  kind: 'tool' | 'model'
+  kind: CatalogKind
   item: MarkItem
   kinds: { category: Category; count: CountValue }[]
 }

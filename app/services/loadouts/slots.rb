@@ -7,18 +7,18 @@
 # Make a new instance for each operation.
 #
 # Ranks are unique per member and kind, and SQLite checks a unique index row by
-# row, so rows that change rank are first parked PARKED above their rank and then
-# given their final rank, inside the caller's transaction (KTD6).
+# row, so rows that change rank are first parked PARKED ranks above where they are
+# and then given their final rank, inside the caller's transaction (KTD6).
 module Loadouts
   class Slots
     PARKED = 10
 
-    def initialize(user:, category:, source:, client_name: nil, at: Time.current)
+    def initialize(user:, category:, source:, client_name: nil)
       @user = user
       @category = category
       @source = source
       @client_name = client_name
-      @at = at
+      @at = Time.current
       @batch = SecureRandom.uuid
     end
 

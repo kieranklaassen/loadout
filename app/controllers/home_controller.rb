@@ -14,24 +14,23 @@ class HomeController < InertiaController
 
   include VariesByViewer
 
+  # Every prop but the constant is a lambda, so a search-only partial reload (the page
+  # asks for `search` alone on each keystroke) skips the audience, rankings and launch reads.
   def index
-    audience = Audience.new(viewer: Current.user, show: params[:show], person: params[:person])
-    rankings = TeamRankings.new(viewer: Current.user, show: params[:show])
-    person = PersonPicks.new(viewer: Current.user, show: params[:show]).for(audience.person, team: true) if audience.person
     @page_meta = { url: "#{LoadoutHost.base_url(request)}/" }
 
     render inertia: "home/index", props: {
-      filters: audience.filters.merge(overall: params[:overall] == "1", q: query),
-      people: audience.people,
-      notice: audience.notice,
-      private_picks: audience.includes_private_picks?,
-      empty_reason: rankings.empty_reason,
-      launches: ModelLaunches.new(viewer: Current.user, show: params[:show]).list,
-      hero: (rankings.hero unless person),
-      rows: rankings.rows,
-      overall: rankings.overall,
-      person:,
-      cta: call_to_action,
+      filters: -> { audience.filters.merge(overall: params[:overall] == "1", q: query) },
+      people: -> { audience.people },
+      notice: -> { audience.notice },
+      private_picks: -> { audience.includes_private_picks? },
+      empty_reason: -> { rankings.empty_reason },
+      launches: -> { ModelLaunches.new(viewer: Current.user, show: params[:show]).list },
+      hero: -> { rankings.hero unless person },
+      rows: -> { rankings.rows },
+      overall: -> { rankings.overall },
+      person: -> { person },
+      cta: -> { call_to_action },
       all_vibe_checks_url: LoadoutHost::ALL_VIBE_CHECKS_URL,
       search: InertiaRails.optional { Search.new(viewer: Current.user, show: params[:show]).call(params[:q]) }
     }
@@ -39,8 +38,22 @@ class HomeController < InertiaController
 
   private
 
+  def audience
+    @audience ||= Audience.new(viewer: Current.user, show: params[:show], person: params[:person])
+  end
+
+  def rankings
+    @rankings ||= TeamRankings.new(viewer: Current.user, show: params[:show])
+  end
+
+  def person
+    return unless audience.person
+
+    @person ||= PersonPicks.new(viewer: Current.user, show: params[:show]).for(audience.person, team: true)
+  end
+
   def query
-    params[:q].to_s.squish.first(Search::MAX_QUERY_LENGTH).presence
+    Search.clean(params[:q]).presence
   end
 
   # Visitors are asked to join, members with nothing ranked to start, and members with picks get none.

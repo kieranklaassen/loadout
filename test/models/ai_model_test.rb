@@ -72,7 +72,7 @@ class AiModelTest < ActiveSupport::TestCase
   end
 
   test "to_prop carries the kind and the mark" do
-    assert_equal({ slug: "claude-opus-5-5", name: "Claude Opus 5.5", kind: "model", maker: "Anthropic", mark: nil, hue: 18, monogram: "O5", pending: false }, ai_models(:opus_5_5).to_prop)
+    assert_equal({ slug: "claude-opus-5-5", name: "Claude Opus 5.5", kind: "model", maker: "Anthropic", mark: nil, pending: false }, ai_models(:opus_5_5).to_prop)
     assert_equal "tool", tools(:cursor).to_prop[:kind]
 
     tools(:cursor).update!(mark: "cursor")

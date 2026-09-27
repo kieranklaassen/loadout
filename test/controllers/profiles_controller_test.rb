@@ -6,19 +6,10 @@ require "test_helper"
 # knowledge work; dee shares with the Every team; cy is only me; eli and fay share with
 # anyone with the link.
 class ProfilesControllerTest < ActionDispatch::IntegrationTest
-  def props = inertia.props.deep_symbolize_keys
-  def kind(slug) = props[:kinds].find { |kind| kind[:category][:slug] == slug }
+  include SurfaceHelper
+
+  def kind(slug) = page_props[:kinds].find { |kind| kind[:category][:slug] == slug }
   def slugs(picks) = picks.map { |pick| [ pick[:tool][:slug], pick.dig(:model, :slug) ] }
-
-  # The same request path is in every not-found body (the page url and og:url), so bodies
-  # are compared with it masked.
-  def masked_body(path) = response.body.gsub(%r{#{Regexp.escape(path)}(?![\w-])}, "/PATH")
-
-  def not_found_answer(path)
-    get path
-    assert_response :not_found
-    [ inertia.component, inertia.props.deep_symbolize_keys, masked_body(path) ]
-  end
 
   # A member who finished onboarding and has ranked nothing.
   def newcomer = add_person("newcomer", visibility: "only_me", team: true)
@@ -30,35 +21,35 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_inertia_component "profiles/show"
-    assert_equal({ handle: "ana", name: "Ana Every", avatar_url: "https://every.to/avatars/ana.png" }, props[:person])
-    assert_equal 2, props[:ranked_count]
-    assert_equal %w[coding knowledge-work video], props[:kinds].map { |kind| kind[:category][:slug] }
+    assert_equal({ handle: "ana", name: "Ana Every", avatar_url: "https://every.to/avatars/ana.png" }, page_props[:person])
+    assert_equal 2, page_props[:ranked_count]
+    assert_equal %w[coding knowledge-work video], page_props[:kinds].map { |kind| kind[:category][:slug] }
     assert_equal [ [ "cursor", "claude-opus-5-5" ], [ "claude-code", nil ] ], slugs(kind("coding")[:picks])
     first = kind("coding")[:picks].first
     assert_equal [ 1, "1m", "high" ], first.values_at(:rank, :context, :effort)
     assert_empty kind("video")[:picks]
-    assert_equal "http://www.example.com/ana", props[:copy_url]
+    assert_equal "http://www.example.com/ana", page_props[:copy_url]
   end
 
   test "the Profile carries no team notes, launches, recent changes, notes or owner flags" do
     get "/ana"
 
-    assert props[:kinds].all? { |kind| kind[:team_uses].nil? }
-    assert_empty props[:new_in_loadout]
-    assert_empty props.keys & %i[recent_changes categories is_owner profile]
+    assert page_props[:kinds].all? { |kind| kind[:team_uses].nil? }
+    assert_empty page_props[:new_in_loadout]
+    assert_empty page_props.keys & %i[recent_changes categories is_owner profile]
   end
 
   test "bio is the Profile's alone: present here, absent from the read layer's person and from Home's Person view" do
     users(:every_ana).update!(bio: "Writes code and essays.")
 
     get "/ana"
-    assert_equal "Writes code and essays.", props[:bio]
-    assert_not_includes all_keys(props.slice(:person, :kinds, :new_in_loadout, :you)), :bio
+    assert_equal "Writes code and essays.", page_props[:bio]
+    assert_not_includes all_keys(page_props.slice(:person, :kinds, :new_in_loadout, :you)), :bio
 
     sign_in_as users(:every_dee)
     get root_path, params: { person: "ana" }
-    assert_equal "ana", props[:person][:person][:handle]
-    assert_not_includes all_keys(props[:person]), :bio
+    assert_equal "ana", page_props[:person][:person][:handle]
+    assert_not_includes all_keys(page_props[:person]), :bio
   end
 
   test "no field on the page carries an email address" do
@@ -67,7 +58,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     get "/ana"
 
-    assert_no_private_fields(props.slice(:person, :kinds, :new_in_loadout, :you, :copy_url))
+    assert_no_private_fields(page_props.slice(:person, :kinds, :new_in_loadout, :you, :copy_url))
   end
 
   test "a team profile opens for a team viewer, and a link profile for any signed-in member" do
@@ -112,7 +103,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     hidden.each do |path, viewers|
       viewers.each do |viewer|
-        viewer ? sign_in_as(viewer) : sign_out
+        sign_in_or_out(viewer)
         who = viewer&.email_address || "a visitor"
         unknown = not_found_answer("/nobody-here")
         answer = not_found_answer(path)
@@ -154,7 +145,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
     assert_inertia_component "profiles/show"
-    assert_equal "dee", props[:person][:handle]
+    assert_equal "dee", page_props[:person][:handle]
   ensure
     restore_every_oauth
   end
@@ -177,8 +168,8 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     get "/newbie"
 
     assert_response :success
-    assert_equal 0, props[:ranked_count]
-    assert props[:kinds].all? { |kind| kind[:picks].empty? }
+    assert_equal 0, page_props[:ranked_count]
+    assert page_props[:kinds].all? { |kind| kind[:picks].empty? }
     assert_select "meta[property='og:image'][content$='/og-default.png']"
     assert_select "meta[property='og:image'][content*='/newbie/og.png']", count: 0
     assert_select "meta[name=robots]", count: 0
@@ -191,7 +182,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     get "/quiet"
 
     assert_response :success
-    assert_equal 0, props[:ranked_count]
+    assert_equal 0, page_props[:ranked_count]
   end
 
   # Compare with mine
@@ -201,10 +192,10 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     get "/ana"
 
-    assert props[:viewer_can_compare]
-    assert_equal %w[coding knowledge-work], props[:you].keys.map(&:to_s)
-    assert_equal [ [ "claude-code", "claude-opus-5-5" ], [ "cursor", "gpt-6-astra" ] ], slugs(props[:you][:coding])
-    assert_equal "medium", props[:you][:coding].first[:effort]
+    assert page_props[:viewer_can_compare]
+    assert_equal %w[coding knowledge-work], page_props[:you].keys.map(&:to_s)
+    assert_equal [ [ "claude-code", "claude-opus-5-5" ], [ "cursor", "gpt-6-astra" ] ], slugs(page_props[:you][:coding])
+    assert_equal "medium", page_props[:you][:coding].first[:effort]
   end
 
   test "only the kinds the viewer ranked are in you" do
@@ -212,20 +203,20 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     get "/ana"
 
-    assert_equal %w[coding video], props[:you].keys.map(&:to_s)
+    assert_equal %w[coding video], page_props[:you].keys.map(&:to_s)
   end
 
   test "a visitor, a member with nothing ranked and the owner cannot compare" do
     get "/ana"
-    assert_equal [ false, {} ], [ props[:viewer_can_compare], props[:you] ]
+    assert_equal [ false, {} ], [ page_props[:viewer_can_compare], page_props[:you] ]
 
     sign_in_as newcomer
     get "/ana"
-    assert_equal [ false, {} ], [ props[:viewer_can_compare], props[:you] ]
+    assert_equal [ false, {} ], [ page_props[:viewer_can_compare], page_props[:you] ]
 
     sign_in_as users(:every_ana)
     get "/ana"
-    assert_equal [ false, {} ], [ props[:viewer_can_compare], props[:you] ]
+    assert_equal [ false, {} ], [ page_props[:viewer_can_compare], page_props[:you] ]
   end
 
   test "the viewer's pending picks are their own to compare with" do
@@ -235,7 +226,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     get "/ana"
 
-    pick = props[:you][:video].first
+    pick = page_props[:you][:video].first
     assert_equal [ "secret-tool", true ], [ pick[:tool][:slug], pick[:tool][:pending] ]
   end
 
@@ -268,11 +259,8 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     [ "/ana", "/nobody-here" ].each do |path|
       get path
 
-      cache_control = response.headers["Cache-Control"].split(/,\s*/)
-      assert_includes cache_control, "private", path
-      assert_includes cache_control, "must-revalidate", path
-      assert_not_includes cache_control, "public", path
-      assert_includes response.headers["Vary"].split(/,\s*/), "Cookie", path
+      assert_never_shared_cacheable(path)
+      assert_includes response.headers["Cache-Control"].split(/,\s*/), "must-revalidate", path
     end
   end
 
@@ -322,7 +310,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     get "/ana"
 
-    assert_equal "https://loadout.example.test/ana", props[:copy_url]
+    assert_equal "https://loadout.example.test/ana", page_props[:copy_url]
     assert_select "meta[property='og:url'][content=?]", "https://loadout.example.test/ana"
     assert_select "meta[property='og:image'][content^='https://loadout.example.test/ana/og.png']"
   ensure
@@ -330,12 +318,11 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the preview does not depend on who is looking" do
-    tags = "meta[name=description], meta[property^='og:'], meta[name^='twitter:'], meta[name=robots]"
     get "/ana"
-    visitor = css_select(tags).map(&:to_s)
+    visitor = preview_meta
     sign_in_as users(:every_dee)
     get "/ana"
 
-    assert_equal visitor, css_select(tags).map(&:to_s)
+    assert_equal visitor, preview_meta
   end
 end

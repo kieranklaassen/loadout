@@ -211,7 +211,7 @@ class TeamRankings
   def listing(tally, entries, kind)
     holders = entries.select { |entry| item_of(entry, kind)&.id == tally.item.id }
     by_rank = (1..Entry::MAX_RANK).index_with do |rank|
-      holders.select { |entry| entry.rank == rank }.map { |entry| audience.person_ref(entry.user_id) }.sort_by { |person| [ person[:name].to_s.downcase, person[:handle].to_s ] }
+      holders.select { |entry| entry.rank == rank }.map { |entry| audience.person_ref(entry.user_id) }.sort_by { |person| Audience.name_key(person[:name], person[:handle]) }
     end
     standing(tally).merge(by_rank:)
   end

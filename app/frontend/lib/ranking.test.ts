@@ -5,7 +5,6 @@ import {
   modelAction,
   movedMessage,
   optionGroups,
-  ordinal,
   progress,
   progressLabel,
   startedCount,
@@ -23,12 +22,6 @@ const zed = markItem('zed', 'Zed')
 
 const kind = (overrides: Partial<EditorKind> = {}): EditorKind => ({ category: coding, picks: [], suggestions: [], to_confirm: 0, ...overrides })
 const standing = (item = cursorMark, n = 2): TeamStanding => ({ item, count: { n, of: 6 }, yours_rank: null })
-
-describe('ordinal', () => {
-  it('writes ranks the way the page says them', () => {
-    expect([1, 2, 3].map(ordinal)).toEqual(['1st', '2nd', '3rd'])
-  })
-})
 
 describe('layoutSlots', () => {
   it('gives each slot its pick and stacks suggestions in the slot they would land in', () => {
@@ -168,7 +161,7 @@ describe('slot helpers', () => {
     expect([...toolsUsedElsewhere(state, 3)].sort()).toEqual(['claude-code', 'cursor'])
   })
 
-  it('announces a move the way the plan words it', () => {
+  it('announces a move as the new rank, spelled as an ordinal', () => {
     expect(movedMessage('Cursor', 1)).toBe('Cursor is now 1st')
   })
 })

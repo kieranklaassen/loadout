@@ -38,7 +38,7 @@ class SearchCatalogTool < ApplicationTool
       items = items.select { |item| matches?(item, query.downcase) } if query.present?
       items = items.select { |item| suggested?(item, category) } if category && query.blank?
       items = items.sort_by.with_index { |item, index| [ category && suggested?(item, category) ? 0 : 1, index ] }
-      items.first(LIMIT).map { |item| item.to_prop.except(:hue, :monogram, :pending).merge(categories: item.category_slugs) }
+      items.first(LIMIT).map { |item| item.to_prop.except(:pending).merge(categories: item.category_slugs) }
     end
 
     def matches?(item, query)

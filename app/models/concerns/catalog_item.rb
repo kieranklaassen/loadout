@@ -64,7 +64,7 @@ module CatalogItem
   end
 
   def to_prop
-    { slug:, name:, kind:, maker:, mark:, hue:, monogram:, pending: pending? }
+    { slug:, name:, kind:, maker:, mark:, pending: pending? }
   end
 
   private

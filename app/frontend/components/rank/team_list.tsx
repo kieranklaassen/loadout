@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { modelAction, ordinal, teamCountText, toolAction, type EditorKind, type TeamAction, type TeamStanding, type TeamTop } from '../../lib/ranking'
+import { rankLabel } from '../../lib/rank_label'
+import { modelAction, teamCountText, toolAction, type EditorKind, type TeamAction, type TeamStanding, type TeamTop } from '../../lib/ranking'
 import Button from '../button'
 import Mark from '../mark'
 import { sectionLabelClasses } from '../section_label'
@@ -60,7 +61,7 @@ export default function TeamList({ kind, top, actions }: { kind: EditorKind; top
                 standing={standing}
                 action={toolAction(kind, standing)}
                 onUse={(action) =>
-                  actions.saveSlot(action.rank, { tool: standing.item.slug }, { message: `${standing.item.name} is now your ${ordinal(action.rank)} pick` })
+                  actions.saveSlot(action.rank, { tool: standing.item.slug }, { message: `${standing.item.name} is now your ${rankLabel(action.rank)} pick` })
                 }
               />
             ))}
@@ -73,7 +74,7 @@ export default function TeamList({ kind, top, actions }: { kind: EditorKind; top
                 launched={standing.launched}
                 action={modelAction(kind, standing)}
                 onUse={(action) =>
-                  actions.saveSlot(action.rank, { model: standing.item.slug }, { message: `${standing.item.name} is now the model for your ${ordinal(action.rank)} pick` })
+                  actions.saveSlot(action.rank, { model: standing.item.slug }, { message: `${standing.item.name} is now the model for your ${rankLabel(action.rank)} pick` })
                 }
               />
             ))}

@@ -39,7 +39,7 @@ function Top({ leader }: { leader: Leader }) {
           <span aria-hidden="true" className="text-fg-muted">
             {runner_up.count.n}
           </span>
-          <span className="sr-only">{`${runner_up.count.n} of ${runner_up.count.of} use it`}</span>
+          <Count count={runner_up.count} label="use it" className="sr-only" />
         </p>
       )}
     </>

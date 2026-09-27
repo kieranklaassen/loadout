@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { contextOptionLabel, effortOptionLabel, ordinal } from '../../lib/ranking'
+import { rankLabel } from '../../lib/rank_label'
+import { contextOptionLabel, effortOptionLabel } from '../../lib/ranking'
 import type { MarkItem, PickContext, PickEffort, RankedPick, Suggestion } from '../../types'
 import Button from '../button'
 import Chip, { contextLabel, effortLabel } from '../chip'
@@ -133,7 +134,7 @@ export default function SuggestionSlot({ suggestion, mode, pick, picks, actions 
                 />
                 <span className="radio-dot mt-0" />
                 <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[15px]">
-                  <span className="text-fg-muted">{ordinal(candidate.rank)}</span>
+                  <span className="text-fg-muted">{rankLabel(candidate.rank)}</span>
                   <Mark item={candidate.tool} size="xs" />
                   {candidate.tool.name}
                   {candidate.model && <span className="text-fg-muted">with {candidate.model.name}</span>}

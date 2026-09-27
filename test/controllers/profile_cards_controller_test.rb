@@ -1,6 +1,8 @@
 require "test_helper"
 
 class ProfileCardsControllerTest < ActionDispatch::IntegrationTest
+  include SurfaceHelper
+
   # Production answers with public/404.html; the test environment would print the exception.
   DETAILED_EXCEPTIONS = "action_dispatch.show_detailed_exceptions".freeze
 
@@ -29,7 +31,7 @@ class ProfileCardsControllerTest < ActionDispatch::IntegrationTest
       "/dee/og.png" => [ nil, users(:every_dee), users(:every_ana), users(:outside_eli) ]
     }.each do |path, viewers|
       viewers.each do |viewer|
-        viewer ? sign_in_as(viewer) : sign_out
+        sign_in_or_out(viewer)
         get path
 
         assert_equal unknown, [ response.status, response.body ], "#{path} for #{viewer&.email_address || "a visitor"}"

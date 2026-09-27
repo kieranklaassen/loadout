@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
+import { rankLabel } from '../../lib/rank_label'
 import {
   contextOptionLabel,
   effortOptionLabel,
   optionGroups,
-  ordinal,
   toolsUsedElsewhere,
   type Catalog,
   type CatalogOption,
@@ -115,14 +115,14 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
         {pick || waiting ? (
           <>
             <span aria-hidden="true">{rank}</span>
-            <span className="sr-only">{ordinal(rank)} pick</span>
+            <span className="sr-only">{rankLabel(rank)} pick</span>
           </>
         ) : (
           <>
             <span aria-hidden="true" className={numeral}>
               {rank}
             </span>
-            <span className="text-base font-semibold">Add your {ordinal(rank)} pick</span>
+            <span className="text-base font-semibold">Add your {rankLabel(rank)} pick</span>
           </>
         )}
       </h3>

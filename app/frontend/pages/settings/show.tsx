@@ -154,7 +154,7 @@ function PageForm({ account, availability }: { account: Account; availability?: 
 function Agents({ agents }: { agents: ConnectedAgent[] }) {
   const revoke = (agent: ConnectedAgent) => {
     if (window.confirm(`Disconnect ${agent.name}? Its next request will be refused until you approve it again.`)) {
-      router.delete(`/agents/${agent.id}`)
+      router.delete(`/agents/${encodeURIComponent(agent.id)}`)
     }
   }
 
