@@ -38,7 +38,7 @@ module Loadouts
     end
 
     def recent_changes(limit: 12)
-      changes = @user.entry_changes.recent_first.includes(:category, :tool, :ai_model).limit(limit * 3)
+      changes = @user.entry_changes.narrated.recent_first.includes(:category, :tool, :ai_model).limit(limit * 3)
       EntryChange.story(changes).first(limit)
     end
 

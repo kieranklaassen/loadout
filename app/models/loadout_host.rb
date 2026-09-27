@@ -20,6 +20,12 @@ module LoadoutHost
     configured_base_url&.sub(%r{\Ahttps?://}, "") || DEFAULT_HOST
   end
 
+  # A link that stays relative to the host (agent tool output, the WebMCP endpoint):
+  # the path the app is served under, then the app's own path. Empty at a host root.
+  def path_to(path)
+    "#{URI.parse(base_url).path.chomp("/")}#{path}"
+  end
+
   def configured_base_url
     Rails.configuration.x.public_base_url.presence
   end

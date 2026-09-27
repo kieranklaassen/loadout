@@ -4,14 +4,15 @@ require "test_helper"
 
 class WebmcpTest < ActionDispatch::IntegrationTest
   test "signed-in pages share the ToolRegistry manifest as the webmcp prop" do
-    sign_in_as(users(:one))
-    get "/welcome"
+    sign_in_as(users(:every_ana))
+    get agents_path
 
     assert_equal ToolRegistry.manifest.deep_stringify_keys, inertia.props[:webmcp].deep_stringify_keys
+    assert_includes inertia.props[:webmcp][:tools].pluck(:name), "suggest_picks"
   end
 
   test "signed-out pages share webmcp: nil, so the page registers no tools" do
-    get root_path
+    get new_session_path
 
     assert inertia.props.key?(:webmcp)
     assert_nil inertia.props[:webmcp]
@@ -32,11 +33,11 @@ class WebmcpTest < ActionDispatch::IntegrationTest
   end
 
   test "the layout emits an origin-trial meta tag per token and none when unset" do
-    get root_path
+    get new_session_path
     assert_select "meta[http-equiv=origin-trial]", count: 0
 
     ENV[Webmcp::ORIGIN_TRIAL_ENV] = "TokenA== TokenB=="
-    get root_path
+    get new_session_path
     assert_select "meta[http-equiv=origin-trial][content=?]", "TokenA=="
     assert_select "meta[http-equiv=origin-trial][content=?]", "TokenB=="
   ensure

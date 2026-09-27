@@ -27,12 +27,51 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Claude Code", "Cursor" ], inertia.props[:agents].map { |agent| agent[:name] }.sort
     assert_equal "http://www.example.com/mcp", inertia.props[:mcp_url]
     assert_match(/Ask me before you guess/, inertia.props[:suggested_prompt])
+    assert_equal Agents::Capabilities.to_prop.deep_stringify_keys, inertia.props[:capabilities].deep_stringify_keys
 
     install = URI.parse(inertia.props[:cursor_install_url])
     assert_equal [ "cursor", "anysphere.cursor-deeplink", "/mcp/install" ], [ install.scheme, install.host, install.path ]
     query = Rack::Utils.parse_query(install.query)
     assert_equal "loadout", query["name"]
     assert_equal({ "url" => "http://www.example.com/mcp" }, JSON.parse(Base64.strict_decode64(query["config"])))
+  end
+
+  test "a client is known only by where its sign-in code went: an https redirect on an allowlisted host" do
+    claude_uri = "https://claude.ai/api/mcp/auth_callback"
+    connect = lambda do |name, redirect_uris, redirect_uri|
+      client_id = register_client(client_name: name, redirect_uris:)
+      verifier, challenge = pkce_pair
+      code = approve(user: @user, client_id:, challenge:, redirect_uri:)
+      sign_out
+      exchange_code(code:, client_id:, verifier:, redirect_uri:)
+      client_id
+    end
+    connect.("Claude", [ claude_uri ], claude_uri)
+    connect.("Cursor", [ "cursor://anysphere.cursor-retrieval/oauth/callback" ], "cursor://anysphere.cursor-retrieval/oauth/callback")
+    connect.("Also Claude", [ McpOauthHelper::LOOPBACK_REDIRECT, claude_uri ], McpOauthHelper::LOOPBACK_REDIRECT)
+
+    sign_in_as(@user)
+    get agents_path
+
+    agents = inertia.props[:agents].index_by { |agent| agent[:name] }
+    assert_equal [ "claude", "claude.ai" ], agents["Claude"].values_at(:known_key, :redirect_host)
+    assert_equal [ nil, "cursor://anysphere.cursor-retrieval" ], agents["Cursor"].values_at(:known_key, :redirect_host)
+    assert_equal [ nil, "127.0.0.1" ], agents["Also Claude"].values_at(:known_key, :redirect_host), "registering an allowlisted URI is not using it"
+  end
+
+  test "each agent carries the count of open suggestions that revoking it would withdraw" do
+    client_id, = connect_agent(user: @user, client_name: "Claude")
+    client = OauthClient.find_by!(client_id:)
+    Loadouts::Update.call(
+      user: @user, operations: [ { op: "suggest", category: "video", tool: "runway" }, { op: "suggest", category: "video", tool: "Hedra" } ],
+      source: "mcp", client_name: "Claude", oauth_client_id: client.id
+    )
+    Loadouts::Update.call(user: @user, operations: [ { op: "suggest", category: "coding", tool: "cursor" } ], source: "webmcp")
+
+    sign_in_as(@user)
+    get agents_path
+
+    assert_equal 2, inertia.props[:agents].sole[:open_suggestions]
   end
 
   test "revoking a client ends all of that member's grants for it on the next call (AE3)" do

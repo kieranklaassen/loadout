@@ -19,6 +19,16 @@ class LoadoutHostTest < ActiveSupport::TestCase
     assert_equal "every.to/loadout", LoadoutHost.host
   end
 
+  test "paths on the host sit under the base URL's own path" do
+    assert_equal "/loadout/edit?kind=coding", LoadoutHost.path_to("/loadout/edit?kind=coding")
+
+    Rails.configuration.x.public_base_url = "https://every.to/loadout"
+    assert_equal "/loadout/loadout/edit", LoadoutHost.path_to("/loadout/edit")
+
+    Rails.configuration.x.public_base_url = "https://loadout.every.to/"
+    assert_equal "/webmcp/tools", LoadoutHost.path_to("/webmcp/tools")
+  end
+
   test "a blank PUBLIC_BASE_URL counts as unset" do
     Rails.configuration.x.public_base_url = ""
 

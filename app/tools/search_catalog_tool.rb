@@ -10,9 +10,9 @@ class SearchCatalogTool < ApplicationTool
     Pass `category` (a slug from list_categories) to rank the items usually used for that
     kind of work first, or pass only `category` to browse its suggestions. Returns
     `{ tools: [...], models: [...] }`, each item with `slug`, `name`, `maker`, and
-    `categories` (the categories it is suggested for). Prefer these slugs in update_loadout
-    so entries match the catalog exactly; a name that is not in the catalog becomes a new
-    item flagged for review.
+    `categories` (the categories it is suggested for). Prefer these slugs in suggest_picks
+    so picks match the catalog exactly; a name that is not in the catalog becomes a new
+    item flagged for review. #{DATA_NOTICE}
   TEXT
   input_schema(
     properties: {
@@ -33,13 +33,6 @@ class SearchCatalogTool < ApplicationTool
   end
 
   private
-    def find_category
-      return if arguments[:category].blank?
-
-      Category.resolve(arguments[:category]) ||
-        raise(Error, "Unknown category #{arguments[:category].inspect}. Use one of: #{Category.pluck(:slug).join(", ")}.")
-    end
-
     def search(klass, query, category)
       items = klass.approved.ordered.to_a
       items = items.select { |item| matches?(item, query.downcase) } if query.present?

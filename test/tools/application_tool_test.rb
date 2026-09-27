@@ -43,17 +43,39 @@ class ApplicationToolTest < ActiveSupport::TestCase
     description "Reports where the call came from."
     input_schema(properties: {}, required: [], additionalProperties: false)
 
-    def call = { source:, client_name: }
+    def call = { source:, client_name:, oauth_client_id: }
   end
 
-  test "source and client_name come from the server context" do
-    response = SourceTool.call(server_context: { user: users(:one), source: "mcp", client_name: "Cursor" })
-    assert_equal({ "source" => "mcp", "client_name" => "Cursor" }, JSON.parse(text(response)))
+  test "source, client_name and oauth_client_id come from the server context" do
+    response = SourceTool.call(server_context: { user: users(:one), source: "mcp", client_name: "Cursor", oauth_client_id: 12 })
+    assert_equal({ "source" => "mcp", "client_name" => "Cursor", "oauth_client_id" => 12 }, JSON.parse(text(response)))
+  end
+
+  class WriteTool < ApplicationTool
+    tool_name "test_write"
+    description "Sends operations to the write path."
+    input_schema(properties: { op: { type: "string" } }, required: [ "op" ], additionalProperties: false)
+
+    def call = update_loadout!([ { op: arguments[:op], category: "video", tool: "runway" } ]).suggestions.size
+  end
+
+  test "update_loadout! writes as the call's source, client name and client id" do
+    user = users(:every_dee)
+    WriteTool.call(op: "suggest", server_context: { user:, source: "mcp", client_name: "Cursor", oauth_client_id: 12 })
+
+    suggestion = user.pick_suggestions.open.sole
+    assert_equal [ "Cursor", 12 ], [ suggestion.client_name, suggestion.oauth_client_id ]
   end
 
   test "a Loadouts::Update::Error becomes an isError result" do
-    response = UpdateLoadoutTool.call(operations: [ { op: "nope", category: "coding" } ], server_context: { user: users(:one), source: "mcp" })
+    response = WriteTool.call(op: "nope", server_context: { user: users(:one), source: "mcp" })
     assert response.error?
     assert_match(/Unknown operation/, text(response))
+  end
+
+  test "a decision that belongs to the member is refused for an agent's source" do
+    response = WriteTool.call(op: "set_pick", server_context: { user: users(:one), source: "webmcp" })
+    assert response.error?
+    assert_match(/only be done by the member on the web/, text(response))
   end
 end

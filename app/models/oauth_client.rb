@@ -47,6 +47,14 @@ class OauthClient < ApplicationRecord
     uri.scheme&.downcase == "http" && LOOPBACK_HOSTS.include?(uri.hostname.to_s.downcase)
   end
 
+  # Where a redirect URI sends the member, as the consent screen and the Agents page print
+  # it: the host of an http(s) URI, otherwise scheme and host, so that a private-use scheme
+  # ("x-evil://claude.ai/cb") cannot borrow the look of a familiar host.
+  def self.redirect_host(value)
+    uri = URI.parse(value)
+    %w[http https].include?(uri.scheme&.downcase) && uri.host.present? ? uri.host : "#{uri.scheme}://#{uri.host}"
+  end
+
   # Exact match, except that a loopback redirect may use any port (RFC 8252 §7.3),
   # because native clients bind an ephemeral port per sign-in.
   def redirect_uri_registered?(candidate)

@@ -47,8 +47,9 @@ class McpController < ActionController::API
 
     def transport
       base = URI.parse(public_base_url)
+      client = @grant.oauth_client
       MCP::Server::Transports::StreamableHTTPTransport.new(
-        ToolRegistry.mcp_server(user: @grant.user, source: "mcp", client_name: @grant.oauth_client.client_name),
+        ToolRegistry.mcp_server(user: @grant.user, source: "mcp", client_name: client.client_name, oauth_client_id: client.id),
         stateless: true,
         enable_json_response: true,
         serve_subscriptions_listen: false,
