@@ -54,7 +54,7 @@ class ApplicationTool < MCP::Tool
   end
 
   private
-    def update_loadout!(operations)
+    def run_operations!(operations)
       Loadouts::Update.call(user:, operations:, source:, client_name:, oauth_client_id:)
     end
 

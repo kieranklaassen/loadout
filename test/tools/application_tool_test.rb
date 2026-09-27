@@ -56,10 +56,10 @@ class ApplicationToolTest < ActiveSupport::TestCase
     description "Sends operations to the write path."
     input_schema(properties: { op: { type: "string" } }, required: [ "op" ], additionalProperties: false)
 
-    def call = update_loadout!([ { op: arguments[:op], category: "video", tool: "runway" } ]).suggestions.size
+    def call = run_operations!([ { op: arguments[:op], category: "video", tool: "runway" } ]).suggestions.size
   end
 
-  test "update_loadout! writes as the call's source, client name and client id" do
+  test "run_operations! writes as the call's source, client name and client id" do
     user = users(:every_dee)
     WriteTool.call(op: "suggest", server_context: { user:, source: "mcp", client_name: "Cursor", oauth_client_id: 12 })
 

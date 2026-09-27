@@ -51,7 +51,7 @@ class SuggestPicksTool < ApplicationTool
   annotations(read_only_hint: false, destructive_hint: false, idempotent_hint: false, open_world_hint: false)
 
   def call
-    result = update_loadout!(arguments[:operations])
+    result = run_operations!(arguments[:operations])
     proposed, withdrawn = result.suggestions.partition { |suggestion| suggestion.status == "open" }
 
     {

@@ -94,17 +94,4 @@ class Loadouts::PresenterTest < ActiveSupport::TestCase
     assert_equal 1, listed[:to_confirm]
     assert_empty kind(users(:every_dee), "video")[:suggestions]
   end
-
-  test "categories groups confirmed picks by kind in catalog order, first pick first" do
-    categories = Loadouts::Presenter.new(users(:every_ana)).categories
-
-    assert_equal %w[coding knowledge-work], categories.map { |category| category[:slug] }
-    assert_equal %w[cursor claude-code], categories.first[:entries].map { |entry| entry[:tool][:slug] }
-    assert_equal Category.count, Loadouts::Presenter.new(users(:one)).categories(include_empty: true).size
-  end
-
-  test "top_picks keeps each kind's first pick" do
-    assert_equal [ [ "coding", %w[cursor] ], [ "knowledge-work", %w[claude] ] ],
-      Loadouts::Presenter.new(users(:every_ana)).top_picks.map { |category| [ category[:slug], category[:entries].map { |entry| entry[:tool][:slug] } ] }
-  end
 end

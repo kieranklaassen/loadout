@@ -32,17 +32,6 @@ module Loadouts
       TeamRankings.new(viewer: @user).team_top
     end
 
-    # [{ slug:, name:, blurb:, entries: [Entry#to_prop, ...] }, ...] for categories with entries.
-    def categories(include_empty: false)
-      grouped = entries.group_by(&:category_id)
-      Category.all.filter_map do |category|
-        picks = grouped.fetch(category.id, [])
-        next if picks.empty? && !include_empty
-
-        category.to_prop.merge(entries: picks.map(&:to_prop))
-      end
-    end
-
     def recent_changes(limit: 12)
       changes = @user.entry_changes.narrated.recent_first.includes(:category, :tool, :ai_model).limit(limit * 3)
       EntryChange.story(changes).first(limit)
@@ -50,11 +39,6 @@ module Loadouts
 
     def entries
       @entries ||= @user.entries.includes(:category, :tool, :ai_model).in_display_order.to_a
-    end
-
-    # The first pick per category, for summaries and the share card.
-    def top_picks
-      categories.map { |category| category.merge(entries: category[:entries].first(1)) }
     end
 
     private
