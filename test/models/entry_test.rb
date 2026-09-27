@@ -72,6 +72,16 @@ class EntryTest < ActiveSupport::TestCase
     end
   end
 
+  test "starting to share changes who may see a person's history, not the history itself" do
+    hidden = users(:every_cy)
+    hidden.update!(visibility: "team")
+
+    changes = hidden.entry_changes.map { |change| change.attributes.merge("details" => change.details) }
+    expected = hidden.entries.to_h { |entry| [ [ entry.category_id, entry.rank ], [ entry.tool_id, entry.ai_model_id, entry.context, entry.effort ] ] }
+    assert_equal expected, replay_slots(changes)
+    assert_equal [ "team", "team" ], hidden.visibility_periods.order(:starts_at).pluck(:level), "the earlier team span is kept beside the new one"
+  end
+
   test "an open suggestion is not a pick, so no query over entries can show it" do
     suggestion = pick_suggestions(:ana_runway)
 
