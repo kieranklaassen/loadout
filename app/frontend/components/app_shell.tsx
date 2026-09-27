@@ -84,8 +84,6 @@ export default function AppShell({
   children: ReactNode
   search?: ReactNode
   header?: Header
-  /** Ignored: v1 pages still pass it until U13 removes them. */
-  wide?: boolean
 }) {
   const { props, url } = usePage<SharedProps>()
   const { current_user, flash } = props

@@ -32,7 +32,7 @@ function Preview({ name, avatarUrl, handle, kinds, visibility }: { name: string;
         <div className="flex items-center gap-4">
           <Avatar name={name} src={avatarUrl} size="lg" />
           <div className="min-w-0">
-            <p className="display break-words text-[28px] md:text-[32px]">{name}</p>
+            <p className="font-serif leading-[1.02] tracking-[-0.02em] break-words text-[28px] md:text-[32px]">{name}</p>
             <p className="mt-1 break-all font-mono text-caption text-fg-muted">
               {host}/{handle}
             </p>
@@ -84,7 +84,7 @@ export default function OnboardingShow({ suggested_handle, name, avatar_url, vis
       <div className="grid grid-cols-1 gap-12 pt-4 md:grid-cols-[minmax(0,1fr)_minmax(0,520px)] md:gap-[72px] md:pt-8">
         <div>
           <SectionLabel as="p">Step 1 of 2 · Then rank your first tools</SectionLabel>
-          <h1 className="display mt-3.5 text-[40px] md:text-[56px]">Claim your link</h1>
+          <h1 className="font-serif leading-[1.02] tracking-[-0.02em] mt-3.5 text-[40px] md:text-[56px]">Claim your link</h1>
           <p className="mt-4 max-w-[520px] text-lg leading-normal text-fg-soft">
             This is the address of your loadout. You can change it later in settings.
           </p>

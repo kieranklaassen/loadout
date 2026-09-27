@@ -4,7 +4,7 @@ import AppShell from '../../components/app_shell'
 import Button, { ButtonLink } from '../../components/button'
 import LoadoutTable from '../../components/profile/loadout_table'
 import ProfileHeader from '../../components/profile/profile_header'
-import { CopyLinkButton } from '../../components/share_bar'
+import { CopyLinkButton } from '../../components/copy_link_button'
 import type { PersonData } from '../../components/team/person_view'
 import type { RankedPick, SharedProps } from '../../types'
 

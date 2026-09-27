@@ -30,7 +30,7 @@ type Props = {
   availability?: HandleAvailability
 }
 
-const heading = 'display text-[28px] md:text-[32px]'
+const heading = 'font-serif leading-[1.02] tracking-[-0.02em] text-[28px] md:text-[32px]'
 const label = 'block text-sm font-semibold text-fg'
 const hint = 'mt-1.5 text-caption text-fg-muted'
 
@@ -240,7 +240,7 @@ export default function SettingsShow({ account, agents, availability }: Props) {
     <AppShell>
       <Head title="Settings" />
       <div className="pt-4">
-        <h1 className="display text-[40px] md:text-[56px]">Settings</h1>
+        <h1 className="font-serif leading-[1.02] tracking-[-0.02em] text-[40px] md:text-[56px]">Settings</h1>
         <div className="mt-8 grid grid-cols-1 gap-12 md:grid-cols-[minmax(0,600px)_minmax(0,1fr)] md:gap-[72px]">
           <PageForm account={account} availability={availability} />
           <div className="flex flex-col gap-12">

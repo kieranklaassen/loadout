@@ -1,9 +1,6 @@
 import type { ProfileProps } from '../pages/profiles/show'
-import type { Category } from '../types'
 import { codingKind, musicKind, writingKind } from './home_fixtures'
 import { claudeCodeMark, cursorMark, markItem, opusMark, rankedPick } from './picker_fixtures'
-
-export const videoKind: Category = { slug: 'video', name: 'Video', blurb: 'Generating and editing video' }
 
 export const claude = markItem('claude', 'Claude', 'tool', 'claude')
 export const gpt = markItem('gpt-6-astra', 'GPT-6 Astra', 'model', 'openai')

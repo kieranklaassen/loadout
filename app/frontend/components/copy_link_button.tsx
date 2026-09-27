@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 import { buttonClasses } from './button'
 
-export function xIntentUrl(url: string, text: string) {
-  const params = new URLSearchParams({ text, url })
-  return `https://x.com/intent/post?${params.toString()}`
-}
-
 async function copyText(value: string) {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(value)
@@ -39,14 +34,6 @@ function CheckIcon() {
   )
 }
 
-function XIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true" fill="currentColor">
-      <path d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.77L17.75 3Zm-1.08 16.2h1.7L7.4 4.73H5.58l11.1 14.47Z" />
-    </svg>
-  )
-}
-
 /** The Copy link button: copies the URL and says so for two seconds. */
 export function CopyLinkButton({ url }: { url: string }) {
   const [copied, setCopied] = useState(false)
@@ -76,18 +63,5 @@ export function CopyLinkButton({ url }: { url: string }) {
         {copied ? 'Link copied to clipboard' : ''}
       </span>
     </>
-  )
-}
-
-/** Copy link + share on X for a profile URL. */
-export default function ShareBar({ url, text, className = '' }: { url: string; text: string; className?: string }) {
-  return (
-    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      <CopyLinkButton url={url} />
-      <a href={xIntentUrl(url, text)} target="_blank" rel="noopener noreferrer" className={buttonClasses('secondary')}>
-        <XIcon />
-        <span>Share on X</span>
-      </a>
-    </div>
   )
 }

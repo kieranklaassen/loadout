@@ -38,7 +38,7 @@ const PRODUCTS = [
 const WEBMCP_SPEC_URL = 'https://webmachinelearning.github.io/webmcp/'
 const WEBMCP_FLAG = 'chrome://flags/#enable-webmcp-testing'
 
-const heading = 'display text-[28px] md:text-[30px]'
+const heading = 'font-serif leading-[1.02] tracking-[-0.02em] text-[28px] md:text-[30px]'
 const panelPadding = 'px-5 py-5 md:px-[22px]'
 const monoWell = 'mt-3.5 rounded-sharp bg-page px-3.5 py-3 font-mono text-caption leading-relaxed text-fg [overflow-wrap:anywhere]'
 const caption = 'mt-3 text-caption leading-normal text-fg-soft'
@@ -284,7 +284,7 @@ export default function AgentsIndex({ agents, capabilities, mcp_url, cursor_inst
       <Head title="Agents" />
       <div className="flex flex-col gap-12 pt-4 xl:flex-row xl:gap-[72px]">
         <div className="min-w-0 max-w-[760px] flex-1">
-          <h1 className="display text-[40px] md:text-[56px]">Let your agent fill it in</h1>
+          <h1 className="font-serif leading-[1.02] tracking-[-0.02em] text-[40px] md:text-[56px]">Let your agent fill it in</h1>
           <p className="mt-4 max-w-[760px] text-lg leading-normal text-fg-soft">
             Connect Claude, Claude Code, Cursor or Codex with your normal Every sign-in, or use an agent in your browser through WebMCP.
             There are no keys to paste. Your agent proposes picks from what it knows about how you work.

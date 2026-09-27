@@ -26,10 +26,6 @@ export function relativeDate(iso: string, now: Date = new Date()): string {
   })
 }
 
-export function fullDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { dateStyle: 'long' })
-}
-
 /** "Sep 19", or "Sep 19, 2025" in another year. Reads the UTC day, so a date-only "2026-09-22" is Sep 22 in every zone. */
 export function shortDate(iso: string, now: Date = new Date()): string {
   const date = new Date(iso)

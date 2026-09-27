@@ -23,7 +23,7 @@ export default function ConnectAgentCard({ className = '', compact = false }: { 
   return (
     <section className={`panel p-6 md:p-7 ${className}`}>
       <SectionLabel as="p">Or let your agent do it</SectionLabel>
-      <h3 className="display mt-2 text-3xl">Connect your agent</h3>
+      <h3 className="mt-2 font-serif text-3xl tracking-[-0.02em]">Connect your agent</h3>
       <p className="mt-2 max-w-md text-sm text-fg-soft">
         Add Loadout to {CLIENTS.slice(0, -1).join(', ')} or {CLIENTS[CLIENTS.length - 1]}, or open it in an agent browser that supports
         WebMCP and talk to it right here. It signs in with Every and suggests picks. Nothing shows on your page until you confirm it.

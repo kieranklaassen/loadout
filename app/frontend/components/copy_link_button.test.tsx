@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import ShareBar, { xIntentUrl } from './share_bar'
+import { CopyLinkButton } from './copy_link_button'
 
-describe('ShareBar', () => {
+describe('CopyLinkButton', () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
@@ -16,7 +16,7 @@ describe('ShareBar', () => {
   })
 
   it('copies the link and shows a copied state that resets', async () => {
-    render(<ShareBar url="https://loadout.every.to/ana" text="Ana's AI loadout" />)
+    render(<CopyLinkButton url="https://loadout.every.to/ana" />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /copy link/i }))
@@ -30,21 +30,5 @@ describe('ShareBar', () => {
       vi.advanceTimersByTime(2100)
     })
     expect(screen.getByRole('button', { name: /copy link/i })).toBeInTheDocument()
-  })
-
-  it('links to an X intent with the text and url', () => {
-    render(<ShareBar url="https://loadout.every.to/ana" text="Ana's AI loadout" />)
-
-    const link = screen.getByRole('link', { name: /share on x/i })
-    const href = new URL(link.getAttribute('href') ?? '')
-    expect(href.origin + href.pathname).toBe('https://x.com/intent/post')
-    expect(href.searchParams.get('url')).toBe('https://loadout.every.to/ana')
-    expect(href.searchParams.get('text')).toBe("Ana's AI loadout")
-    expect(link).toHaveAttribute('target', '_blank')
-    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
-  })
-
-  it('encodes the intent url', () => {
-    expect(xIntentUrl('https://x.test/a b', 'a&b')).toBe('https://x.com/intent/post?text=a%26b&url=https%3A%2F%2Fx.test%2Fa+b')
   })
 })

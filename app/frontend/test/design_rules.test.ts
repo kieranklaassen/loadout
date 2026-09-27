@@ -1,17 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-/**
- * v1 files that still break the size rules below. Each surface unit deletes the files
- * it converts from this list (the "still violates" test below makes it) and U13
- * asserts the list is empty. Paths are relative to app/frontend.
- */
-export const LEGACY_FILES: string[] = [
-  'components/catalog_search.tsx',
-  'components/category_card.tsx',
-  'components/map_rank.tsx',
-  'components/tool_mark.tsx',
-]
-
 // The design brief's text minimums: 12px for uppercase mono labels, 13px for everything else.
 const MIN_LABEL_PX = 12
 const MIN_TEXT_PX = 13
@@ -90,15 +78,99 @@ describe('design rules: minimum text sizes', () => {
     expect(lines).toEqual([2, 3])
   })
 
-  it('finds no violation in shipped sources outside the legacy list', () => {
-    const offenders = Object.entries(sources)
-      .filter(([file]) => !LEGACY_FILES.includes(file))
-      .flatMap(([file, source]) => findSizeViolations(source).map((v) => `${file}:${v.line} ${v.text}`))
+  it('finds no violation in any shipped source', () => {
+    const offenders = Object.entries(sources).flatMap(([file, source]) =>
+      findSizeViolations(source).map((v) => `${file}:${v.line} ${v.text}`),
+    )
     expect(offenders).toEqual([])
   })
+})
 
-  it('lists only legacy files that still exist and still violate', () => {
-    const stale = LEGACY_FILES.filter((file) => !sources[file] || findSizeViolations(sources[file]).length === 0)
-    expect(stale).toEqual([])
+// The retired paper-and-ink palette: utilities and variables of the old theme, and its component classes.
+const OLD_NAMES = [
+  /(?<![\w-])(?:[\w-]+:)*(?:(?:bg|text|border|ring|fill|stroke|from|to|via|divide|outline|decoration|shadow|accent|caret|placeholder)-(?:paper|ink|rule)(?:-deep|-soft|-muted)?|rounded-card|shadow-(?:card|lift)|animate-(?:rise|slot|burst))(?![\w-])/g,
+  /every-(?:blue|sky|lime|coral)/g,
+  /--(?:color-(?:paper|ink|rule)|radius-card|shadow-(?:card|lift)|animate-(?:rise|slot|burst))/g,
+  /^\s*\.(?:display|card|eyebrow|hairline)(?![\w-])/gm,
+]
+
+const OLD_CLASSES = ['display', 'card', 'eyebrow', 'hairline']
+const UTILITY =
+  /^(?:[\w-]+:)*!?(?:-?(?:text|bg|border|p[xytblr]?|m[xytblr]?|w|h|size|gap|space|rounded|font|leading|tracking|shadow|opacity|z|inset|top|left|right|bottom|items|justify|min|max|col|row|overflow)-\S+|flex|grid|block|inline|inline-flex|hidden|relative|absolute|fixed|sticky|uppercase|underline|truncate|sr-only)$/
+
+export function findOldPalette(source: string): { line: number; text: string }[] {
+  const found: { index: number; text: string }[] = []
+
+  for (const pattern of OLD_NAMES) {
+    for (const match of source.matchAll(pattern)) found.push({ index: match.index, text: match[0].trim() })
+  }
+
+  // "card" and "display" are ordinary words, so only a string that is a class list counts:
+  // one that follows className=, or holds a Tailwind utility beside the word.
+  for (const match of source.matchAll(/(["'`])((?:\\.|(?!\1)[^\\\n])*)\1/g)) {
+    const tokens = match[2].split(/\s+/).filter(Boolean)
+    const word = tokens.find((token) => OLD_CLASSES.includes(token))
+    const classList = /className=\{?\s*$/.test(source.slice(0, match.index)) || tokens.some((token) => UTILITY.test(token))
+    if (word && classList) found.push({ index: match.index, text: word })
+  }
+
+  return found
+    .map(({ index, text }) => ({ line: source.slice(0, index).split('\n').length, text }))
+    .sort((a, b) => a.line - b.line)
+}
+
+describe('design rules: the old palette is gone', () => {
+  it('flags the retired utilities, with any variant prefix', () => {
+    const source =
+      '<div className="bg-paper text-ink border-rule hover:bg-paper-deep md:text-ink-soft rounded-card shadow-lift animate-rise text-every-blue" />'
+    expect(findOldPalette(source).map((v) => v.text)).toEqual([
+      'bg-paper',
+      'text-ink',
+      'border-rule',
+      'hover:bg-paper-deep',
+      'md:text-ink-soft',
+      'rounded-card',
+      'shadow-lift',
+      'animate-rise',
+      'every-blue',
+    ])
+    expect(findOldPalette('<i className="ring-every-sky bg-every-lime text-every-coral text-ink-muted" />')).toHaveLength(4)
+  })
+
+  it('flags the retired theme variables and component selectors in CSS', () => {
+    expect(findOldPalette(':root { --color-paper: #fdfaf7; --color-ink: #121212; }')).toHaveLength(2)
+    expect(findOldPalette('@theme { --radius-card: 1rem; --shadow-lift: none; --animate-burst: b 1s; }')).toHaveLength(3)
+    expect(findOldPalette('.card {\n  background: white;\n}\n.hairline {\n  border-color: red;\n}')).toHaveLength(2)
+    expect(findOldPalette('  .eyebrow { color: red; }')).toHaveLength(1)
+  })
+
+  it('flags the retired component classes inside a class list', () => {
+    expect(findOldPalette('<h1 className="display mt-3 text-[40px]">x</h1>')).toEqual([{ line: 1, text: 'display' }])
+    expect(findOldPalette("const heading = 'eyebrow text-fg-muted'")).toHaveLength(1)
+    expect(findOldPalette('<p className={`hairline ${extra}`}>x</p>')).toHaveLength(1)
+    expect(findOldPalette('<p className="card">x</p>')).toHaveLength(1)
+    expect(findOldPalette('<a>\n<p className="p-4 card">x</p>\n</a>')).toEqual([{ line: 2, text: 'card' }])
+  })
+
+  it('passes the Every dark tokens, radio-card, and plain words that only look alike', () => {
+    const source = [
+      '<div className="panel bg-panel text-fg-muted border-line rounded-soft ring-sky" />',
+      '<label className="radio-card">x</label>',
+      "const title = 'Share card for a link-only profile'",
+      "const label = 'card'",
+      "el.style.display = 'none'",
+      "const note = 'a card for sign-in'",
+      '<div className="text-inkwell text-rules" />',
+      '.dot-grid { background-size: 28px 28px; }',
+      '.radio-card:has(input:checked) { box-shadow: none; }',
+    ].join('\n')
+    expect(findOldPalette(source)).toEqual([])
+  })
+
+  it('finds no old-palette name in shipped sources', () => {
+    const offenders = Object.entries(sources).flatMap(([file, source]) =>
+      findOldPalette(source).map((v) => `${file}:${v.line} ${v.text}`),
+    )
+    expect(offenders).toEqual([])
   })
 })

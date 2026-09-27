@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
 @import '@fontsource-variable/hanken-grotesk';
 @import '@fontsource-variable/newsreader/opsz.css';
 @import '@fontsource-variable/newsreader/opsz-italic.css';
@@ -12,13 +11,12 @@
 /*
  * Loadout is "Every dark" (docs/design/every-loadout/DESIGN-BRIEF.md): a near-black
  * page with a faint dot grid, #111111 cards, Newsreader serif headings, Hanken
- * Grotesk UI and Geist Mono captions. The v1 paper tokens further down stay only
- * until the last v1 page is converted (U13 deletes them); new code uses the Every
- * dark tokens and never the paper ones.
+ * Grotesk UI and Geist Mono captions. The design-rules test fails on any old
+ * paper-and-ink class or token name.
  */
 @theme {
   --font-serif: 'Newsreader Variable', 'Signifier', Georgia, 'Times New Roman', serif;
-  --font-sans: 'Hanken Grotesk Variable', 'Inter Variable', 'Switzer', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Hanken Grotesk Variable', 'Switzer', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
 
   /* Every dark. Sky is only the primary CTA, the active filter and the italic brand word;
@@ -45,64 +43,6 @@
   /* 13px: the smallest text that is not an uppercase mono label (12px, Tailwind's text-xs). */
   --text-caption: 0.8125rem;
   --text-caption--line-height: 1.45;
-
-  /* v1 paper tokens, removed by U13. */
-  --color-paper: #fdfaf7;
-  --color-paper-deep: #f6f0e8;
-  --color-ink: #121212;
-  --color-ink-soft: #3c3c3c;
-  --color-ink-muted: #6b6b6b;
-  --color-rule: #e7e0d6;
-  --color-every-blue: #1652ea;
-  --color-every-sky: #c0f0fb;
-  --color-every-lime: #8cff8a;
-  --color-every-coral: #ff7765;
-
-  --radius-card: 1.25rem;
-  --shadow-card: 0 1px 0 rgb(18 18 18 / 0.04), 0 12px 32px -18px rgb(18 18 18 / 0.25);
-  --shadow-lift: 0 1px 0 rgb(18 18 18 / 0.05), 0 24px 48px -24px rgb(18 18 18 / 0.35);
-
-  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  --animate-slot: slot 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
-
-  @keyframes slot {
-    from {
-      opacity: 0;
-      transform: translateX(-24px) scaleX(0.4);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0) scaleX(1);
-    }
-  }
-
-  --animate-burst: burst 1.1s cubic-bezier(0.15, 0.7, 0.3, 1) both;
-
-  @keyframes burst {
-    0% {
-      opacity: 0;
-      transform: translate(0, 0) rotate(0deg) scale(0.4);
-    }
-    15% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-      transform: translate(var(--burst-x), var(--burst-y)) rotate(var(--burst-r)) scale(1);
-    }
-  }
 }
 
 @layer base {
@@ -144,32 +84,6 @@
 }
 
 @layer components {
-  .display {
-    font-family: var(--font-serif);
-    font-optical-sizing: auto;
-    letter-spacing: -0.02em;
-    line-height: 1.02;
-  }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
-  }
-
-  .card {
-    background: white;
-    border: 1px solid var(--color-rule);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-  }
-
-  .hairline {
-    border-color: var(--color-rule);
-  }
-
   /* The page's faint dots. Pair with a background colour: bg-page for the page, bg-field for a framed box. */
   .dot-grid {
     background-image: radial-gradient(circle at center, rgb(255 255 255 / 0.07) 0 1.5px, transparent 2px);

@@ -23,7 +23,7 @@ export default function SignIn({ join_every_url, dev_login_people }: SignInProps
       <Head title="Sign in" />
       <div className="grid grid-cols-1 gap-10 pt-4 md:grid-cols-[minmax(0,1fr)_480px] md:gap-[72px] md:pt-10">
         <div className="md:pt-10">
-          <h1 className="display text-[44px] md:text-[64px]">
+          <h1 className="font-serif leading-[1.02] tracking-[-0.02em] text-[44px] md:text-[64px]">
             Sign in with <span className="italic text-sky">Every</span>
           </h1>
           <p className="mt-5 max-w-[520px] text-lg leading-normal text-fg-soft">

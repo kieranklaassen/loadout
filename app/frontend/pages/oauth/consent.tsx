@@ -30,7 +30,7 @@ export default function Consent({ client, redirect_host, authorization, authenti
           <img src={everyLogo} alt="" className="h-7 w-auto invert" />
         </div>
 
-        <h1 id="consent-heading" className="display mt-6 text-center text-[32px] text-balance [overflow-wrap:anywhere] md:text-[40px]">
+        <h1 id="consent-heading" className="font-serif leading-[1.02] tracking-[-0.02em] mt-6 text-center text-[32px] text-balance [overflow-wrap:anywhere] md:text-[40px]">
           {client.name} wants to fill in your loadout
         </h1>
         {current_user && (
