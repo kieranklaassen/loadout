@@ -37,6 +37,10 @@ module Catalog
 
     private
 
+    def replaces_column
+      column == :tool_id ? :replaces_tool_id : :replaces_ai_model_id
+    end
+
     def column
       @source.is_a?(Tool) ? :tool_id : :ai_model_id
     end
@@ -56,7 +60,7 @@ module Catalog
     # open one that now proposes exactly the pick the member already has is done.
     def repoint_suggestions(open_ids)
       PickSuggestion.where(column => @source.id).update_all(column => @target.id)
-      PickSuggestion.where("replaces_#{column}" => @source.id).update_all("replaces_#{column}" => @target.id)
+      PickSuggestion.where(replaces_column => @source.id).update_all(replaces_column => @target.id)
 
       now = Time.current
       PickSuggestion.where(id: open_ids).find_each do |suggestion|
