@@ -12,13 +12,13 @@ class HomeController < InertiaController
   rate_limit to: 120, within: 1.minute, store: RATE_LIMIT_STORE, only: :index, if: -> { params.key?(:q) },
              with: -> { render plain: "Search is busy, try again in a minute.", status: :too_many_requests }
 
-  before_action :vary_by_viewer
+  include VariesByViewer
 
   def index
     audience = Audience.new(viewer: Current.user, show: params[:show], person: params[:person])
     rankings = TeamRankings.new(viewer: Current.user, show: params[:show])
     person = PersonPicks.new(viewer: Current.user, show: params[:show]).for(audience.person, team: true) if audience.person
-    @page_meta = { description: "Which AI tools and models the Every team uses for each kind of work.", url: "#{LoadoutHost.base_url(request)}/" }
+    @page_meta = { url: "#{LoadoutHost.base_url(request)}/" }
 
     render inertia: "home/index", props: {
       filters: audience.filters.merge(overall: params[:overall] == "1", q: query),
@@ -38,11 +38,6 @@ class HomeController < InertiaController
   end
 
   private
-
-  def vary_by_viewer
-    expires_in 0.seconds, public: false, must_revalidate: true
-    response.headers["Vary"] = "Cookie"
-  end
 
   def query
     params[:q].to_s.squish.first(Search::MAX_QUERY_LENGTH).presence

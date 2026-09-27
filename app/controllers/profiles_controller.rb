@@ -9,7 +9,7 @@ class ProfilesController < InertiaController
 
   allow_unauthenticated_access only: :show
 
-  before_action :vary_by_viewer
+  include VariesByViewer
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
   def show
@@ -23,11 +23,6 @@ class ProfilesController < InertiaController
   end
 
   private
-
-  def vary_by_viewer
-    expires_in 0.seconds, public: false, must_revalidate: true
-    response.headers["Vary"] = "Cookie"
-  end
 
   # A visitor who signs in lands back here, so a team member who followed a team link
   # signed out gets to the page they were sent to.

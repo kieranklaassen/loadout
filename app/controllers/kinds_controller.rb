@@ -7,7 +7,7 @@
 class KindsController < InertiaController
   allow_unauthenticated_access only: :show
 
-  before_action :vary_by_viewer
+  include VariesByViewer
 
   def show
     category = Category.find_by!(slug: params[:slug])
@@ -30,11 +30,6 @@ class KindsController < InertiaController
   end
 
   private
-
-  def vary_by_viewer
-    expires_in 0.seconds, public: false, must_revalidate: true
-    response.headers["Vary"] = "Cookie"
-  end
 
   # Only ever selects the kind in the editor; visitors come back to it after signing in.
   def call_to_action(category)

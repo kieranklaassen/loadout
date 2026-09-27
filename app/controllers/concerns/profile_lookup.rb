@@ -23,7 +23,7 @@ module ProfileLookup
     LoadoutHost.base_url(request)
   end
 
-  # "loadout.every.to", as printed on the page and the card.
+  # The host as printed on the page and the card.
   def public_host
     LoadoutHost.host
   end

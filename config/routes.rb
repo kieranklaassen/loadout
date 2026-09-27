@@ -28,7 +28,7 @@ Rails.application.routes.draw do
   post "webmcp/tools/:name" => "webmcp_tools#create", as: :webmcp_tool,
     constraints: { name: /[A-Za-z0-9_.\-]{1,128}/ }, defaults: { format: :json }
 
-  # MCP for agents: Streamable HTTP, OAuth 2.1 bearer tokens (U7 routes go here).
+  # MCP for agents: Streamable HTTP, OAuth 2.1 bearer tokens.
   match "mcp" => "mcp#handle", via: %i[get post delete], as: :mcp, format: false
   get ".well-known/oauth-protected-resource(/mcp)" => "well_known#protected_resource", as: :oauth_protected_resource, format: false
   get ".well-known/oauth-authorization-server(/mcp)" => "well_known#authorization_server", as: :oauth_authorization_server, format: false
@@ -41,7 +41,7 @@ Rails.application.routes.draw do
   end
   resources :agents, only: %i[index destroy]
 
-  # Onboarding, editing, and settings (U3 routes go here).
+  # Onboarding, editing, and settings.
   get "welcome", to: "onboarding#show", as: :welcome
   patch "welcome", to: "onboarding#update"
   get "handles/check", to: "handles#check", as: :check_handle
@@ -53,7 +53,7 @@ Rails.application.routes.draw do
     resource :history, only: :show, module: :settings
   end
 
-  # Admin: catalog review and the Flipper dashboard (U8 routes go here).
+  # Admin: catalog review and the Flipper dashboard.
   # Non-admins fall through to a 404, not a sign-in redirect.
   admin_only = ->(request) { Session.find_by(id: request.cookie_jar.signed[:session_id])&.user&.admin? }
   constraints(admin_only) do
@@ -68,7 +68,7 @@ Rails.application.routes.draw do
   root "home#index"
   get "kinds/:slug" => "kinds#show", as: :kind, format: false
 
-  # Profiles live on the root path, so they are drawn last (U4 routes go here).
+  # Profiles live on the root path, so they are drawn last.
   # format: false keeps "/manifest.xml" and friends from reaching a profile.
   handle = Regexp.new(User::Handle::FORMAT.source.delete_prefix("\\A").delete_suffix("\\z"))
   get ":handle/og.png" => "profile_cards#show", as: :profile_card, format: false, constraints: { handle: }
