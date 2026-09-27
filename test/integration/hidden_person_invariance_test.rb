@@ -1,31 +1,38 @@
 require "test_helper"
 
-# AE10, R12, R13: whatever a hidden person does, nobody else can tell. Cy is only me, with a
-# past team period. For each viewer class this reads Home, the Kind pages (with the team's
-# "What we used before"), a visible person's Profile, Cy's own handle, search results and the
-# agent tools, then changes Cy's picks, suggestions, visibility, pending catalog items, account and
-# finally deletes her, and requires that what every other viewer sees stays byte-identical.
+# AE10, R12, R13: whatever a hidden person does, nobody else can tell. Two people are hidden
+# and each once shared: Cy, an Every member with a past team period, and Otto, someone
+# outside Every with a past link period. For each viewer class this reads Home, the Kind pages
+# (with "What we used before"), a visible person's Profile, the hidden person's own handle,
+# search results and the agent tools. Then the hidden person changes their picks, suggestions,
+# visibility, pending catalog items and account, and is finally deleted; what every other
+# viewer sees must stay byte-identical throughout.
 #
 # Time is frozen, so timestamps such as a kind's last update are compared exactly: they are
-# one of the ways a hidden edit could show, so they are not normalised away. A person's
-# own view (Cy's) is left out of the comparison, except to show that it does change.
+# one of the ways a hidden edit could show, so they are not normalised away. The hidden
+# person's own view is left out of the comparison, except to show that it does change.
 class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
   include SurfaceHelper
 
   SHOWS = %w[team others].freeze
   KINDS = %w[coding knowledge-work video].freeze
-  SEARCHES = [ "cy", "cy every", "opus", "secret", "cursor", "runway" ].freeze
-  PROFILES = %w[/ana /dee /eli /cy /nobody-here].freeze
+  SEARCHES = [ "cy", "otto", "opus", "secret", "cursor", "runway" ].freeze
+  PROFILES = %w[/ana /dee /eli /cy /otto /nobody-here].freeze
+
+  # handle => the viewer and SHOW class whose history the person's past would land in
+  SUBJECTS = {
+    "cy" => { about: "an Every member whose team period is in the past", history: [ "dee", "team" ] },
+    "otto" => { about: "someone outside Every whose link period is in the past", history: [ "newcomer", "others" ] }
+  }.freeze
 
   setup do
     @now = Time.current.change(usec: 0)
-    @cy = users(:every_cy)
-    build_team_history
+    build_histories
     @viewers = {
       "a visitor" => nil,
-      "a signed-in member outside Every" => add_person("newcomer", visibility: "only_me"),
+      "a signed-in member outside Every" => User.find_by!(handle: "newcomer"),
       "a verified Every member" => users(:every_dee),
-      "another Every member whose picks are private" => @dot
+      "another Every member whose picks are private" => User.find_by!(handle: "dot")
     }
   end
 
@@ -35,77 +42,80 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
     assert_equal read_everyone, read_everyone
   end
 
-  test "the team has a history of its own for Cy's past to disturb" do
-    sign_in_as users(:every_dee)
-    get kind_path("coding")
+  SUBJECTS.each do |handle, subject|
+    test "the history has two eras of its own for #{handle}'s past to disturb" do
+      viewer, show = subject[:history]
+      sign_in_as User.find_by!(handle: viewer)
+      get kind_path("coding"), params: { show: }
 
-    assert_operator page_props[:eras].to_a.size, :>=, 2
-    assert_equal 5, page_props[:ranked][:of], "ana, dee, gil, hal and ivy; not Cy"
-  end
-
-  # AE10
-
-  test "AE10: her picks, suggestions, visibility, pending items, account and deletion change nothing for anyone else" do
-    baseline = read_everyone
-    herself = read_as(@cy)
-
-    mutate(baseline, "she changes her picks") do
-      update_loadout @cy, [
-        { op: "set_pick", category: "coding", rank: 1, tool: "claude-code", model: "claude-opus-5-5", context: "1m", effort: "high" },
-        { op: "set_pick", category: "coding", rank: 2, tool: "cursor" },
-        { op: "set_pick", category: "video", rank: 1, tool: "runway" },
-        { op: "set_pick", category: "knowledge-work", rank: 1, tool: "claude" }
-      ]
-    end
-    assert_not_equal herself, read_as(@cy), "her own page shows her change, so the snapshot can see it"
-
-    mutate(baseline, "an agent suggests picks for her") do
-      update_loadout @cy, [ { op: "suggest", category: "knowledge-work", tool: "claude-code", model: "claude-opus-5-5" }, { op: "suggest", category: "video", tool: "Cy Agent Tool" } ],
-        source: "mcp", client_name: "Claude", oauth_client_id: 7
+      assert_operator page_props[:eras].to_a.size, :>=, 2
+      assert_equal 5, page_props[:ranked][:of], "the five other people in the class, not #{handle}"
     end
 
-    mutate(baseline, "she shares with the Every team, then with the link, then stops again") do
-      @cy.update!(visibility: "team")
+    test "were #{handle} to share again, their past period would change the history" do
+      viewer, show = subject[:history]
+      sign_in_as User.find_by!(handle: viewer)
+      get kind_path("coding"), params: { show: }
+      hidden = page_props[:eras]
+
       travel 1.minute
-      assert_not_equal baseline["a verified Every member"], read_as(users(:every_dee)), "the team sees her while she shares with it"
-      @cy.update!(visibility: "link")
-      travel 1.minute
-      assert_not_equal baseline["a visitor"], read_as(nil), "a visitor sees her while she shares with the link"
-      @cy.update!(visibility: "only_me")
+      User.find_by!(handle:).update!(visibility: "link")
+      get kind_path("coding"), params: { show: }
+
+      assert_not_equal hidden, page_props[:eras]
     end
 
-    mutate(baseline, "she adds pending catalog items and ranks them") do
-      Tool.resolve_or_suggest!("Cy Secret Tool", user: @cy)
-      AiModel.resolve_or_suggest!("Cy Secret Model", user: @cy)
-      update_loadout @cy, [ { op: "set_pick", category: "coding", rank: 3, tool: "Cy Secret Tool", model: "Cy Secret Model" } ]
-    end
+    test "AE10: #{handle} (#{subject[:about]}): picks, suggestions, visibility, pending items, account and deletion change nothing for anyone else" do
+      person = User.find_by!(handle:)
+      baseline = read_everyone
+      themselves = read_as(person)
 
-    mutate(baseline, "she removes a pick") do
-      update_loadout @cy, [ { op: "remove_pick", category: "coding", rank: 1 } ]
-    end
+      mutate(baseline, "they change their picks") do
+        update_loadout person, [
+          { op: "set_pick", category: "coding", rank: 1, tool: "claude-code", model: "claude-opus-5-5", context: "1m", effort: "high" },
+          { op: "set_pick", category: "coding", rank: 2, tool: "cursor" },
+          { op: "set_pick", category: "video", rank: 1, tool: "runway" },
+          { op: "set_pick", category: "knowledge-work", rank: 1, tool: "claude" }
+        ]
+      end
+      assert_not_equal themselves, read_as(person), "their own page shows the change, so the snapshot can see it"
 
-    mutate(baseline, "she renames herself and changes her handle and bio") do
-      @cy.update!(name: "Cynthia Renamed", handle: "cy-renamed", bio: "Now writing about Zed.")
-    end
+      mutate(baseline, "an agent suggests picks for them") do
+        update_loadout person, [ { op: "suggest", category: "knowledge-work", tool: "claude-code", model: "claude-opus-5-5" }, { op: "suggest", category: "video", tool: "Secret Agent Tool" } ],
+          source: "mcp", client_name: "Claude", oauth_client_id: 7
+      end
 
-    mutate(baseline, "her account is deleted") do
-      @cy.destroy!
+      mutate(baseline, "they share with the Every team, then with the link, then stop again") do
+        person.update!(visibility: "team")
+        travel 1.minute
+        assert_not_equal baseline["a verified Every member"], read_as(users(:every_dee)), "the team sees them while they share with it"
+        person.update!(visibility: "link")
+        travel 1.minute
+        assert_not_equal baseline["a visitor"], read_as(nil), "a visitor sees them while they share with the link"
+        person.update!(visibility: "only_me")
+      end
+
+      mutate(baseline, "they add pending catalog items and rank them") do
+        Tool.resolve_or_suggest!("Secret Tool", user: person)
+        AiModel.resolve_or_suggest!("Secret Model", user: person)
+        update_loadout person, [ { op: "set_pick", category: "coding", rank: 3, tool: "Secret Tool", model: "Secret Model" } ]
+      end
+
+      mutate(baseline, "they remove a pick") do
+        update_loadout person, [ { op: "remove_pick", category: "coding", rank: 1 } ]
+      end
+
+      mutate(baseline, "they rename themselves and change their handle and bio") do
+        person.update!(name: "Renamed Person", handle: "#{handle}-renamed", bio: "Now writing about Zed.")
+      end
+
+      mutate(baseline, "their account is deleted") do
+        person.destroy!
+      end
     end
   end
 
   # The snapshot is not blind
-
-  test "were Cy to share with the team again, her past team period would change the team's history" do
-    sign_in_as users(:every_dee)
-    get kind_path("coding")
-    hidden = page_props[:eras]
-
-    travel 1.minute
-    @cy.update!(visibility: "team")
-    get kind_path("coding")
-
-    assert_not_equal hidden, page_props[:eras]
-  end
 
   test "a visible person's change is seen by every viewer class that can open her" do
     before = read_everyone
@@ -131,24 +141,33 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
 
   private
 
-  # Three more teammates join 100 days ago, so the team has a history of its own: Zed leads
-  # until Gil switches to Claude Code 25 days ago. Cy's team period (100 to 50 days ago, see
-  # visibility_periods.yml) overlaps all of it, and she would change the eras if she counted.
+  # Each class has, besides the fixture people, three members who joined 100 days ago and a
+  # history of their own: Zed leads until one of them switches to Claude Code 25 days ago.
+  # The hidden person's past sharing period (Cy: fixtures, 100 to 50 days ago; Otto: made here,
+  # the same span) overlaps all of it, and would change the eras if they counted.
   # Dot is another hidden Every member, with private picks of her own.
-  def build_team_history
+  def build_histories
     zed = add_tool("Zed")
     windsurf = add_tool("Windsurf")
 
     travel_to @now - 100.days
-    gil, hal, ivy = %w[gil hal ivy].map { |handle| add_person(handle, visibility: "team", team: true) }
-    @dot = add_person("dot", visibility: "only_me", team: true)
-    update_loadout gil, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
-    update_loadout hal, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
-    update_loadout ivy, [ { op: "set_pick", category: "coding", rank: 1, tool: windsurf.slug } ]
-    update_loadout @dot, [ { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "claude-opus-5" } ]
+    add_person("newcomer", visibility: "only_me")
+    dot = add_person("dot", visibility: "only_me", team: true)
+    otto = add_person("otto", visibility: "link")
+    [ [ %w[gil hal ivy], { visibility: "team", team: true } ], [ %w[pam quinn rae], { visibility: "link", team: false } ] ].each do |handles, options|
+      first, second, third = handles.map { |handle| add_person(handle, **options) }
+      update_loadout first, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
+      update_loadout second, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
+      update_loadout third, [ { op: "set_pick", category: "coding", rank: 1, tool: windsurf.slug } ]
+    end
+    update_loadout dot, [ { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "claude-opus-5" } ]
+    update_loadout otto, [ { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "gpt-6-astra" } ]
+
+    travel_to @now - 50.days
+    otto.update!(visibility: "only_me")
 
     travel_to @now - 25.days
-    update_loadout gil, [ { op: "set_pick", category: "coding", rank: 1, tool: "claude-code" } ]
+    %w[gil pam].each { |handle| update_loadout User.find_by!(handle:), [ { op: "set_pick", category: "coding", rank: 1, tool: "claude-code" } ] }
 
     travel_to @now
   end
@@ -189,7 +208,7 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
 
     SHOWS.each do |show|
       surfaces["Home, #{show}"] = read_page(root_path, show:)
-      %w[ana cy].each { |handle| surfaces["Home, #{show}, person #{handle}"] = read_page(root_path, show:, person: handle) }
+      %w[ana cy otto].each { |handle| surfaces["Home, #{show}, person #{handle}"] = read_page(root_path, show:, person: handle) }
       KINDS.each { |slug| surfaces["Kind #{slug}, #{show}"] = read_page(kind_path(slug), show:) }
       SEARCHES.each { |query| surfaces["search #{query.inspect}, #{show}"] = partial_search(query, show:).to_json }
     end
