@@ -32,6 +32,7 @@ class HomeController < InertiaController
       overall: rankings.overall,
       person:,
       cta: call_to_action,
+      all_vibe_checks_url: LoadoutHost::ALL_VIBE_CHECKS_URL,
       search: InertiaRails.optional { Search.new(viewer: Current.user, show: params[:show]).call(params[:q]) }
     }
   end

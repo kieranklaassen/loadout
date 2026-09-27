@@ -173,6 +173,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "claude-opus-5-5" ], launches.map { |launch| launch[:model][:slug] }
     assert_equal "https://checks.every.to/vibe-checks/claude-opus-5-5", launches.first[:vibe_check_url]
     assert launches.first[:newest]
+    assert_equal LoadoutHost::ALL_VIBE_CHECKS_URL, props[:all_vibe_checks_url]
   end
 
   # SHOW stub
@@ -250,10 +251,11 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
   # Search (an optional prop, asked for by a partial reload)
 
-  test "search is left out of a full page load" do
-    get root_path, params: { q: "cursor" }
+  test "search is left out of a full page load, which still echoes the cleaned query" do
+    get root_path, params: { q: "  cursor  " }
 
     assert_not props.key?(:search)
+    assert_equal "cursor", props[:filters][:q]
   end
 
   test "a partial reload returns people and items the viewer may see, with N of M" do

@@ -29,3 +29,19 @@ export function relativeDate(iso: string, now: Date = new Date()): string {
 export function fullDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { dateStyle: 'long' })
 }
+
+/** "Sep 19", or "Sep 19, 2025" in another year. Reads the UTC day, so a date-only "2026-09-22" is Sep 22 in every zone. */
+export function shortDate(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso)
+  const sameYear = date.getUTCFullYear() === now.getUTCFullYear()
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }), timeZone: 'UTC' })
+}
+
+const utcDay = (date: Date) => Math.floor(date.getTime() / DAY)
+
+/** "Not updated in 6 weeks" in weeks up to 8, then "Not updated in 3 months"; counts UTC calendar days like the server's stale flag. */
+export function staleness(iso: string, now: Date = new Date()): string {
+  const days = utcDay(now) - utcDay(new Date(iso))
+  const weeks = Math.floor(days / 7)
+  return weeks <= 8 ? `Not updated in ${weeks} weeks` : `Not updated in ${Math.floor(days / 30)} months`
+}

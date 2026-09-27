@@ -1,0 +1,101 @@
+/*
+ * The Home hero: boards of the team's top picks that fade in turn, each pick dropping
+ * into place. CSS only. hero.tsx sets data-playing and data-boards; while it is not
+ * playing (paused, or reduced motion) the first board shows as a still.
+ */
+.hero {
+  --cycle: 15s;
+  --frames: hero-board-third;
+}
+
+.hero[data-boards='2'] {
+  --cycle: 10s;
+  --frames: hero-board-half;
+}
+
+@keyframes hero-board-third {
+  0% {
+    opacity: 0;
+  }
+  1.5% {
+    opacity: 1;
+  }
+  31% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hero-board-half {
+  0% {
+    opacity: 0;
+  }
+  1.5% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* A pick drops in shortly after its board appears; the board's own fade hides it the rest of the cycle. */
+@keyframes hero-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px) rotate(-5deg);
+  }
+  2.5% {
+    opacity: 1;
+    transform: translateY(3px) rotate(1.5deg);
+  }
+  5%,
+  88% {
+    opacity: 1;
+    transform: none;
+  }
+  90%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+.hero:not([data-playing='true']) .hero-board:not(:first-child) {
+  display: none;
+}
+
+.hero:not([data-playing='true']) .hero-dot:first-child .hero-dot-lit {
+  opacity: 1;
+}
+
+.hero[data-playing='true'] .hero-board,
+.hero[data-playing='true'] .hero-dot-lit {
+  opacity: 0;
+  animation: var(--frames) var(--cycle) linear infinite both;
+  animation-delay: calc(var(--i) * 5s);
+}
+
+.hero[data-playing='true'] .hero-pick {
+  animation: hero-drop var(--cycle) cubic-bezier(0.2, 0.9, 0.3, 1) infinite both;
+  animation-delay: calc(var(--i) * 5s + 0.35s + var(--j) * 0.22s);
+}
+
+/* Playing is the reader's choice under reduced motion, so the global 0.01ms rule must not squash it. */
+@media (prefers-reduced-motion: reduce) {
+  .hero[data-playing='true'] .hero-board,
+  .hero[data-playing='true'] .hero-dot-lit,
+  .hero[data-playing='true'] .hero-pick {
+    animation-duration: var(--cycle) !important;
+  }
+}
