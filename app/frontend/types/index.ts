@@ -254,7 +254,8 @@ export type Era = {
   from: string
   to: string | null
   tool: MarkItem
-  model: MarkItem
+  /** Null while nobody counted had a model. */
+  model: MarkItem | null
 }
 
 export type Launch = {
