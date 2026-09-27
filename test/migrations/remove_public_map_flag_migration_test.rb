@@ -26,17 +26,27 @@ class RemovePublicMapFlagMigrationTest < ActiveSupport::TestCase
     assert_equal [ "focus_mode" ], @connection.select_values("SELECT feature_key FROM flipper_gates")
   end
 
+  test "rolling back brings the flag back once, disabled" do
+    create_flipper_tables
+
+    2.times { run_migration(:down) }
+
+    assert_equal [ "public_map" ], @connection.select_values("SELECT key FROM flipper_features")
+    assert_empty @connection.select_values("SELECT feature_key FROM flipper_gates")
+  end
+
   test "does nothing on a database that never had the flipper tables" do
     assert_nothing_raised { run_migration }
+    assert_nothing_raised { run_migration(:down) }
   end
 
   private
 
-  def run_migration
+  def run_migration(direction = :up)
     connection = @connection
     migration = RemovePublicMapFlag.new
     migration.define_singleton_method(:connection) { connection }
-    ActiveRecord::Migration.suppress_messages { migration.migrate(:up) }
+    ActiveRecord::Migration.suppress_messages { migration.migrate(direction) }
   end
 
   def create_flipper_tables
