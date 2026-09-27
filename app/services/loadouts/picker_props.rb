@@ -6,6 +6,8 @@
 #
 #   Loadouts::PickerProps.new(user, kinds: presenter.kinds, kind: params[:kind]).to_h
 #
+# kinds is the member's Presenter#kinds; leave it out and they are built here.
+#
 # catalog   { tools: [...], models: [...] }: approved items in catalog order, then the
 #           member's own items still waiting for review (marked pending), each a
 #           CatalogItem#to_prop plus suggested_for, the slugs of the kinds it suits.
@@ -15,9 +17,9 @@
 #           picks, else the first kind.
 module Loadouts
   class PickerProps
-    def initialize(user, kinds:, kind: nil)
+    def initialize(user, kinds: nil, kind: nil)
       @user = user
-      @kinds = kinds
+      @kinds = kinds || Presenter.new(user).kinds
       @kind = kind
     end
 

@@ -36,7 +36,7 @@ function Item({ item }: { item: MarkItem }) {
 function SetupLine({ label, setup }: { label: string; setup: Setup }) {
   return (
     <p className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[15px]">
-      <span className={`${sectionLabelClasses} w-24`}>{label}</span>
+      <span className={`${sectionLabelClasses} w-full md:w-24`}>{label}</span>
       <span className="flex items-center gap-2">
         <Mark item={setup.tool} size="xs" />
         {setup.tool.name}

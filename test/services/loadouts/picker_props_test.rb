@@ -55,6 +55,10 @@ class Loadouts::PickerPropsTest < ActiveSupport::TestCase
     assert_equal "knowledge-work", props(ana)[:selected_kind]
   end
 
+  test "the member's kinds are built when not passed in" do
+    assert_equal "coding", Loadouts::PickerProps.new(users(:every_ana)).to_h[:selected_kind]
+  end
+
   test "with every kind full the first kind opens" do
     user = users(:one)
     operations = %w[coding knowledge-work video].flat_map do |category|

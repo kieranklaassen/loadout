@@ -42,7 +42,7 @@ function SelectField({ id, label, mark, disabled, value, onChange, children }: {
           disabled={disabled}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={`truncate ${value ? '' : 'text-fg-muted'}`}
+          className={`-my-2.5 truncate py-2.5 ${value ? '' : 'text-fg-muted'}`}
         >
           {children}
         </select>
