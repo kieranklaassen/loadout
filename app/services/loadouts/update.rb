@@ -1,38 +1,52 @@
 # frozen_string_literal: true
 
-# The one write path for loadouts: the web pickers, MCP agents, and WebMCP all
-# call this. It changes `entries` (the current state) and appends
-# `entry_changes` (the dated history) in one transaction, so the history can
-# always rebuild the loadout.
+# The one write path for loadouts: the web editor, MCP agents and WebMCP all call
+# this. It changes `entries` (confirmed picks) or `pick_suggestions` (an agent's
+# proposals) and appends `entry_changes` (the dated history) in one transaction, so
+# the history always replays to the loadout (KTD7).
 #
-# Operations (string or symbol keys; tools and models by slug or name):
+# The boundary is the `source`, which the server sets per transport and no caller
+# can argue with (KTD2): only "web" runs WEB_OPERATIONS, the member's own decisions;
+# every source may run AGENT_OPERATIONS, which never touch a confirmed pick.
 #
-#   { op: "add", category: "coding", tool: "cursor", model: "claude-opus-5-5", note: "...", primary: true }
-#   { op: "remove", category: "coding", tool: "cursor", model: "claude-opus-5-5" }
-#   { op: "set_primary", category: "coding", tool: "cursor", model: nil }
-#   { op: "update_note", category: "coding", tool: "cursor", model: nil, note: "..." }
-#   { op: "replace_category", category: "coding", picks: [ { tool: "cursor", model: "...", primary: true, note: "..." } ] }
+#   { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "claude-opus-5-5", context: "1m", effort: "high" }
+#   { op: "remove_pick", category: "coding", rank: 2 }
+#   { op: "move_pick", category: "coding", rank: 2, direction: "up" }
+#   { op: "confirm", suggestion_id: 12, rank: 2, expected: { tool: "cursor", model: nil } }
+#   { op: "dismiss", suggestion_id: 12 }
+#   { op: "suggest", category: "coding", tool: "cursor", model: "claude-opus-5-5", context: "1m", effort: "high", rank: 1 }
+#   { op: "withdraw", suggestion_id: 12 }
 #
-# Unknown tools and models become pending catalog items (Catalog review).
-# Raises Loadouts::Update::Error with a message an agent or a person can act on.
+# Tools, models and kinds go by slug or name. On set_pick, a key left out keeps what
+# the slot holds and a key sent as null clears it. Unknown tools and models become
+# pending catalog items; agents may add a few a day. Raises Loadouts::Update::Error
+# with a message a person or an agent can act on.
 module Loadouts
   class Update
     class Error < StandardError; end
 
-    OPERATIONS = %w[add remove set_primary update_note replace_category].freeze
+    WEB_OPERATIONS = %w[set_pick remove_pick move_pick confirm dismiss].freeze
+    AGENT_OPERATIONS = %w[suggest withdraw].freeze
+    OPERATIONS = (WEB_OPERATIONS + AGENT_OPERATIONS).freeze
     MAX_OPERATIONS = 50
+    MAX_NEW_ITEMS_PER_DAY = 5
+    CHOICES = { context: Entry::CONTEXTS, effort: Entry::EFFORTS }.freeze
 
-    Result = Data.define(:changes, :user)
+    # changes: entry_changes rows written; suggestions: the suggestion rows created or
+    # closed; messages: plain-words notes for operations that had nothing to do.
+    Result = Data.define(:changes, :suggestions, :messages, :user)
 
     def self.call(...) = new(...).call
 
-    def initialize(user:, operations:, source:, client_name: nil)
+    def initialize(user:, operations:, source:, client_name: nil, oauth_client_id: nil)
       @user = user
       @operations = Array.wrap(operations).map { |operation| operation.to_h.with_indifferent_access }
       @source = source.to_s
       @client_name = client_name.presence
-      @batch = SecureRandom.uuid
+      @oauth_client_id = oauth_client_id
       @changes = []
+      @suggestion_rows = []
+      @messages = []
     end
 
     def call
@@ -40,93 +54,87 @@ module Loadouts
       raise Error, "Send at most #{MAX_OPERATIONS} operations at a time." if @operations.size > MAX_OPERATIONS
       raise ArgumentError, "unknown source #{@source}" unless EntryChange::SOURCES.include?(@source)
 
+      @operations.each { |operation| check_allowed(operation[:op].to_s) }
+
       ApplicationRecord.transaction do
         @operations.each { |operation| apply(operation) }
-        touched_categories.each { |category| ensure_one_primary(category) }
-        @user.update!(loadout_updated_at: Time.current) if @changes.any?
+        @user.update!(loadout_updated_at: Time.current) if @changes.any? { |change| EntryChange::SLOT_ACTIONS.include?(change.action) }
       end
 
-      Result.new(changes: @changes, user: @user)
+      Result.new(changes: @changes, suggestions: @suggestion_rows, messages: @messages, user: @user)
     rescue ActiveRecord::RecordInvalid => e
       raise Error, e.record.errors.full_messages.to_sentence
+    rescue ActiveRecord::RecordNotUnique
+      raise Error, "That slot changed while you were saving. Reload and try again."
     end
 
     private
 
+    # Before any write, so a forbidden operation anywhere in the list stops the lot.
+    def check_allowed(op)
+      allowed = @source == "web" ? OPERATIONS : AGENT_OPERATIONS
+      raise Error, "#{op} can only be done by the member on the web." if WEB_OPERATIONS.include?(op) && @source != "web"
+      raise Error, "Unknown operation #{op.inspect}. Use one of: #{allowed.join(", ")}." unless allowed.include?(op)
+    end
+
     def apply(operation)
-      op = operation[:op].to_s
-      raise Error, "Unknown operation #{op.inspect}. Use one of: #{OPERATIONS.join(", ")}." unless OPERATIONS.include?(op)
+      case operation[:op].to_s
+      when "set_pick" then set_pick(operation)
+      when "remove_pick" then remove_pick(operation)
+      when "move_pick" then move_pick(operation)
+      when "confirm" then absorb(suggestions.confirm(suggestion_id(operation), rank: optional_rank(operation, "Send a rank from 1 to 3."), expected: operation[:expected]))
+      when "dismiss" then absorb(suggestions.dismiss(suggestion_id(operation)))
+      when "suggest" then suggest(operation)
+      when "withdraw" then absorb(suggestions.withdraw(suggestion_id(operation)))
+      end
+    end
 
+    def set_pick(operation)
+      slots = slots_for(operation)
+      rank = rank_from(operation)
+      existing = slots.entries.find { |entry| entry.rank == rank }
+      tool = operation.key?(:tool) ? resolve(Tool, operation[:tool], required: true) : existing&.tool || raise(Error, "Name a tool.")
+      ai_model = operation.key?(:model) ? resolve(AiModel, operation[:model]) : existing&.ai_model
+      context = operation.key?(:context) ? choice(:context, operation[:context]) : existing&.context
+      effort = operation.key?(:effort) ? choice(:effort, operation[:effort]) : existing&.effort
+
+      change = slots.place(rank:, tool:, ai_model:, context:, effort:)
+      @changes << change if change
+    end
+
+    def remove_pick(operation)
+      @changes.concat(slots_for(operation).remove(rank: rank_from(operation)))
+    end
+
+    def move_pick(operation)
+      direction = operation[:direction].to_s
+      raise Error, "Direction must be up or down." unless %w[up down].include?(direction)
+
+      @changes.concat(slots_for(operation).move(rank: rank_from(operation), direction:))
+    end
+
+    def suggest(operation)
       category = category_for(operation)
-      case op
-      when "add" then add(category, operation)
-      when "remove" then remove(category, operation)
-      when "set_primary" then set_primary(find_entry!(category, operation))
-      when "update_note" then update_note(find_entry!(category, operation), operation[:note])
-      when "replace_category" then replace_category(category, Array.wrap(operation[:picks]))
-      end
+      tool = resolve(Tool, operation[:tool], required: true)
+      absorb(suggestions.suggest(
+        category:, tool:, ai_model: resolve(AiModel, operation[:model]),
+        context: choice(:context, operation[:context]), effort: choice(:effort, operation[:effort]),
+        slot_hint: optional_rank(operation, "A rank hint must be 1, 2 or 3.")
+      ))
     end
 
-    def add(category, pick)
-      tool = resolve(Tool, pick[:tool], required: true)
-      model = resolve(AiModel, pick[:model])
-      entry = @user.entries.find_or_initialize_by(category:, tool:, ai_model: model)
-
-      if entry.new_record?
-        entry.note = pick[:note]
-        entry.save!
-        record("added", entry)
-      elsif pick.key?(:note) && entry.note != Entry.normalize_value_for(:note, pick[:note])
-        update_note(entry, pick[:note])
-      end
-
-      set_primary(entry) if ActiveModel::Type::Boolean.new.cast(pick[:primary])
-      entry
+    def absorb(outcome)
+      @changes.concat(outcome.changes)
+      @suggestion_rows << outcome.suggestion if outcome.suggestion
+      @messages << outcome.message if outcome.message
     end
 
-    def remove(category, operation)
-      entry = find_entry!(category, operation)
-      record("removed", entry)
-      entry.destroy!
+    def slots_for(operation)
+      Slots.new(user: @user, category: category_for(operation), source: @source, client_name: @client_name)
     end
 
-    def set_primary(entry)
-      return if entry.primary?
-
-      @user.entries.where(category: entry.category, primary: true).update_all(primary: false)
-      entry.update!(primary: true)
-      record("made_primary", entry)
-    end
-
-    def update_note(entry, note)
-      entry.update!(note:)
-      record("updated", entry) if entry.saved_change_to_note?
-    end
-
-    def replace_category(category, picks)
-      kept = picks.map do |pick|
-        pick = pick.to_h.with_indifferent_access
-        add(category, pick)
-      end
-      @user.entries.where(category:).where.not(id: kept.map(&:id)).find_each do |entry|
-        record("removed", entry)
-        entry.destroy!
-      end
-    end
-
-    def ensure_one_primary(category)
-      entries = @user.entries.where(category:)
-      return if entries.none? || entries.exists?(primary: true)
-
-      entries.order(:created_at, :id).first.update!(primary: true)
-    end
-
-    def find_entry!(category, operation)
-      tool = resolve(Tool, operation[:tool], required: true, create: false)
-      model = resolve(AiModel, operation[:model], create: false)
-      scope = @user.entries.where(category:, tool:)
-      entry = operation[:model].present? ? scope.find_by(ai_model: model) : (scope.find_by(ai_model: nil) || (scope.one? && scope.first))
-      entry || raise(Error, "#{[ operation[:tool], operation[:model] ].compact_blank.join(" with ")} is not in your #{category.name.downcase} loadout.")
+    def suggestions
+      @suggestions ||= Suggestions.new(user: @user, source: @source, client_name: @client_name, oauth_client_id: @oauth_client_id)
     end
 
     def category_for(operation)
@@ -134,26 +142,49 @@ module Loadouts
         raise(Error, "Unknown category #{operation[:category].inspect}. Use one of: #{Category.pluck(:slug).join(", ")}.")
     end
 
-    def resolve(klass, value, required: false, create: true)
+    def rank_from(operation)
+      Integer(operation[:rank].to_s, exception: false) || raise(Error, "Send a rank from 1 to 3.")
+    end
+
+    def optional_rank(operation, message)
+      return if operation[:rank].blank?
+
+      rank = Integer(operation[:rank].to_s, exception: false)
+      raise Error, message unless rank&.between?(1, Entry::MAX_RANK)
+
+      rank
+    end
+
+    def suggestion_id(operation)
+      operation[:suggestion_id].presence || raise(Error, "Send the suggestion_id.")
+    end
+
+    def choice(field, value)
+      normalized = Entry.normalize_value_for(field, value)
+      return normalized if normalized.nil? || CHOICES.fetch(field).include?(normalized)
+
+      raise Error, "#{field.to_s.capitalize} must be one of #{CHOICES.fetch(field).to_sentence(two_words_connector: " or ", last_word_connector: " or ")}."
+    end
+
+    def resolve(klass, value, required: false)
       if value.blank?
         raise Error, "Name a #{klass == Tool ? "tool" : "model"}." if required
         return
       end
 
-      item = create ? klass.resolve_or_suggest!(value, user: @user) : klass.find_by_name_or_slug(value)
-      item || raise(Error, "Unknown #{klass == Tool ? "tool" : "model"} #{value.to_s.inspect}.")
+      klass.find_by_name_or_slug(value) || create_pending(klass, value)
     end
 
-    def touched_categories
-      @touched_categories ||= Category.where(id: @changes.map(&:category_id).uniq).to_a
+    def create_pending(klass, value)
+      if @source != "web" && new_items_today >= MAX_NEW_ITEMS_PER_DAY
+        raise Error, "Agents can add #{MAX_NEW_ITEMS_PER_DAY} new tools or models a day and that limit is reached. Pick one from the catalog, or ask the member to add it."
+      end
+
+      klass.resolve_or_suggest!(value, user: @user)
     end
 
-    def record(action, entry)
-      @touched_categories = nil
-      @changes << EntryChange.create!(
-        user: @user, category: entry.category, tool: entry.tool, ai_model: entry.ai_model,
-        action:, source: @source, client_name: @client_name, details: { batch: @batch }
-      )
+    def new_items_today
+      [ Tool, AiModel ].sum { |klass| klass.pending.where(created_by: @user, created_at: 1.day.ago..).count }
     end
   end
 end
