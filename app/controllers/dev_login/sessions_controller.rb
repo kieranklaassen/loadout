@@ -10,6 +10,7 @@ class DevLogin::SessionsController < InertiaController
     user = User.find_by(email_address: params[:email_address].to_s.strip.downcase)
     return redirect_to new_session_path, alert: "Pick a seeded person from the list." if user.nil?
 
+    user.update!(email_verified: true) # seeded people are Every staff, so they count as the team
     start_new_session_for user
     redirect_to after_authentication_url, status: :see_other
   end

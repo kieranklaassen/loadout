@@ -1,8 +1,15 @@
-# The dated history of a loadout. Every add, removal, note edit, or primary
-# switch appends one row; the timeline and "recent changes" read from here.
+# The dated history of a loadout. Every change to a member's picks appends one
+# row; the timeline, "recent changes" and the number-one history read from here.
+#
+# The legacy actions (added, removed, updated, made_primary) have no rank and stay
+# readable. A slot-changing row stores the slot after the change (tool, model, rank,
+# context, effort) and, for a move, the rank it came from; `removed` means that slot
+# is now empty. Suggested and dismissed rows never touch a slot. Rows sharing a
+# details["batch"] were written together and apply together.
 class EntryChange < ApplicationRecord
-  ACTIONS = %w[added removed updated made_primary].freeze
-  SOURCES = %w[web mcp webmcp].freeze
+  SLOT_ACTIONS = %w[set moved removed confirmed baseline].freeze
+  ACTIONS = (%w[added updated made_primary suggested dismissed] + SLOT_ACTIONS).freeze
+  SOURCES = %w[web mcp webmcp system].freeze
 
   belongs_to :user
   belongs_to :category
@@ -11,6 +18,9 @@ class EntryChange < ApplicationRecord
 
   validates :action, inclusion: { in: ACTIONS }
   validates :source, inclusion: { in: SOURCES }
+  validates :rank, :from_rank, numericality: { only_integer: true, in: 1..Entry::MAX_RANK }, allow_nil: true
+  validates :context, inclusion: { in: Entry::CONTEXTS }, allow_nil: true
+  validates :effort, inclusion: { in: Entry::EFFORTS }, allow_nil: true
 
   scope :recent_first, -> { order(created_at: :desc, id: :desc) }
 

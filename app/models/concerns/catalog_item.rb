@@ -11,6 +11,7 @@ module CatalogItem
     belongs_to :created_by, class_name: "User", optional: true
     has_many :entries, dependent: :restrict_with_exception
     has_many :entry_changes, dependent: :restrict_with_exception
+    has_many :pick_suggestions, dependent: :delete_all
 
     normalizes :name, with: ->(name) { name.squish }
 
@@ -63,7 +64,7 @@ module CatalogItem
   end
 
   def to_prop
-    { slug:, name:, maker:, hue:, monogram:, pending: pending? }
+    { slug:, name:, kind:, maker:, mark:, hue:, monogram:, pending: pending? }
   end
 
   private

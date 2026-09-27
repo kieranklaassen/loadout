@@ -12,7 +12,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
 
   test "a verified callback creates the user and a session, then sends a new member to onboarding" do
     stub_every_token
-    stub_every_userinfo
+    stub_every_userinfo(every_payload("userinfo", email_verified: true))
 
     assert_difference -> { User.count } => 1, -> { Session.count } => 1 do
       complete_every_sign_in
@@ -22,6 +22,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
     user = User.find_by!(every_user_id: "4242")
     assert_equal [ "bo@every.to", "Bo Every", "https://every.to/avatars/bo.png" ], [ user.email_address, user.name, user.avatar_url ]
     assert user.every_member?
+    assert user.email_verified?
     assert_equal user, Session.last.user
     assert cookies[:session_id].present?
     assert_empty cookies[OmniAuth::Strategies::Every::STATE_COOKIE].to_s
@@ -41,13 +42,69 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
 
   test "a look-alike domain is not an Every member and a padded upper-case every.to address is normalized" do
     stub_every_token
-    stub_every_userinfo(every_payload("userinfo", email: "bo@every.to.evil.com"))
+    stub_every_userinfo(every_payload("userinfo", email: "bo@every.to.evil.com", email_verified: true))
     complete_every_sign_in
     assert_not User.find_by!(every_user_id: "4242").every_member?
 
-    stub_every_userinfo(every_payload("userinfo", email: "bo@EVERY.TO "))
+    stub_every_userinfo(every_payload("userinfo", email: "bo@EVERY.TO ", email_verified: true))
     complete_every_sign_in
     assert_equal "bo@every.to", User.find_by!(every_user_id: "4242").email_address
+    assert User.find_by!(every_user_id: "4242").every_member?
+  end
+
+  test "AE11: none of these addresses is the Every team, verified or not" do
+    stub_every_token
+    [ "ana@every.to.evil.com", "a@b@every.to", "x@sub.every.to", "ana@evil-every.to" ].each_with_index do |email, index|
+      stub_every_userinfo(every_payload("userinfo", user_id: 7000 + index, email:, email_verified: true))
+      complete_every_sign_in
+
+      person = User.find_by!(every_user_id: (7000 + index).to_s)
+      assert_not person.every_member?, email
+      assert_not User.every_members.exists?(id: person.id), email
+    end
+  end
+
+  test "an @every.to address the provider did not verify signs in but is not the Every team" do
+    stub_every_token
+    stub_every_userinfo(every_payload("userinfo", user_id: 4243, email: "unverified@every.to", email_verified: "true"))
+
+    assert_difference -> { Session.count } => 1 do
+      complete_every_sign_in
+    end
+
+    person = User.find_by!(every_user_id: "4243")
+    assert_not person.email_verified?, "only a claim of exactly true verifies"
+    assert_not person.every_member?
+    assert_not User.every_members.exists?(id: person.id)
+  end
+
+  test "an absent claim signs in as not verified, and a later sign-in without it clears earlier team status" do
+    stub_every_token
+    stub_every_userinfo(every_payload("userinfo", email_verified: true))
+    complete_every_sign_in
+    assert User.find_by!(every_user_id: "4242").every_member?
+
+    stub_every_userinfo(every_payload("userinfo"))
+    assert_difference -> { Session.count } => 0 do
+      complete_every_sign_in
+    end
+
+    assert_not User.find_by!(every_user_id: "4242").every_member?
+    assert_not User.find_by!(every_user_id: "4242").email_verified?
+  end
+
+  test "an ADMIN_EMAILS address is admin only once the provider verified it" do
+    ENV["ADMIN_EMAILS"] = "bo@every.to"
+    stub_every_token
+    stub_every_userinfo(every_payload("userinfo"))
+    complete_every_sign_in
+    assert_not User.find_by!(every_user_id: "4242").admin?
+
+    stub_every_userinfo(every_payload("userinfo", email_verified: true))
+    complete_every_sign_in
+    assert User.find_by!(every_user_id: "4242").admin?
+  ensure
+    ENV.delete("ADMIN_EMAILS")
   end
 
   test "an explicit email_verified false is refused" do
@@ -59,6 +116,20 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to new_session_url
+  end
+
+  test "an explicit false also clears the team status the account had" do
+    ana = users(:every_ana)
+    assert ana.every_member?
+    stub_every_token
+    stub_every_userinfo(every_payload("userinfo", user_id: ana.every_user_id, email: ana.email_address, email_verified: false))
+
+    assert_no_difference -> { Session.count } do
+      complete_every_sign_in
+    end
+
+    assert_not ana.reload.email_verified?
+    assert_not ana.every_member?
   end
 
   test "a new member signing in to approve an agent goes straight back to the consent screen" do

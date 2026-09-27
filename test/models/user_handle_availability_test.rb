@@ -17,4 +17,14 @@ class UserHandleAvailabilityTest < ActiveSupport::TestCase
     assert User.handle_availability("ana", except: users(:every_ana))[:available]
     assert_not User.handle_availability("ana", except: users(:every_cy))[:available]
   end
+
+  test "messages print the configured host" do
+    Rails.configuration.x.public_base_url = "https://loadout.example.test"
+
+    assert_equal "loadout.example.test/fresh is yours.", User.handle_availability("fresh")[:message]
+    assert_equal "loadout.example.test/admin is reserved.", User.handle_availability("admin")[:message]
+    assert_equal "loadout.example.test/ana is taken.", User.handle_availability("ana")[:message]
+  ensure
+    Rails.configuration.x.public_base_url = nil
+  end
 end
