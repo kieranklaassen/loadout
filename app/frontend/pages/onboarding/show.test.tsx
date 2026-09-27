@@ -1,51 +1,118 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { catalog, coding, video } from '../../test/picker_fixtures'
+import { VISIBILITY_CONSEQUENCE, VISIBILITY_STATUS } from '../../lib/visibility_copy'
 import OnboardingShow from './show'
 
-const router = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn() }))
+const router = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn(), delete: vi.fn() }))
 
 vi.mock('@inertiajs/react', () => ({
   Head: () => null,
+  Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
   router,
-  usePage: () => ({ props: { flash: {}, current_user: null } }),
+  usePage: () => ({
+    props: { flash: {}, public_host: 'loadout.example.test', current_user: { name: 'Olive Jones', avatar_url: null, handle: null } },
+    url: '/welcome',
+  }),
 }))
 
 const baseProps = {
-  handle: null,
-  suggested_handle: 'olive',
-  first_name: 'Olive',
-  every_member: true,
-  public: false,
-  picker: { categories: [coding, video], catalog, picks: {} },
+  suggested_handle: 'olive-jones',
+  name: 'Olive Jones',
+  avatar_url: null,
+  visibility: 'only_me' as const,
+  preview_kinds: ['Coding', 'Knowledge work'],
 }
 
-describe('Onboarding', () => {
+const linkField = () => screen.getByRole('textbox', { name: /your link/i })
+
+describe('Claim your link', () => {
   beforeEach(() => {
     router.get.mockReset()
     router.patch.mockReset()
-    window.scrollTo = vi.fn()
   })
   afterEach(() => vi.useRealTimers())
 
-  it('prefills the suggested handle and claims it', async () => {
-    render(<OnboardingShow {...baseProps} step="handle" />)
+  it('prefills the suggested handle under the configured host, not a hard-coded one', () => {
+    render(<OnboardingShow {...baseProps} />)
 
-    expect(screen.getByRole('textbox', { name: /your link/i })).toHaveValue('olive')
-    expect(screen.getByText('loadout.every.to/olive is yours.')).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /claim it/i }))
-    expect(router.patch).toHaveBeenCalledWith('/welcome/handle', { handle: 'olive' }, expect.objectContaining({ preserveState: 'errors' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Claim your link' })).toBeInTheDocument()
+    expect(linkField()).toHaveValue('olive-jones')
+    expect(screen.getByText('loadout.example.test/', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByText('loadout.example.test/olive-jones is yours.')).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('loadout.every.to')
   })
 
-  it('checks a typed handle live through a partial reload of /handles/check', () => {
-    vi.useFakeTimers()
-    render(<OnboardingShow {...baseProps} step="handle" />)
+  it('shows the preview: name, link and two empty kinds, updating with the handle', () => {
+    render(<OnboardingShow {...baseProps} />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: /your link/i }), { target: { value: 'Olive J' } })
+    const preview = screen.getByText('Preview').parentElement as HTMLElement
+    expect(within(preview).getByText('Olive Jones')).toBeInTheDocument()
+    expect(within(preview).getByText('loadout.example.test/olive-jones')).toBeInTheDocument()
+    expect(within(preview).getByText('Coding')).toBeInTheDocument()
+    expect(within(preview).getByText('Knowledge work')).toBeInTheDocument()
+    expect(within(preview).getAllByText('Empty')).toHaveLength(2)
+
+    fireEvent.change(linkField(), { target: { value: 'olive' } })
+    expect(within(preview).getByText('loadout.example.test/olive')).toBeInTheDocument()
+  })
+
+  it('offers the three levels, private by default, and says what the chosen one means', async () => {
+    render(<OnboardingShow {...baseProps} />)
+
+    const group = screen.getByRole('radiogroup', { name: 'Who can see it' })
+    expect(within(group).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['only_me', 'team', 'link'])
+    expect(screen.getByRole('radio', { name: /only me/i })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /every team/i })).not.toBeChecked()
+    expect(screen.getByText('People on the Every team.')).toBeInTheDocument()
+    expect(screen.getByText(VISIBILITY_CONSEQUENCE.only_me)).toBeInTheDocument()
+    expect(screen.getByText(VISIBILITY_STATUS.only_me)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('radio', { name: /every team/i }))
+
+    expect(screen.getByRole('radio', { name: /every team/i })).toBeChecked()
+    expect(screen.getByText(VISIBILITY_CONSEQUENCE.team)).toBeInTheDocument()
+    expect(screen.queryByText(VISIBILITY_CONSEQUENCE.only_me)).not.toBeInTheDocument()
+    expect(screen.getByText(VISIBILITY_STATUS.team)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('radio', { name: /anyone with the link/i }))
+    expect(screen.getByText(VISIBILITY_CONSEQUENCE.link)).toBeInTheDocument()
+    expect(screen.getByText(VISIBILITY_STATUS.link)).toBeInTheDocument()
+  })
+
+  it('keeps the radios reachable and described for a keyboard user', async () => {
+    render(<OnboardingShow {...baseProps} />)
+
+    const radio = screen.getByRole('radio', { name: /only me/i })
+    expect(radio).toHaveAccessibleDescription(VISIBILITY_CONSEQUENCE.only_me)
+    linkField().focus()
+    await userEvent.tab()
+    expect(radio).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('radio', { name: /every team/i })).toBeChecked()
+  })
+
+  it('saves the handle and the chosen level with one PATCH to /welcome', async () => {
+    render(<OnboardingShow {...baseProps} />)
+
+    await userEvent.click(screen.getByRole('radio', { name: /anyone with the link/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save and rank my first tools' }))
+
+    expect(router.patch).toHaveBeenCalledWith('/welcome', { handle: 'olive-jones', visibility: 'link' }, expect.objectContaining({ preserveState: true }))
+  })
+
+  it('checks a typed handle live through a partial reload of /handles/check and waits for the answer', () => {
+    vi.useFakeTimers()
+    render(<OnboardingShow {...baseProps} />)
+
+    fireEvent.change(linkField(), { target: { value: 'Olive J' } })
     expect(screen.getByText('Checking…')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /claim it/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeDisabled()
     act(() => vi.advanceTimersByTime(300))
 
     expect(router.get).toHaveBeenCalledWith(
@@ -55,53 +122,64 @@ describe('Onboarding', () => {
     )
   })
 
-  it('shows the availability answer for the current value', () => {
-    render(
-      <OnboardingShow
-        {...baseProps}
-        step="handle"
-        suggested_handle="map-person"
-        availability={{ handle: 'map-person', available: false, message: 'loadout.every.to/map-person is taken.' }}
-      />,
-    )
-    fireEvent.change(screen.getByRole('textbox', { name: /your link/i }), { target: { value: 'map-person' } })
+  it('shows the answer for the current value: taken blocks saving, free allows it', () => {
+    const taken = { handle: 'map-person', available: false, message: 'loadout.example.test/map-person is taken.' }
+    const { rerender } = render(<OnboardingShow {...baseProps} availability={taken} />)
+    fireEvent.change(linkField(), { target: { value: 'map-person' } })
 
-    expect(screen.getByText('loadout.every.to/map-person is yours.')).toBeInTheDocument()
+    expect(screen.getByText('loadout.example.test/map-person is taken.')).toBeInTheDocument()
+    expect(linkField()).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeDisabled()
+
+    rerender(<OnboardingShow {...baseProps} availability={{ ...taken, available: true, message: 'loadout.example.test/map-person is yours.' }} />)
+    expect(screen.getByText('loadout.example.test/map-person is yours.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeEnabled()
   })
 
-  it('skips picks straight to visibility, private by default, and finishes', async () => {
-    render(<OnboardingShow {...baseProps} handle="olive" step="picks" />)
+  it('ignores an answer that belongs to an earlier value', () => {
+    render(<OnboardingShow {...baseProps} availability={{ handle: 'older', available: true, message: 'loadout.example.test/older is yours.' }} />)
 
-    await userEvent.click(screen.getByRole('button', { name: /skip for now/i }))
-    expect(router.patch).not.toHaveBeenCalled()
-    expect(screen.getByRole('radio', { name: /just me/i })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByText(/count, anonymously, in the Every map/i)).toBeInTheDocument()
+    fireEvent.change(linkField(), { target: { value: 'newer' } })
 
-    await userEvent.click(screen.getByRole('radio', { name: /anyone with the link/i }))
-    await userEvent.click(screen.getByRole('button', { name: /finish and see my loadout/i }))
-    expect(router.patch).toHaveBeenCalledWith('/welcome/finish', { public: true, next: null }, expect.any(Object))
+    expect(screen.getByText('Checking…')).toBeInTheDocument()
   })
 
-  it('saves touched categories through PATCH /loadout', async () => {
-    render(<OnboardingShow {...baseProps} handle="olive" step="picks" />)
+  it('shows a refusal from the server under the field and clears it when the handle changes', async () => {
+    render(<OnboardingShow {...baseProps} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cursor' }))
-    expect(screen.getByText('1 pick · 1 category')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save and rank my first tools' }))
+    const options = router.patch.mock.calls[0][2]
+    act(() => options.onError({ handle: 'loadout.example.test/olive-jones was just taken. Try another.' }))
 
-    expect(router.patch).toHaveBeenCalledWith(
-      '/loadout',
-      { operations: [{ op: 'replace_category', category: 'coding', picks: [{ tool: 'cursor', model: null, primary: true, note: null }] }] },
-      expect.objectContaining({ preserveState: true }),
-    )
+    expect(screen.getByText('loadout.example.test/olive-jones was just taken. Try another.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeDisabled()
+
+    fireEvent.change(linkField(), { target: { value: 'olive-j' } })
+    expect(screen.queryByText(/was just taken/)).not.toBeInTheDocument()
   })
 
-  it('offers the agent path as an equal alternative', async () => {
-    render(<OnboardingShow {...baseProps} handle="olive" step="picks" />)
+  it('shows a refused level next to the radios', async () => {
+    render(<OnboardingShow {...baseProps} />)
 
-    await userEvent.click(screen.getByRole('button', { name: /rather let your agent do it/i }))
-    await userEvent.click(screen.getByRole('button', { name: /finish and connect your agent/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save and rank my first tools' }))
+    act(() => router.patch.mock.calls[0][2].onError({ visibility: 'Visibility is not included in the list' }))
 
-    expect(router.patch).toHaveBeenCalledWith('/welcome/finish', { public: false, next: 'agents' }, expect.any(Object))
+    expect(screen.getByRole('alert')).toHaveTextContent('not included')
+  })
+
+  it('does not save a cleared handle', async () => {
+    render(<OnboardingShow {...baseProps} />)
+
+    fireEvent.change(linkField(), { target: { value: '' } })
+
+    expect(screen.getByText('Pick a handle.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeDisabled()
+  })
+
+  it('does not pull in the old picker or the welcome celebration', () => {
+    render(<OnboardingShow {...baseProps} />)
+
+    expect(screen.queryByRole('button', { name: /skip for now/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/rather let your agent/i)).not.toBeInTheDocument()
   })
 })
