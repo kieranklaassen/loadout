@@ -91,9 +91,11 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     update({ op: "move_pick", category: "coding", rank: 2, direction: "up" })
     assert_equal [ "claude-code", "cursor" ], @user.entries.order(:rank).map { |entry| entry.tool.slug }
     assert_in_delta Time.current, @user.reload.loadout_updated_at, 5
+    assert_no_rank_above_the_limit
 
     update({ op: "remove_pick", category: "coding", rank: 1 })
     assert_equal [ [ 1, "cursor" ] ], @user.entries.map { |entry| [ entry.rank, entry.tool.slug ] }
+    assert_no_rank_above_the_limit
     assert_replays_to_entries @user
   end
 
