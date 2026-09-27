@@ -66,6 +66,7 @@ Rails.application.routes.draw do
   end
 
   root "home#index"
+  get "kinds/:slug" => "kinds#show", as: :kind, format: false
 
   # Profiles live on the root path, so they are drawn last (U4 routes go here).
   # format: false keeps "/manifest.xml" and friends from reaching a profile.
