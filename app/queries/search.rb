@@ -60,7 +60,8 @@ class Search
   end
 
   def kinds_of(kind, item)
-    Category.all.filter_map do |category|
+    @categories ||= Category.all.to_a
+    @categories.filter_map do |category|
       count = rankings.count_of(kind, item.id, category:)
       { category: category.to_prop, count: } if count[:n].positive?
     end

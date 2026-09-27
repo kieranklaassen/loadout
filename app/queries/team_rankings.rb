@@ -122,7 +122,8 @@ class TeamRankings
   end
 
   def item_counts(category: nil)
-    { tools: counts(ranked_items(category, :tool)), models: counts(ranked_items(category, :model)) }
+    @item_counts ||= {}
+    @item_counts[category&.id] ||= { tools: counts(ranked_items(category, :tool)), models: counts(ranked_items(category, :model)) }
   end
 
   def count_of(kind, id, category: nil)
