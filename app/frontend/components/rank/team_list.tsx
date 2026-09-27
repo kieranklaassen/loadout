@@ -15,10 +15,11 @@ function Column({ title, empty, children }: { title: string; empty: string; chil
   )
 }
 
-function Row({ standing, launched, action, onUse }: {
+function Row({ standing, launched, action, busy, onUse }: {
   standing: TeamStanding
   launched?: boolean
   action: TeamAction | null
+  busy: boolean
   onUse: (action: Extract<TeamAction, { type: 'use' }>) => void
 }) {
   return (
@@ -30,7 +31,7 @@ function Row({ standing, launched, action, onUse }: {
       </div>
       {action?.type === 'have' && <span className="text-caption text-fg-muted">{action.text}</span>}
       {action?.type === 'use' && (
-        <Button variant="secondary" aria-label={`${action.label}: ${standing.item.name}`} onClick={() => onUse(action)}>
+        <Button variant="secondary" aria-label={`${action.label}: ${standing.item.name}`} aria-disabled={busy || undefined} onClick={() => onUse(action)}>
           {action.label}
         </Button>
       )}
@@ -60,6 +61,7 @@ export default function TeamList({ kind, top, actions }: { kind: EditorKind; top
                 key={standing.item.slug}
                 standing={standing}
                 action={toolAction(kind, standing)}
+                busy={actions.busy}
                 onUse={(action) =>
                   actions.saveSlot(action.rank, { tool: standing.item.slug }, { message: `${standing.item.name} is now your ${rankLabel(action.rank)} pick` })
                 }
@@ -73,6 +75,7 @@ export default function TeamList({ kind, top, actions }: { kind: EditorKind; top
                 standing={standing}
                 launched={standing.launched}
                 action={modelAction(kind, standing)}
+                busy={actions.busy}
                 onUse={(action) =>
                   actions.saveSlot(action.rank, { model: standing.item.slug }, { message: `${standing.item.name} is now the model for your ${rankLabel(action.rank)} pick` })
                 }

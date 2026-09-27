@@ -52,7 +52,9 @@ class SuggestPicksTool < ApplicationTool
 
   def call
     result = run_operations!(arguments[:operations])
-    proposed, withdrawn = result.suggestions.partition { |suggestion| suggestion.status == "open" }
+    # A suggestion a later operation of the same call superseded is neither proposed nor withdrawn.
+    proposed = result.suggestions.select { |suggestion| suggestion.status == "open" }
+    withdrawn = result.suggestions.select { |suggestion| suggestion.status == "withdrawn" }
 
     {
       message: message(proposed, withdrawn, result.messages),

@@ -12,7 +12,7 @@ const VARIANTS: Record<Variant, string> = {
 
 export function buttonClasses(variant: Variant = 'primary', size: 'md' | 'lg' = 'md') {
   const sizing = size === 'lg' ? 'px-6 py-3.5 text-base' : 'px-4 py-2.5 text-sm'
-  return `inline-flex min-h-11 items-center justify-center gap-2 rounded-sharp font-semibold transition-colors md:min-h-0 disabled:pointer-events-none disabled:opacity-50 ${sizing} ${VARIANTS[variant]}`
+  return `inline-flex min-h-11 items-center justify-center gap-2 rounded-sharp font-semibold transition-colors md:min-h-0 disabled:pointer-events-none disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 ${sizing} ${VARIANTS[variant]}`
 }
 
 type ButtonProps = ComponentProps<'button'> & { variant?: Variant; size?: 'md' | 'lg'; children: ReactNode }

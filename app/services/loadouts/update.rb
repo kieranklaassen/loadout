@@ -33,7 +33,7 @@ module Loadouts
     CHOICES = { context: Entry::CONTEXTS, effort: Entry::EFFORTS }.freeze
 
     # changes: entry_changes rows written; suggestions: the suggestion rows created or
-    # closed; messages: plain-words notes for operations that had nothing to do.
+    # closed, as they stand when the call ends; messages: plain-words notes for operations that had nothing to do.
     Result = Data.define(:changes, :suggestions, :messages, :user)
 
     def self.call(...) = new(...).call
@@ -58,6 +58,8 @@ module Loadouts
 
       ApplicationRecord.transaction do
         @operations.each { |operation| apply(operation) }
+        # Supersession closes rows with update_all, so a row created earlier in this call can be stale.
+        @suggestion_rows.each(&:reload)
         @user.update!(loadout_updated_at: Time.current) if @changes.any? { |change| EntryChange::SLOT_ACTIONS.include?(change.action) }
       end
 

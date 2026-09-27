@@ -1,6 +1,6 @@
 import type { Page, VisitOptions } from '@inertiajs/core'
 import { router } from '@inertiajs/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { rankLabel } from '../../lib/rank_label'
 import { movedMessage } from '../../lib/ranking'
 import type { PickContext, PickEffort, RankedPick, SharedProps, Suggestion } from '../../types'
@@ -11,6 +11,11 @@ import type { PickContext, PickEffort, RankedPick, SharedProps, Suggestion } fro
 // back with fresh props, so the page never holds a second copy of the loadout. The
 // hook tracks what to show while a request is out, what to say when it is refused, and
 // where focus and the live region should go afterwards.
+//
+// One request at a time: Inertia keeps a single app-wide queue for visits and a new one
+// cancels the one in flight, and every write here addresses a pick by its rank, which a
+// removal or a move changes. So while a request is out `busy` is true and every action
+// below ignores new calls; the controls show it (aria-disabled) instead of hiding.
 
 const LOADOUT = '/loadout'
 const REFUSED = 'That did not save. Try again.'
@@ -35,6 +40,9 @@ export function useEditorActions(category: string) {
   const [suggestionError, setSuggestionError] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
   const [focus, setFocus] = useState<{ id: string } | null>(null)
+  // The ref decides, so two calls in one tick cannot both pass; the state is for rendering.
+  const inFlight = useRef(false)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (focus) document.getElementById(focus.id)?.focus()
@@ -44,25 +52,48 @@ export function useEditorActions(category: string) {
   const settle = (rank: number) => setDrafts(({ [rank]: _dropped, ...rest }) => rest)
   const focusSlot = (rank: number) => setFocus({ id: `slot-heading-${rank}` })
 
+  const setInFlight = (value: boolean) => {
+    inFlight.current = value
+    setBusy(value)
+  }
+  const whenIdle =
+    <Args extends unknown[]>(action: (...args: Args) => void) =>
+    (...args: Args) => {
+      if (!inFlight.current) action(...args)
+    }
+
   // A refusal comes back as a flash alert on the page the server redirects to; a request that
   // never got an answer arrives as an error callback. Either way the editor says so inline, so
-  // the alert banner is cleared instead of saying it twice.
-  const run = (send: Send, { onSaved, onFailed }: Outcome) =>
+  // the alert banner is cleared instead of saying it twice. A visit another part of the page
+  // cancelled reports neither, only that it finished, and counts as a request without an answer.
+  const run = (send: Send, { onSaved, onFailed }: Outcome) => {
+    let answered = false
+    const answer = (outcome: () => void) => {
+      if (answered) return
+      answered = true
+      setInFlight(false)
+      outcome()
+    }
+
+    setInFlight(true)
     send({
       preserveScroll: true,
       preserveState: true,
-      onSuccess: (page: Page) => {
-        const alert = (page.props as Partial<SharedProps>).flash?.alert
-        if (!alert) return onSaved()
-        router.replaceProp('flash', {})
-        onFailed(alert)
-      },
-      onError: (errors) => onFailed(String(Object.values(errors)[0] ?? REFUSED)),
-      onNetworkError: () => onFailed(REFUSED),
-      onHttpException: () => onFailed(REFUSED),
+      onSuccess: (page: Page) =>
+        answer(() => {
+          const alert = (page.props as Partial<SharedProps>).flash?.alert
+          if (!alert) return onSaved()
+          router.replaceProp('flash', {})
+          onFailed(alert)
+        }),
+      onError: (errors) => answer(() => onFailed(String(Object.values(errors)[0] ?? REFUSED))),
+      onNetworkError: () => answer(() => onFailed(REFUSED)),
+      onHttpException: () => answer(() => onFailed(REFUSED)),
+      onFinish: () => answer(() => onFailed(REFUSED)),
     })
+  }
 
-  const saveSlot = (rank: number, fields: SlotFields, then?: { message: string }) => {
+  const saveSlot = whenIdle((rank: number, fields: SlotFields, then?: { message: string }) => {
     setDrafts((current) => ({ ...current, [rank]: { ...current[rank], ...fields } }))
     status(rank, { state: 'saving' })
     run((options) => router.patch(LOADOUT, { operations: [{ op: 'set_pick', category, rank, ...fields }] }, options), {
@@ -79,9 +110,9 @@ export function useEditorActions(category: string) {
         status(rank, { state: 'error', message, retry: () => saveSlot(rank, fields, then) })
       },
     })
-  }
+  })
 
-  const moveSlot = (pick: RankedPick, direction: 'up' | 'down') => {
+  const moveSlot = whenIdle((pick: RankedPick, direction: 'up' | 'down') => {
     const to = pick.rank + (direction === 'up' ? -1 : 1)
     status(pick.rank, { state: 'saving' })
     run((options) => router.patch(LOADOUT, { operations: [{ op: 'move_pick', category, rank: pick.rank, direction }] }, options), {
@@ -93,9 +124,9 @@ export function useEditorActions(category: string) {
       },
       onFailed: (message) => status(pick.rank, { state: 'error', message, retry: () => moveSlot(pick, direction) }),
     })
-  }
+  })
 
-  const removeSlot = (pick: RankedPick) => {
+  const removeSlot = whenIdle((pick: RankedPick) => {
     status(pick.rank, { state: 'saving' })
     run((options) => router.patch(LOADOUT, { operations: [{ op: 'remove_pick', category, rank: pick.rank }] }, options), {
       onSaved: () => {
@@ -105,10 +136,10 @@ export function useEditorActions(category: string) {
       },
       onFailed: (message) => status(pick.rank, { state: 'error', message, retry: () => removeSlot(pick) }),
     })
-  }
+  })
 
   // `landing` is the slot the pick ends up in, for the announcement and focus.
-  const confirmSuggestion = (suggestion: Suggestion, options: ConfirmOptions, landing: number) => {
+  const confirmSuggestion = whenIdle((suggestion: Suggestion, options: ConfirmOptions, landing: number) => {
     setSuggestionError(null)
     run((visit) => router.post(`${LOADOUT}/suggestions/${suggestion.id}/confirm`, options, visit), {
       onSaved: () => {
@@ -117,9 +148,9 @@ export function useEditorActions(category: string) {
       },
       onFailed: setSuggestionError,
     })
-  }
+  })
 
-  const dismissSuggestion = (suggestion: Suggestion) => {
+  const dismissSuggestion = whenIdle((suggestion: Suggestion) => {
     setSuggestionError(null)
     run((visit) => router.delete(`${LOADOUT}/suggestions/${suggestion.id}`, visit), {
       onSaved: () => {
@@ -129,7 +160,7 @@ export function useEditorActions(category: string) {
       },
       onFailed: setSuggestionError,
     })
-  }
+  })
 
-  return { drafts, statuses, suggestionError, announcement, saveSlot, moveSlot, removeSlot, confirmSuggestion, dismissSuggestion }
+  return { busy, drafts, statuses, suggestionError, announcement, saveSlot, moveSlot, removeSlot, confirmSuggestion, dismissSuggestion }
 }

@@ -76,6 +76,38 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
     assert_equal "withdrawn", PickSuggestion.find(suggested).status
   end
 
+  test "a suggestion a later operation of the same call supersedes is not reported as proposed" do
+    body = payload(suggest([
+      { op: "suggest", category: "coding", tool: "cursor" },
+      { op: "suggest", category: "coding", tool: "cursor", model: "claude-opus-5-5" }
+    ]))
+
+    open = @user.pick_suggestions.open.sole
+    assert_equal [ [ open.id, "claude-opus-5-5" ] ], body["suggestions"].map { |entry| entry.values_at("id", "model") }
+    assert_equal [], body["withdrawn"]
+    assert_match(/Suggested 1 pick\./, body["message"])
+    assert_equal [ "superseded", "open" ], @user.pick_suggestions.order(:id).pluck(:status)
+  end
+
+  test "four suggestions for one kind in one call report the three that stay open" do
+    body = payload(suggest(%w[cursor claude-code Windsurf Zed].map { |tool| { op: "suggest", category: "coding", tool: } }))
+
+    assert_equal @user.pick_suggestions.open.order(:id).pluck(:id), body["suggestions"].map { |entry| entry["id"] }
+    assert_equal %w[claude-code windsurf zed], body["suggestions"].map { |entry| entry["tool"] }
+    assert_equal [], body["withdrawn"]
+    assert_match(/Suggested 3 picks\./, body["message"])
+  end
+
+  test "a call that withdraws one suggestion and makes another reports each under its own heading" do
+    old = payload(suggest([ { op: "suggest", category: "video", tool: "runway" } ]))["suggestions"].sole["id"]
+
+    body = payload(suggest([ { op: "withdraw", suggestion_id: old }, { op: "suggest", category: "coding", tool: "cursor" } ]))
+
+    assert_equal [ old ], body["withdrawn"]
+    assert_equal [ @user.pick_suggestions.open.sole.id ], body["suggestions"].map { |entry| entry["id"] }
+    assert_match(/Suggested 1 pick\..*Withdrew 1 suggestion\./, body["message"])
+  end
+
   test "an exact suggestion the member dismissed is refused with a readable reason" do
     id = payload(suggest([ { op: "suggest", category: "video", tool: "runway" } ]))["suggestions"].sole["id"]
     Loadouts::Update.call(user: @user, operations: [ { op: "dismiss", suggestion_id: id } ], source: "web")

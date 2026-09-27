@@ -21,11 +21,14 @@ const numeral = 'font-serif text-[28px] leading-none'
 const rowButton =
   'text-link inline-flex min-h-11 items-center px-2 text-caption aria-disabled:cursor-not-allowed aria-disabled:opacity-50 md:min-h-0 md:py-1'
 
-function SelectField({ id, label, mark, disabled, value, onChange, children }: {
+// `busy` is a request in flight: the select stays focusable (`disabled` would drop focus) and the
+// editor ignores a change, so the select shows the saved value again.
+function SelectField({ id, label, mark, disabled, busy, value, onChange, children }: {
   id: string
   label: string
   mark?: ReactNode
   disabled: boolean
+  busy: boolean
   value: string
   onChange: (value: string) => void
   children: ReactNode
@@ -40,6 +43,7 @@ function SelectField({ id, label, mark, disabled, value, onChange, children }: {
         <select
           id={id}
           disabled={disabled}
+          aria-disabled={busy || undefined}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className={`-my-2.5 truncate py-2.5 ${value ? '' : 'text-fg-muted'}`}
@@ -144,6 +148,7 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
                 label="Tool"
                 mark={toolItem && <Mark item={toolItem} size="sm" />}
                 disabled={false}
+                busy={actions.busy}
                 value={shown.tool}
                 onChange={(value) => value && change({ tool: value })}
               >
@@ -155,6 +160,7 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
                 label={pick ? 'Model' : 'Model (optional)'}
                 mark={modelItem && <Mark item={modelItem} size="sm" />}
                 disabled={!pick}
+                busy={actions.busy}
                 value={shown.model}
                 onChange={(value) => change({ model: value || null })}
               >
@@ -165,6 +171,7 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
                 id={`slot-${rank}-context`}
                 label="Context"
                 disabled={!pick}
+                busy={actions.busy}
                 value={shown.context}
                 onChange={(value) => change({ context: (value || null) as SlotFields['context'] })}
               >
@@ -179,6 +186,7 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
                 id={`slot-${rank}-effort`}
                 label="Effort"
                 disabled={!pick}
+                busy={actions.busy}
                 value={shown.effort}
                 onChange={(value) => change({ effort: (value || null) as SlotFields['effort'] })}
               >
@@ -210,7 +218,7 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
                     type="button"
                     className={rowButton}
                     aria-label={`Move ${pick.tool.name} up`}
-                    aria-disabled={rank === 1 || undefined}
+                    aria-disabled={rank === 1 || actions.busy || undefined}
                     onClick={() => rank !== 1 && actions.moveSlot(pick, 'up')}
                   >
                     Move up
@@ -219,12 +227,12 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
                     type="button"
                     className={rowButton}
                     aria-label={`Move ${pick.tool.name} down`}
-                    aria-disabled={rank === kind.picks.length || undefined}
+                    aria-disabled={rank === kind.picks.length || actions.busy || undefined}
                     onClick={() => rank !== kind.picks.length && actions.moveSlot(pick, 'down')}
                   >
                     Move down
                   </button>
-                  <button type="button" className={rowButton} aria-label={`Remove ${pick.tool.name}`} onClick={() => actions.removeSlot(pick)}>
+                  <button type="button" className={rowButton} aria-label={`Remove ${pick.tool.name}`} aria-disabled={actions.busy || undefined} onClick={() => actions.removeSlot(pick)}>
                     Remove
                   </button>
                 </div>
@@ -233,7 +241,7 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
             {status?.state === 'error' && (
               <p role="alert" className="mt-2 text-caption text-coral">
                 {status.message}{' '}
-                <button type="button" onClick={status.retry} className="text-link">
+                <button type="button" onClick={status.retry} aria-disabled={actions.busy || undefined} className="text-link aria-disabled:cursor-not-allowed aria-disabled:opacity-50">
                   Retry
                 </button>
               </p>

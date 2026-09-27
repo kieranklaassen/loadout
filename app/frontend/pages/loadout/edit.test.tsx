@@ -361,6 +361,170 @@ describe('move and remove', () => {
   })
 })
 
+// Requests the test answers by hand, the way a slow network would. Inertia ends every one with onFinish, after its outcome.
+type Held = { onSuccess: (page: unknown) => void; onError: (errors: Record<string, string>) => void; onFinish: () => void }
+const hold = (...mocks: (typeof patch)[]) => {
+  const held: Held[] = []
+  mocks.forEach((mock) => mock.mockImplementation((...args: unknown[]) => held.push(args[args.length - 1] as Held)))
+  return held
+}
+const land = (request: Held) =>
+  act(() => {
+    request.onSuccess(saved)
+    request.onFinish()
+  })
+const refuse = (request: Held) =>
+  act(() => {
+    request.onError({ base: 'That did not save.' })
+    request.onFinish()
+  })
+
+describe('one request at a time', () => {
+  const state = () => props({}, { suggestions: [suggestion({ id: 7, tool: runway, target_rank: 3 })] })
+  const team = () => within(screen.getByRole('region', { name: 'What the team uses for Coding' }))
+  // Every control that starts a request, except the four selects.
+  const buttons = () => [
+    within(slot('1st pick')).getByRole('button', { name: 'Move Claude Code down' }),
+    within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }),
+    within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor up' }),
+    within(slot('2nd pick')).getByRole('button', { name: 'Remove Cursor' }),
+    screen.getByRole('button', { name: 'Confirm Runway' }),
+    screen.getByRole('button', { name: 'Remove suggested Runway' }),
+    team().getByRole('button', { name: 'Use as 3rd pick: Codex' }),
+    team().getByRole('button', { name: 'Use in 2nd pick: GPT-6 Astra' }),
+  ]
+
+  it('ignores an edit in another slot while a save is out, then takes it once the save has landed', async () => {
+    const user = userEvent.setup()
+    const held = hold(patch)
+    render(<LoadoutEdit {...props()} />)
+
+    await user.selectOptions(field('1st pick', 'Effort'), 'low')
+    await user.selectOptions(field('2nd pick', 'Model'), 'gpt-6-astra')
+
+    expect(patch).toHaveBeenCalledTimes(1)
+    expect(field('2nd pick', 'Model')).toHaveValue('')
+    expect(within(slot('2nd pick')).getByRole('status')).not.toHaveTextContent('Saving')
+
+    land(held[0]!)
+    expect(within(slot('1st pick')).getByRole('status')).toHaveTextContent('Saved')
+
+    await user.selectOptions(field('2nd pick', 'Model'), 'gpt-6-astra')
+    expect(patch).toHaveBeenCalledTimes(2)
+    expect(patch.mock.calls[1]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 2, model: 'gpt-6-astra' }] })
+  })
+
+  it('removes one pick when Remove is double-clicked', async () => {
+    const user = userEvent.setup()
+    const held = hold(patch)
+    render(<LoadoutEdit {...props()} />)
+
+    await user.dblClick(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }))
+
+    expect(patch).toHaveBeenCalledTimes(1)
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'remove_pick', category: 'coding', rank: 1 }] })
+    land(held[0]!)
+    expect(screen.getByText('Removed Claude Code from your 1st pick')).toBeInTheDocument()
+  })
+
+  it('swaps a pair once when Move up is double-clicked', async () => {
+    const user = userEvent.setup()
+    hold(patch)
+    render(<LoadoutEdit {...props()} />)
+
+    await user.dblClick(within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor up' }))
+
+    expect(patch).toHaveBeenCalledTimes(1)
+  })
+
+  describe.each([
+    ['lands', land],
+    ['is refused', refuse],
+  ])('while a request %s', (_name, settle) => {
+    it('marks Move, Remove, Confirm and Use aria-disabled, keeps their text, and acts on none of them', async () => {
+      const user = userEvent.setup()
+      const held = hold(patch, post, del)
+      render(<LoadoutEdit {...state()} />)
+      const before = buttons().map((button) => button.textContent)
+      buttons().forEach((button) => expect(button).not.toHaveAttribute('aria-disabled'))
+
+      await user.selectOptions(field('1st pick', 'Effort'), 'low')
+
+      buttons().forEach((button) => expect(button).toHaveAttribute('aria-disabled', 'true'))
+      expect(buttons().map((button) => button.textContent)).toEqual(before)
+      for (const button of buttons()) await user.click(button)
+      expect(held).toHaveLength(1)
+      expect(post).not.toHaveBeenCalled()
+      expect(del).not.toHaveBeenCalled()
+
+      settle(held[0]!)
+
+      buttons().forEach((button) => expect(button).not.toHaveAttribute('aria-disabled'))
+    })
+  })
+
+  it('keeps the selects focusable but ignores a change in any of them while a request is out', async () => {
+    const user = userEvent.setup()
+    const held = hold(patch)
+    render(<LoadoutEdit {...props()} />)
+    await user.click(within(slot('1st pick')).getByRole('button', { name: 'Move Claude Code down' }))
+
+    for (const [name, label, value] of [['1st pick', 'Tool', 'codex'], ['1st pick', 'Model', 'gpt-6-astra'], ['2nd pick', 'Context', '200k'], ['2nd pick', 'Effort', 'low']]) {
+      const select = field(name!, label!)
+      const shown = select.value
+      select.focus()
+      await user.selectOptions(select, value!)
+
+      expect(select).not.toBeDisabled()
+      expect(select).toHaveAttribute('aria-disabled', 'true')
+      expect(select).toHaveValue(shown)
+      expect(document.activeElement).toBe(select)
+    }
+    expect(patch).toHaveBeenCalledTimes(1)
+
+    land(held[0]!)
+    expect(field('1st pick', 'Tool')).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('frees the panel after a refused save, and Retry sends the same change once nothing else is out', async () => {
+    const user = userEvent.setup()
+    patch.mockImplementationOnce((_url, _data, options) => {
+      options.onNetworkError(new Error('offline'))
+      options.onFinish()
+    })
+    render(<LoadoutEdit {...props()} />)
+    await user.selectOptions(field('1st pick', 'Effort'), 'low')
+    const alert = within(slot('1st pick')).getByRole('alert')
+    expect(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' })).not.toHaveAttribute('aria-disabled')
+
+    const held = hold(patch)
+    await user.click(within(slot('2nd pick')).getByRole('button', { name: 'Remove Cursor' }))
+    const retry = within(alert).getByRole('button', { name: 'Retry' })
+    expect(retry).toHaveAttribute('aria-disabled', 'true')
+    await user.click(retry)
+    expect(patch).toHaveBeenCalledTimes(2)
+
+    land(held[0]!)
+    expect(within(alert).getByRole('button', { name: 'Retry' })).not.toHaveAttribute('aria-disabled')
+    await user.click(within(alert).getByRole('button', { name: 'Retry' }))
+    expect(patch).toHaveBeenCalledTimes(3)
+    expect(patch.mock.calls[2]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, effort: 'low' }] })
+  })
+
+  it('does not leave a slot at Saving… when another visit cancels its request', async () => {
+    const user = userEvent.setup()
+    const held = hold(patch)
+    render(<LoadoutEdit {...props()} />)
+
+    await user.selectOptions(field('1st pick', 'Effort'), 'low')
+    act(() => held[0]!.onFinish())
+
+    expect(within(slot('1st pick')).getByRole('alert')).toHaveTextContent(/did not save/i)
+    expect(field('1st pick', 'Effort')).toHaveValue('high')
+    expect(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' })).not.toHaveAttribute('aria-disabled')
+  })
+})
+
 describe('suggestions', () => {
   it('shows a suggestion in the empty slot it would land in, with Confirm and Remove that name it', () => {
     const state = props({}, { suggestions: [suggestion({ id: 7, tool: runway, target_rank: 3, suggested_by: 'Claude' })] })
@@ -629,6 +793,28 @@ describe('Add a tool or model', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('That one is with the admins already.')
     expect(nameField()).toHaveValue('Windsurf')
+  })
+
+  it('sends one request however many times it is submitted while the first is out, and takes another after', async () => {
+    const user = userEvent.setup()
+    const held = hold(post)
+    render(<LoadoutEdit {...props()} />)
+    await open(user)
+    await user.type(nameField(), 'Windsurf')
+
+    await user.dblClick(screen.getByRole('button', { name: 'Add' }))
+    await user.click(nameField())
+    await user.keyboard('{Enter}')
+
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Add' })).toHaveAttribute('aria-disabled', 'true')
+
+    refuse(held[0]!)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('That did not save.')
+    expect(screen.getByRole('button', { name: 'Add' })).not.toHaveAttribute('aria-disabled')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(post).toHaveBeenCalledTimes(2)
   })
 })
 

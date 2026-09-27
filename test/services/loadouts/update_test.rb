@@ -139,6 +139,17 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     end
   end
 
+  test "the suggestion rows it hands back show what became of them by the end of the call" do
+    result = update(
+      { op: "suggest", category: "coding", tool: "cursor" },
+      { op: "suggest", category: "coding", tool: "cursor", model: "claude-opus-5-5" },
+      source: "mcp", client_name: "Claude", oauth_client_id: 1
+    )
+
+    assert_equal %w[superseded open], result.suggestions.map(&:status)
+    assert_equal @user.pick_suggestions.order(:id).pluck(:status), result.suggestions.map(&:status)
+  end
+
   test "agents may only suggest and withdraw" do
     assert_equal %w[suggest withdraw], Loadouts::Update::AGENT_OPERATIONS
     assert_equal %w[set_pick remove_pick move_pick confirm dismiss], Loadouts::Update::WEB_OPERATIONS

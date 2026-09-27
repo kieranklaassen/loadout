@@ -17,6 +17,7 @@ export default function AddItem({ catalog }: { catalog: Catalog }) {
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [added, setAdded] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const input = useRef<HTMLInputElement>(null)
 
@@ -30,12 +31,13 @@ export default function AddItem({ catalog }: { catalog: Catalog }) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (listed) return
+    if (listed || sending) return
     if (clean.length < NAME_LENGTH.min || clean.length > NAME_LENGTH.max) {
       return setError(`Use ${NAME_LENGTH.min} to ${NAME_LENGTH.max} characters.`)
     }
 
     setError(null)
+    setSending(true)
     router.post(
       '/loadout/catalog_items',
       { kind, name: clean },
@@ -51,6 +53,7 @@ export default function AddItem({ catalog }: { catalog: Catalog }) {
         onError: (errors) => setError(String(Object.values(errors)[0] ?? REFUSED)),
         onNetworkError: () => setError(REFUSED),
         onHttpException: () => setError(REFUSED),
+        onFinish: () => setSending(false),
       },
     )
   }
@@ -122,7 +125,7 @@ export default function AddItem({ catalog }: { catalog: Catalog }) {
 
           <p className="text-caption text-fg-muted">An admin reviews new items before the team sees them.</p>
           <div className="flex gap-2">
-            <Button type="submit" disabled={listed}>
+            <Button type="submit" disabled={listed} aria-disabled={sending || undefined}>
               Add
             </Button>
             <Button variant="secondary" onClick={() => setOpen(false)}>

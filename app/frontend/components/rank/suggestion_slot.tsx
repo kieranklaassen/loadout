@@ -73,6 +73,7 @@ export default function SuggestionSlot({ suggestion, mode, pick, picks, actions 
   }, [choosing])
 
   const confirm = () => {
+    if (actions.busy) return
     if (mode === 'unplaced') return setChoosing(true)
     const rank = suggestion.target_rank ?? undefined
     actions.confirmSuggestion(suggestion, { rank }, suggestion.target_rank ?? 1)
@@ -96,7 +97,7 @@ export default function SuggestionSlot({ suggestion, mode, pick, picks, actions 
         <p className="text-caption text-fg-soft">
           {mode === 'change' ? 'Suggested change' : 'Suggested'} by {suggestion.suggested_by}
         </p>
-        <Button ref={confirmButton} aria-label={`Confirm ${name}`} aria-expanded={mode === 'unplaced' ? choosing : undefined} onClick={confirm}>
+        <Button ref={confirmButton} aria-label={`Confirm ${name}`} aria-expanded={mode === 'unplaced' ? choosing : undefined} aria-disabled={actions.busy || undefined} onClick={confirm}>
           Confirm
         </Button>
       </div>
@@ -143,7 +144,7 @@ export default function SuggestionSlot({ suggestion, mode, pick, picks, actions 
             ))}
           </div>
           <div className="mt-3 flex gap-2">
-            <Button disabled={choice === null} onClick={replace}>
+            <Button disabled={choice === null} aria-disabled={actions.busy || undefined} onClick={replace}>
               Replace
             </Button>
             <Button variant="secondary" onClick={cancel}>
@@ -154,7 +155,13 @@ export default function SuggestionSlot({ suggestion, mode, pick, picks, actions 
       )}
 
       <div className="mt-3 flex justify-end">
-        <button type="button" className="text-link min-h-11 px-2 text-caption md:min-h-0" aria-label={`Remove suggested ${name}`} onClick={() => actions.dismissSuggestion(suggestion)}>
+        <button
+          type="button"
+          className="text-link min-h-11 px-2 text-caption aria-disabled:cursor-not-allowed aria-disabled:opacity-50 md:min-h-0"
+          aria-label={`Remove suggested ${name}`}
+          aria-disabled={actions.busy || undefined}
+          onClick={() => actions.dismissSuggestion(suggestion)}
+        >
           Remove
         </button>
       </div>
