@@ -40,6 +40,9 @@ module CatalogItem
     # Finds an item by slug or name, or creates a pending one for review.
     def resolve_or_suggest!(value, user:)
       find_by_name_or_slug(value) || create!(name: value.to_s.squish, status: "pending", created_by: user)
+    rescue ActiveRecord::RecordNotUnique
+      # A concurrent suggestion of the same name claimed the slug first; adopt it.
+      find_by_name_or_slug(value) || raise
     end
 
     # A stable hue per name, so suggested items look intentional before review.
