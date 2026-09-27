@@ -59,7 +59,7 @@ class ProfilesController < InertiaController
       type: "profile"
     }
     return meta.merge(noindex: true) unless user.visible_to?(nil)
-    return meta if picks[:ranked_count].zero?
+    return meta unless ProfileCard.new(user).picks?
 
     meta.merge(image: "#{profile_url(user)}/og.png?v=#{user.loadout_updated_at.to_i}", image_alt: "#{name}'s loadout on Loadout")
   end
