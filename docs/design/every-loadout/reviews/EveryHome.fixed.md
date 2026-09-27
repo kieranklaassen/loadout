@@ -1,0 +1,1 @@
+EveryHome fixed: all 6 review items applied (badge 12px, counts 13px, coral only on stale, sky active tab, one runner-up per cell, single SHOW pill, legend folded into headers, copy changes, lead counts #d0d0d0). Height 3000 -> 2880.

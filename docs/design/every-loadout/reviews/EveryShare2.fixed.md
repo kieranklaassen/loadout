@@ -1,0 +1,1 @@
+EveryShare2: headline 30px #fdfaf7 beside square Claude Code tile + round Claude tile; removed M/R/M tiles, dashed slot, URL line, separator; lockup 30px logo / 36px Loadout; collage panel 340px, img 900px left:-300 top:0. Size stays 1200x630.

@@ -1,0 +1,1 @@
+EveryProfile2: collapsed 5 empty kinds into one row, added TEAM USES column (Image/Video/Speech to text), count now 6 of 11, h2 replaced by 22px 'Top picks by kind of work', model names 14px #fdfaf7, chips '1M context'/'High effort' 13px, footer/links fixed. Height 1290 -> 1040.

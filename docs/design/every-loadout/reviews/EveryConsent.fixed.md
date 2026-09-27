@@ -1,0 +1,1 @@
+EveryConsent fixes: Deny border #8c8d91 and href to EveryHome; Can't line full weight; origin line 'Running on your computer'; Agents page linked; KK avatar link removed; dead CSS removed; arrow and link underline raised to #8c8d91. Height stays 900.

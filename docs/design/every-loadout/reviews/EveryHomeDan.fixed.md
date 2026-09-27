@@ -1,0 +1,1 @@
+EveryHomeDan fixes 1-6 applied: single PERSON pill (blue inset border), Dan H1 #fdfaf7, rank labels/chips 13px, chips spelled out, empty tds removed, avatar 72px, 'Last updated', Back-to-everyone removed. Height 1280->1200.
