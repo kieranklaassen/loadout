@@ -6,7 +6,7 @@
 # What is dropped, and only this, is archived first:
 #   - picks in the "other" kind, with its change rows and its category
 #   - a repeated tool in a kind (kept: the go-to, then the pick with a model, then the earliest)
-#   - picks past the third, by go-to first, then oldest
+#   - picks past the third (the go-to, then the oldest, keep their places)
 #   - notes (the column goes away)
 # The archive is a JSON file next to the database (storage/migration_archive/, mode
 # 0600); it holds private notes, so delete it once the deploy is verified.
