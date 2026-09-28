@@ -67,7 +67,8 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
       user: @user, operations: [ { op: "suggest", category: "video", tool: "runway" }, { op: "suggest", category: "video", tool: "Hedra" } ],
       source: "mcp", client_name: "Claude", oauth_client_id: client.id
     )
-    Loadouts::Update.call(user: @user, operations: [ { op: "suggest", category: "coding", tool: "cursor" } ], source: "webmcp")
+    Loadouts::Update.call(user: @user, operations: [ { op: "suggest", category: "coding", tool: "claude-code" } ], source: "webmcp")
+    assert_equal 3, @user.pick_suggestions.open.count, "the WebMCP suggestion exists but is no client's"
 
     sign_in_as(@user)
     get agents_path
