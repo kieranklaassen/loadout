@@ -64,7 +64,10 @@ overlap cases in `app/frontend/pages/loadout/edit.test.tsx`.
   per-request state; `onSuccess` and `onError` alone miss cancelled visits.
 - Test overlapping actions, not only the happy path: two actions in the same
   tick must send one request.
-- Still open: position-only addressing. A retry after an applied-but-lost
-  response, or a stale second tab, can act on the wrong pick. The fix is to send
-  the acted-on tool with `remove_pick`, `move_pick` and `set_pick` and refuse a
-  mismatch in `Loadouts::Slots`, as `Suggestions` already does for confirm.
+- Closed: position-only addressing. A retry after an applied-but-lost response,
+  or a stale second tab, could act on the wrong pick. Slot writes (`set_pick`,
+  `remove_pick`, `move_pick`) now send `expected_tool`: the slug of the tool
+  shown at that rank, or null for an empty slot. `Loadouts::Update#check_slot`
+  refuses a mismatch with `Suggestions::CHANGED` inside the write transaction,
+  the same way confirm checks its `expected` snapshot. `Loadouts::Slots` stays
+  rank arithmetic; do not add a second check there.
