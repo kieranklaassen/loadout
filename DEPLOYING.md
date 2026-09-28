@@ -91,9 +91,10 @@ not list this variable, so add it under `env.clear` there before you set it.
    migrations.
 2. **`db:prepare`.** Creates or migrates the database.
 3. **`Catalog::Sync`.** Applies `config/catalog.yml` (categories, tools, models, marks). A failed
-   sync is logged and the server still starts; `db:seed:replant` in CI catches a malformed
-   catalog. Launch dates and Vibe Check links are admin-owned: Sync only fills them while they are
-   blank on a model no admin has edited.
+   sync is logged and the server still starts, so a malformed catalog has to be caught before
+   deploy: `test/services/catalog/sync_test.rb` loads the real file in the CI test job, and local
+   `bin/ci` also runs `db:seed:replant`. Launch dates and Vibe Check links are admin-owned: Sync
+   only fills them while they are blank on a model no admin has edited.
 
 The redesign's migrations drop data by design: picks beyond three in a kind, duplicate tools in a
 kind, notes, and the `other` kind's picks and history. What they drop is first written to
@@ -101,7 +102,9 @@ kind, notes, and the `other` kind's picks and history. What they drop is first w
 
 The backup and the archive both hold member emails and notes. **Once the deploy is verified,
 delete them**: in `bin/kamal shell`, check `ls -l storage`, then
-`rm -r storage/migration_archive storage/backup-*.sqlite3`.
+`rm -r storage/migration_archive storage/backup-*.sqlite3`. Copies off the server hold the same
+private data, including any off-server backup of the storage volume taken before this cleanup;
+delete or expire those too.
 
 ## First deploy of the redesign
 
@@ -110,9 +113,9 @@ dropped columns until cutover. Expect a short window of errors.
 
 Before deploying:
 
-- Raise Kamal's `deploy_timeout` (default 30 seconds) in `config/deploy.yml`, for example
-  `deploy_timeout: 120`, for this deploy. The backup, the migrations and the catalog sync all run
-  before the server can answer `/up`.
+- `config/deploy.yml` sets Kamal's `deploy_timeout` to 120 seconds (default 30), because the
+  backup, the migrations and the catalog sync all run before the server can answer `/up`. Raise it
+  there first if the database is large enough to need longer.
 - Check that Every's UserInfo sends `email_verified: true` for staff. "Every team" and admin
   rights need it and both fail closed: without the claim, staff sign in but count as "Everyone
   else", and `ADMIN_EMAILS` grants nothing. If the claim is missing, choose the fallback (key the
@@ -129,9 +132,13 @@ After deploying, before you call it done:
 3. **Existing sessions must sign out and in once.** `email_verified` is assigned from the
    provider's claim at each sign-in and defaults to false, so until someone signs in again they
    count as "Everyone else" and an admin loses admin.
-4. **Set launch links.** Add each model's release date and Vibe Check link at
+4. **Revoke agent grants from before this release, if there are any.** In `bin/kamal console`,
+   check `OauthGrant.active.exists?`. If it is `true`, run
+   `bin/kamal app exec --reuse "bin/rails loadout:revoke_agent_grants"`: an older grant keeps
+   working, and its agent now reads teammates' shared picks. Members approve their agents again.
+5. **Set launch links.** Add each model's release date and Vibe Check link at
    `/admin/catalog_items`; a model is listed as a launch only with both.
-5. **Delete the backup and the migration archive** (see above).
+6. **Delete the backup and the migration archive**, and any off-server copy of them (see above).
 
 ## Rollback
 
