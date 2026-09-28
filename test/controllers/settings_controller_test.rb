@@ -103,7 +103,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
 
   test "deleting the account removes the user, entries, changes, suggestions and periods and signs out" do
     Loadouts::Update.call(user: @cy, operations: [ { op: "set_pick", category: "video", rank: 1, tool: "runway" } ], source: "web")
-    Loadouts::Update.call(user: @cy, operations: [ { op: "suggest", category: "coding", tool: "cursor" } ], source: "webmcp", client_name: "WebMCP")
+    Loadouts::Update.call(user: @cy, operations: [ { op: "suggest", category: "coding", tool: "claude-code" } ], source: "webmcp", client_name: "WebMCP")
     patch settings_path, params: { visibility: "team" }
     assert @cy.entry_changes.any?
     assert @cy.pick_suggestions.any?
