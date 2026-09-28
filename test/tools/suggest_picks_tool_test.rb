@@ -78,7 +78,7 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
 
   test "a suggestion a later operation of the same call supersedes is not reported as proposed" do
     body = payload(suggest([
-      { op: "suggest", category: "coding", tool: "cursor" },
+      { op: "suggest", category: "coding", tool: "cursor", effort: "high" },
       { op: "suggest", category: "coding", tool: "cursor", model: "claude-opus-5-5" }
     ]))
 
@@ -90,7 +90,7 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
   end
 
   test "four suggestions for one kind in one call report the three that stay open" do
-    body = payload(suggest(%w[cursor claude-code Windsurf Zed].map { |tool| { op: "suggest", category: "coding", tool: } }))
+    body = payload(suggest(%w[cursor claude-code Windsurf Zed].map { |tool| { op: "suggest", category: "coding", tool:, effort: "low" } }))
 
     assert_equal @user.pick_suggestions.open.order(:id).pluck(:id), body["suggestions"].map { |entry| entry["id"] }
     assert_equal %w[claude-code windsurf zed], body["suggestions"].map { |entry| entry["tool"] }
@@ -101,11 +101,21 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
   test "a call that withdraws one suggestion and makes another reports each under its own heading" do
     old = payload(suggest([ { op: "suggest", category: "video", tool: "runway" } ]))["suggestions"].sole["id"]
 
-    body = payload(suggest([ { op: "withdraw", suggestion_id: old }, { op: "suggest", category: "coding", tool: "cursor" } ]))
+    body = payload(suggest([ { op: "withdraw", suggestion_id: old }, { op: "suggest", category: "coding", tool: "cursor", effort: "high" } ]))
 
     assert_equal [ old ], body["withdrawn"]
     assert_equal [ @user.pick_suggestions.open.sole.id ], body["suggestions"].map { |entry| entry["id"] }
     assert_match(/Suggested 1 pick\..*Withdrew 1 suggestion\./, body["message"])
+  end
+
+  test "a change to a pick reports only the fields the agent named; the description says the rest keep the member's values" do
+    assert_match(/a field you leave out keeps the member's current value/, SuggestPicksTool.description)
+
+    body = payload(suggest([ { op: "suggest", category: "coding", tool: "claude-code", context: "1m" } ]))
+
+    assert_equal [ "claude-code", nil, "1m", nil ], body["suggestions"].sole.values_at("tool", "model", "context", "effort")
+    mine = JSON.parse(ToolRegistry.call("get_my_loadout", arguments: {}, user: @user, source: "mcp")[:content].first[:text])
+    assert_equal [ nil, "1m", nil ], mine["kinds"].find { |kind| kind["slug"] == "coding" }["suggestions"].sole.values_at("model", "context", "effort")
   end
 
   test "an exact suggestion the member dismissed is refused with a readable reason" do

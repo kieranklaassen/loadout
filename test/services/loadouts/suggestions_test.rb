@@ -229,7 +229,48 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
     assert_equal "open", still_valid.reload.status
     confirm(still_valid)
     entry = @user.entries.sole
-    assert_equal [ nil, "high" ], [ entry.context, entry.effort ], "a suggestion is the whole proposed pick"
+    assert_equal [ "1m", "high" ], [ entry.context, entry.effort ], "a field the suggestion leaves blank keeps what the member has"
+  end
+
+  test "confirming a change that names only a model keeps the pick's context and effort" do
+    as_member(pick(1, "cursor", model: "claude-opus-5", context: "1m", effort: "high"))
+
+    confirm(suggest("cursor", model: "claude-opus-5-5").suggestions.sole)
+
+    entry = @user.entries.sole
+    assert_equal [ ai_models(:opus_5_5), "1m", "high" ], [ entry.ai_model, entry.context, entry.effort ]
+    assert_replays_to_entries @user
+  end
+
+  test "a tool new to the kind keeps its blank fields blank, even when it replaces another pick" do
+    as_member(pick(1, "cursor", model: "claude-opus-5-5", context: "1m", effort: "high"), pick(2, "claude-code"), pick(3, "Windsurf"))
+
+    confirm(suggest("Zed", context: "200k").suggestions.sole, rank: 1, expected: { tool: "cursor", model: "claude-opus-5-5" })
+
+    entry = @user.entries.find_by!(rank: 1)
+    assert_equal [ "zed", nil, "200k", nil ], [ entry.tool.slug, entry.ai_model, entry.context, entry.effort ]
+  end
+
+  test "a suggestion whose named fields all match the pick is a no-op, whatever it leaves blank" do
+    as_member(pick(1, "cursor", model: "claude-opus-5-5", context: "1m", effort: "high"))
+
+    assert_no_difference [ "PickSuggestion.count", "EntryChange.count" ] do
+      [ { model: "claude-opus-5-5" }, { context: "1m", effort: "high" }, {} ].each do |fields|
+        assert_equal [ "Cursor is already your 1st pick for coding with those details." ], suggest("cursor", **fields).messages, fields.inspect
+      end
+    end
+    assert_equal "open", suggest("cursor", effort: "low").suggestions.sole.status
+  end
+
+  test "confirming clears a same-tool suggestion that names only what the pick now has" do
+    as_member(pick(1, "cursor", model: "claude-opus-5-5"))
+    chosen = suggest("cursor", context: "1m", effort: "high", oauth_client_id: 1).suggestions.sole
+    now_a_no_op = suggest("cursor", effort: "high", client_name: "Codex", oauth_client_id: 2).suggestions.sole
+    still_valid = suggest("cursor", effort: "low", client_name: "Other", oauth_client_id: 3).suggestions.sole
+
+    confirm(chosen)
+
+    assert_equal [ "confirmed", "superseded", "open" ], [ chosen, now_a_no_op, still_valid ].map { |suggestion| suggestion.reload.status }
   end
 
   test "a newer suggestion from the same client for the same tool supersedes the earlier one, and clients are told apart by id (AE9)" do

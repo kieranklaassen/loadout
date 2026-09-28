@@ -86,7 +86,8 @@ module Loadouts
     # Places the suggestion in the slot the member was shown. `rank` is that slot
     # (or the one they chose to replace); `expected` is the pick they were shown in
     # it, { tool:, model: } by slug, or blank for an empty slot. Anything that no
-    # longer matches fails with CHANGED and writes nothing.
+    # longer matches fails with CHANGED and writes nothing. A field the suggestion
+    # leaves blank keeps what the member has for that tool (blank for a new tool).
     def confirm(id, rank:, expected:)
       suggestion = find_open(id) || raise(Update::Error, CHANGED)
       slots = slots_for(suggestion.category)
@@ -99,7 +100,8 @@ module Loadouts
       raise Update::Error, CHANGED unless shown?(entries.find { |entry| entry.rank == target }, current, expected)
 
       change = slots.place(
-        rank: target, tool: suggestion.tool, ai_model: suggestion.ai_model, context: suggestion.context, effort: suggestion.effort,
+        rank: target, tool: suggestion.tool,
+        ai_model: suggestion.ai_model || current&.ai_model, context: suggestion.context || current&.context, effort: suggestion.effort || current&.effort,
         action: "confirmed", details: { suggestion_id: suggestion.id, **suggested_by(suggestion) }
       )
       suggestion.update!(status: "confirmed", resolved_at: Time.current)
@@ -153,8 +155,10 @@ module Loadouts
         "The member turned this exact suggestion down; do not suggest it again before #{(dismissed.resolved_at + DISMISSAL_MEMORY).to_date.to_fs(:long)}."
     end
 
+    # The entry already has every field the suggestion names, so confirming it would
+    # change nothing: a field it leaves blank keeps the entry's value.
     def same_pick?(entry, ai_model, context, effort)
-      [ entry.ai_model_id, entry.context, entry.effort ] == [ ai_model&.id, context, effort ]
+      { ai_model_id: ai_model&.id, context:, effort: }.compact.all? { |field, value| entry.public_send(field) == value }
     end
 
     # What the suggestion was written against (nothing, or the pick it changes) is

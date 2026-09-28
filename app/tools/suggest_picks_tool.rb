@@ -11,7 +11,8 @@ class SuggestPicksTool < ApplicationTool
     confirms it on the site. You cannot confirm, change, remove or reorder their picks.
     A pick is a tool (the app, like Cursor) with an optional model (like Claude Opus 5.5),
     an optional context size and an optional effort; send only what the member told you.
-    Send `operations`, applied in order: `suggest` (category, tool, optional model, context,
+    For a tool the member already has in that kind, a field you leave out keeps the member's
+    current value. Send `operations`, applied in order: `suggest` (category, tool, optional model, context,
     effort and a `rank` hint from 1 to 3 for where it belongs) and `withdraw` (suggestion_id
     of one of your own suggestions). `category` is a slug from list_categories; `tool` and
     `model` are slugs from search_catalog (a name that is not in the catalog becomes a new
