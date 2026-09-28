@@ -3,8 +3,9 @@
 Shared vocabulary for this repo. When a term here is ambiguous in conversation,
 this file is the tie-breaker. Keep entries short; link to module docs for depth.
 
-- **Template** — this repo: the canonical Rails app the fleet converges on. New
-  apps clone it; existing apps adopt modules from it à la carte.
+- **Template** — compound-stack-rails, the app Loadout started from at 0.8.0.
+  Loadout is a downstream app: it receives template upgrades as PRs and adds no
+  changelog entries of its own.
 - **Module** — an independently adoptable slice of the stack (auth, jobs, deploy,
   …). Each has a `docs/modules/<name>.md` boundary doc and a key in
   `.template-manifest.yml`.
