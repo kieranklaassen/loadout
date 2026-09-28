@@ -95,6 +95,21 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, @cy.visibility_periods.count
   end
 
+  test "a member without a handle cannot share, and neither the level nor the periods change" do
+    sign_in_as users(:one)
+
+    patch settings_path, params: { visibility: "team" }
+
+    assert_redirected_to settings_path
+    assert_equal "only_me", users(:one).reload.visibility
+    assert_empty users(:one).visibility_periods
+
+    follow_redirect! # settings sends a member who has not claimed a link to /welcome, which shows the refusal
+    follow_redirect!
+    assert_inertia_component "onboarding/show"
+    assert_equal "Visibility needs a claimed link before you share your page", inertia.props[:errors][:visibility]
+  end
+
   test "the retired public flag is not a setting any more" do
     patch settings_path, params: { public: true }
 

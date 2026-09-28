@@ -107,7 +107,7 @@ class UserTest < ActiveSupport::TestCase
     }
 
     expectations.each do |level, expected|
-      person = User.create!(email_address: "#{level}@example.com", visibility: level)
+      person = User.create!(email_address: "#{level}@example.com", handle: level.dasherize, visibility: level)
       viewers = { owner: person, team: users(:every_dee), other: users(:outside_eli), visitor: nil }
 
       expected.each { |viewer_class, allowed| assert_equal allowed, person.visible_to?(viewers[viewer_class]), "#{level} page for #{viewer_class}" }
@@ -122,6 +122,32 @@ class UserTest < ActiveSupport::TestCase
     [ users(:every_dee), users(:outside_eli), users(:one), nil ].each { |viewer| assert_not person.visible_to?(viewer) }
     assert_not_includes User.visible_to(users(:every_dee)), person
     assert_not_includes User.visible_to(nil), person
+  end
+
+  test "only me needs no handle" do
+    person = users(:one)
+
+    assert_nil person.handle
+    assert_equal "only_me", person.visibility
+    assert person.valid?
+  end
+
+  test "sharing with the team or the link needs a handle, since a shared page lives at it" do
+    %w[team link].each do |level|
+      person = users(:one)
+      person.visibility = level
+
+      assert_not person.valid?, "#{level} without a handle"
+      assert_equal [ "Visibility needs a claimed link before you share your page" ], person.errors.full_messages_for(:visibility)
+    end
+  end
+
+  test "a shared page cannot drop its handle" do
+    person = users(:every_ana)
+
+    assert_not person.update(handle: " ")
+    assert_equal [ "Visibility needs a claimed link before you share your page" ], person.errors.full_messages_for(:visibility)
+    assert_equal "ana", person.reload.handle
   end
 
   test "shared? is true when anyone besides the owner may open the page" do
@@ -160,14 +186,14 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "creating a user who shares opens exactly one period" do
-    person = User.create!(email_address: "sharer@example.com", visibility: "link")
+    person = User.create!(email_address: "sharer@example.com", handle: "sharer", visibility: "link")
 
     assert_equal [ [ "link", nil ] ], person.visibility_periods.pluck(:level, :ends_at)
     assert_in_delta Time.current, person.visibility_periods.sole.starts_at, 5.seconds
   end
 
   test "every change of visibility closes the open period and opens the next, through update, update! and save" do
-    person = User.create!(email_address: "switcher@example.com")
+    person = User.create!(email_address: "switcher@example.com", handle: "switcher")
     assert_empty person.visibility_periods
 
     person.update(visibility: "link")
@@ -193,7 +219,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "a failed save leaves the periods alone" do
-    person = User.create!(email_address: "steady@example.com", visibility: "team")
+    person = User.create!(email_address: "steady@example.com", handle: "steady", visibility: "team")
 
     assert_not person.update(visibility: "everyone")
     assert_equal [ "team" ], person.reload.visibility_periods.pluck(:level)

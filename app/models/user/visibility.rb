@@ -5,8 +5,9 @@
 # Every span a person shared is recorded in visibility_periods, so history can
 # later count them only on days they were sharing. The callback keeps the periods
 # in step with the column in the same transaction, so no controller, seed or
-# console session can change one without the other. A model rule validates the
-# level: a database check on users would make SQLite rebuild the table.
+# console session can change one without the other. Model rules validate the
+# level, and that a shared page has a handle: a database check on users would make
+# SQLite rebuild the table.
 module User::Visibility
   extend ActiveSupport::Concern
 
@@ -17,6 +18,7 @@ module User::Visibility
     has_many :visibility_periods, dependent: :delete_all
 
     validates :visibility, inclusion: { in: LEVELS }
+    validate :shared_page_has_handle
 
     after_save :record_visibility_period, if: :saved_change_to_visibility?
 
@@ -45,6 +47,12 @@ module User::Visibility
   end
 
   private
+
+  # A shared page lives at its handle, so sharing waits for a claimed link and a
+  # shared page keeps one.
+  def shared_page_has_handle
+    errors.add(:visibility, "needs a claimed link before you share your page") if shared? && handle.blank?
+  end
 
   def record_visibility_period
     now = Time.current
