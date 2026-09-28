@@ -28,11 +28,15 @@ there, and open a PR. This holds for agents and humans alike.
 
 ## Users & auth
 
-There is **no open registration**. Create users only with:
+There is **no registration route and no password**. Members arrive through Sign
+in with Every (`Sessions::EveryController`): the first successful sign-in creates
+the `User`, and only a verified `@every.to` address counts as the Every team. In
+development, and only there, the sign-in page also lists users under "Dev login"
+(`bin/rails db:seed` creates demo members).
 
-```sh
-EMAIL=you@example.com PASSWORD='a-long-password' bin/rails users:create
-```
+Admins are `users.admin`, or an address in `ADMIN_EMAILS` once Every verified
+it. Remove someone who left Every with
+`EMAIL=person@every.to bin/rails loadout:remove_member` (see DEPLOYING.md).
 
 Every Inertia page is authenticated by default (the gate lives on
 `InertiaController`); make a page public with `allow_unauthenticated_access`.
@@ -81,13 +85,18 @@ config. Secrets resolve at deploy time via shell indirection — none are commit
 - **[docs/solutions/](docs/solutions/)** — durable, dated write-ups of solved
   problems (YAML frontmatter; see the README there).
 - **[CONCEPTS.md](CONCEPTS.md)** — the project's shared vocabulary.
-- **[docs/changelog/](docs/changelog/)** — agent-executable upgrade entries. See
-  its README for the version+module filter algorithm. Upgrades land as reviewable
-  PRs on downstream apps, **never direct pushes**.
+- **[docs/changelog/](docs/changelog/)** — the template's upgrade entries, up to
+  the version this app runs. Loadout adds none of its own (see below).
 
 ## Template upgrades
 
-This repo is the fleet template. Downstream apps carry a
-`.template-manifest.yml`; an upgrade agent reads changelog entries newer than an
-app's manifest version (filtered to its adopted modules), applies them, bumps the
-manifest, and opens a PR.
+This repo is Loadout, an app started from compound-stack-rails 0.8.0, not the
+template. `.template-manifest.yml` records the template version it runs; an
+upgrade agent applies the template's newer changelog entries for the adopted
+modules, bumps the manifest, and opens a reviewable PR, **never a direct push**.
+Loadout's own changes get no `docs/changelog/` entry and no manifest bump.
+
+`docs/modules/frontend.md`, `feature_flags.md` and `webmcp.md` now also describe
+Loadout's own changes, so adapt an upgrade entry that touches those modules
+rather than applying it as written. `auth` was replaced by Sign in with Every;
+`docs/modules/auth.md` still describes the template's password sign-in.
