@@ -38,8 +38,9 @@ class LoadoutsController < InertiaController
     apply([ { op: "dismiss", suggestion_id: params[:id] } ])
   end
 
-  # "Add a tool or model": a name the catalog lacks becomes a pending item the member can
-  # pick right away and an admin reviews. It is offered, never picked.
+  # "Add a tool or model": a name the catalog lacks, or only another member has pending,
+  # becomes a pending item the member can pick right away and an admin reviews. It is
+  # offered, never picked.
   def add_item
     klass = ITEM_KINDS[params[:kind]]
     name = params[:name].to_s.squish
@@ -63,10 +64,10 @@ class LoadoutsController < InertiaController
     return "Choose tool or model." unless klass
     return "Use #{ITEM_NAME_LENGTH.min} to #{ITEM_NAME_LENGTH.max} characters." unless ITEM_NAME_LENGTH.cover?(name.length)
 
-    existing = klass.find_by_name_or_slug(name)
+    existing = klass.matchable_for(Current.user).find_by_name_or_slug(name)
     return unless existing
 
-    existing.approved? || existing.created_by == Current.user ? "Already in the list." : "That one is with the admins already."
+    existing.status == "hidden" ? "An admin took that one out of the list." : "Already in the list."
   end
 
   def operations_param

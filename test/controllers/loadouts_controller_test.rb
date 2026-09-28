@@ -266,14 +266,29 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a name that is with the admins already, or was hidden, is not added" do
-    Tool.create!(name: "Windsurf", status: "pending", created_by: users(:every_dee))
+  test "a name only another member has pending is added as the member's own, as if it were new" do
+    theirs = Tool.create!(name: "Windsurf", status: "pending", created_by: users(:every_dee))
+
+    assert_difference -> { Tool.pending.where(created_by: @ana).count }, 1 do
+      post loadout_catalog_items_path, params: { kind: "tool", name: "windsurf" }, headers: BACK, as: :json
+    end
+
+    assert_redirected_to EDITOR
+    assert_nil inertia_errors_after_redirect[:name]
+    ours = Tool.pending.find_by!(created_by: @ana)
+    assert_not_equal theirs.slug, ours.slug
+    assert_equal [ [ ours.slug, true ] ], inertia_catalog_tools.select { |tool| tool[:name].casecmp?("windsurf") }.pluck(:slug, :pending)
 
     assert_no_difference "Tool.count" do
       post loadout_catalog_items_path, params: { kind: "tool", name: "Windsurf" }, headers: BACK, as: :json
-      assert_match(/with the admins/, follow_redirect!.then { inertia.props[:errors][:name] })
+      assert_equal "Already in the list.", follow_redirect!.then { inertia.props[:errors][:name] }
+    end
+  end
+
+  test "a hidden name is not added, and the member is told an admin took it out" do
+    assert_no_difference "Tool.count" do
       post loadout_catalog_items_path, params: { kind: "tool", name: "Old Thing" }, headers: BACK, as: :json
-      assert_match(/with the admins/, follow_redirect!.then { inertia.props[:errors][:name] })
+      assert_equal "An admin took that one out of the list.", follow_redirect!.then { inertia.props[:errors][:name] }
     end
   end
 

@@ -115,6 +115,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
 
   test "every member ends valid whether or not they ranked both tools" do
     ana = users(:every_ana)
+    @source.update!(status: "approved") # an approved duplicate, so anyone may have picked it
     pick(@member, 1, @source)
     pick(@member, 2, @target)
     pick(@other, 1, tools(:cursor))

@@ -21,8 +21,9 @@
 # the slot holds and a key sent as null clears it. expected_tool is the slug of the
 # tool the member was shown at that rank, or null for an empty slot; if the slot now
 # holds anything else the call fails with Suggestions::CHANGED and writes nothing.
-# Leave it out (seeds, the console) to skip that check. Unknown tools and models become
-# pending catalog items; agents may add a few a day. Raises Loadouts::Update::Error
+# Leave it out (seeds, the console) to skip that check. Unknown tools and models, and
+# another member's pending ones, become this member's pending catalog items; agents
+# may add a few a day. Raises Loadouts::Update::Error
 # with a message a person or an agent can act on.
 module Loadouts
   class Update
@@ -193,7 +194,7 @@ module Loadouts
         return
       end
 
-      klass.find_by_name_or_slug(value) || create_pending(klass, value)
+      klass.matchable_for(@user).find_by_name_or_slug(value) || create_pending(klass, value)
     end
 
     def create_pending(klass, value)

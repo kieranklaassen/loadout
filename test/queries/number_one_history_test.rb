@@ -343,7 +343,9 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
       write person, { op: "set_pick", category: "coding", rank: 1, tool: "Mystery IDE" }
       rank person, 2, @cursor
     end
-    mystery = Tool.find_by!(name: "Mystery IDE")
+    # Each person's "Mystery IDE" is their own until an admin folds the duplicates.
+    mystery, *duplicates = Tool.where(name: "Mystery IDE").order(:id)
+    duplicates.each { |duplicate| Catalog::Merge.call(source: duplicate, target: mystery) }
 
     assert mystery.pending?
     waiting = eras(watcher)

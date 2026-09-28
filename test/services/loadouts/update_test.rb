@@ -84,6 +84,37 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     end
   end
 
+  test "a name or slug only another member has pending becomes this member's own pending item, which they then resolve to" do
+    theirs = Tool.create!(name: "Hedra", status: "pending", created_by: users(:two))
+    their_model = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:two))
+
+    assert_difference -> { Tool.pending.where(created_by: @user).count } => 1, -> { AiModel.pending.where(created_by: @user).count } => 1 do
+      update(set_pick(1, "hedra", category: "video", model: their_model.slug))
+    end
+
+    entry = @user.entries.sole
+    assert_equal [ "hedra", "pending", @user ], [ entry.tool.name, entry.tool.status, entry.tool.created_by ]
+    assert_equal [ "mystery-3", "pending", @user ], [ entry.ai_model.name, entry.ai_model.status, entry.ai_model.created_by ]
+    assert_not_equal theirs.slug, entry.tool.slug
+    assert_empty theirs.entries
+    assert_empty their_model.entries
+
+    assert_no_difference [ "Tool.count", "AiModel.count" ] do
+      update(set_pick(1, "Hedra", category: "coding", model: "mystery-3"))
+      Loadouts::Update.call(user: users(:two), operations: [ set_pick(1, "Hedra", model: "Mystery 3") ], source: "web")
+    end
+    assert_equal [ entry.tool, entry.ai_model ], @user.entries.find_by!(category: categories(:coding)).then { |pick| [ pick.tool, pick.ai_model ] }
+    assert_equal [ theirs, their_model ], users(:two).entries.sole.then { |pick| [ pick.tool, pick.ai_model ] }
+  end
+
+  test "approved and hidden items still resolve by name" do
+    assert_no_difference "Tool.count" do
+      update(set_pick(1, "Cursor"), set_pick(2, "Old Thing"))
+    end
+
+    assert_equal [ tools(:cursor), tools(:hidden_tool) ], @user.entries.order(:rank).map(&:tool)
+  end
+
   test "remove_pick and move_pick change the ranks and move loadout_updated_at" do
     update(set_pick(1, "cursor"), set_pick(2, "claude-code"))
     @user.update_columns(loadout_updated_at: 1.day.ago)
@@ -272,6 +303,26 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
       assert_difference -> { Tool.pending.count } => 1 do
         suggest.("Agent Tool 5")
       end
+    end
+  end
+
+  test "an agent naming another member's pending item suggests a new pending item of this member's, which counts toward the daily five" do
+    theirs = Tool.create!(name: "Hedra", status: "pending", created_by: users(:two))
+    suggest = ->(name) { update({ op: "suggest", category: "video", tool: name }, source: "mcp", client_name: "Claude", oauth_client_id: 7) }
+
+    suggestion = nil
+    assert_difference -> { Tool.pending.where(created_by: @user).count } => 1 do
+      suggestion = suggest.("Hedra").suggestions.sole
+    end
+    assert_equal [ "Hedra", @user ], [ suggestion.tool.name, suggestion.tool.created_by ]
+    assert_not_equal theirs, suggestion.tool
+    assert_empty theirs.pick_suggestions
+
+    4.times { |index| suggest.("Agent Tool #{index}") }
+    Tool.create!(name: "Kling", status: "pending", created_by: users(:two))
+    assert_no_difference -> { Tool.count } do
+      error = assert_raises(Loadouts::Update::Error) { suggest.("kling") }
+      assert_match(/5 new tools or models a day/, error.message)
     end
   end
 

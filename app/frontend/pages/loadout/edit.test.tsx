@@ -806,15 +806,15 @@ describe('Add a tool or model', () => {
 
   it('shows the server’s reason and keeps the form open', async () => {
     const user = userEvent.setup()
-    post.mockImplementationOnce((_url, _data, options) => options.onError({ name: 'That one is with the admins already.' }))
+    post.mockImplementationOnce((_url, _data, options) => options.onError({ name: 'An admin took that one out of the list.' }))
     render(<LoadoutEdit {...props()} />)
     await open(user)
 
-    await user.type(nameField(), 'Windsurf')
+    await user.type(nameField(), 'Old Thing')
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
-    expect(screen.getByRole('alert')).toHaveTextContent('That one is with the admins already.')
-    expect(nameField()).toHaveValue('Windsurf')
+    expect(screen.getByRole('alert')).toHaveTextContent('An admin took that one out of the list.')
+    expect(nameField()).toHaveValue('Old Thing')
   })
 
   it('sends one request however many times it is submitted while the first is out, and takes another after', async () => {

@@ -27,6 +27,9 @@ module CatalogItem
     scope :approved, -> { where(status: "approved") }
     scope :pending, -> { where(status: "pending") }
     scope :pickable, -> { where(status: "approved") }
+    # What a member's name or slug may match: anything but another member's pending
+    # item, whose name stays as unknown to them as one nobody typed.
+    scope :matchable_for, ->(user) { where.not(status: "pending").or(where(created_by: user)) }
     scope :ordered, -> { order(:position, :name) }
   end
 
@@ -38,9 +41,10 @@ module CatalogItem
       find_by(slug: key.downcase) || find_by(slug: key.parameterize) || where("lower(name) = ?", key.downcase).first
     end
 
-    # Finds an item by slug or name, or creates a pending one for review.
+    # Finds an item the member may be matched to by slug or name, or creates a pending
+    # one of theirs for review (with its own slug when another member's shares the name).
     def resolve_or_suggest!(value, user:)
-      find_by_name_or_slug(value) || create!(name: value.to_s.squish, status: "pending", created_by: user)
+      matchable_for(user).find_by_name_or_slug(value) || create!(name: value.to_s.squish, status: "pending", created_by: user)
     end
 
     # A stable hue per name, so suggested items look intentional before review.
