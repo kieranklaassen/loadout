@@ -18,7 +18,6 @@ module Loadouts
       @category = category
       @source = source
       @client_name = client_name
-      @at = Time.current
       @batch = SecureRandom.uuid
     end
 
@@ -79,18 +78,25 @@ module Loadouts
         user: @user, category: @category, tool: pick.tool, ai_model: pick.ai_model,
         action:, source: @source, client_name: @client_name, rank:, from_rank:,
         context: pick.context, effort: pick.effort,
-        details: { batch: @batch }.merge(details), created_at: @at
+        details: { batch: @batch }.merge(details), created_at: at
       )
     end
 
     private
+
+    # Taken at the batch's first write, not when it is built: SQLite takes the write
+    # lock at the transaction's first query, and history replays by (created_at, id),
+    # so a stamp taken earlier could order two concurrent batches against their commits.
+    def at
+      @at ||= Time.current
+    end
 
     # moves: [[entry, new_rank], ...]
     def reassign(moves)
       return [] if moves.empty?
 
       Entry.where(id: moves.map { |entry, _| entry.id }).update_all([ "rank = rank + ?", PARKED ])
-      moves.each { |entry, rank| Entry.where(id: entry.id).update_all(rank:, updated_at: @at) }
+      moves.each { |entry, rank| Entry.where(id: entry.id).update_all(rank:, updated_at: at) }
       moves.map { |entry, rank| record("moved", entry, rank:, from_rank: entry.rank) }
     end
 

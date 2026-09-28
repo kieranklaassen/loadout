@@ -183,6 +183,19 @@ class Loadouts::SlotsTest < ActiveSupport::TestCase
     assert_equal [ [ 1, "cursor" ], [ 2, "claude-code" ] ], ranked_tools
   end
 
+  test "a batch stamps its rows when it first writes, not when it is built" do
+    fill_three
+    placing, moving, removing = slots, slots, slots
+    travel 1.minute
+
+    batches = [ [ placing.place(rank: 3, tool: tools(:runway)) ], moving.move(rank: 1, direction: "down"), removing.remove(rank: 1) ]
+
+    assert_equal [ [ Time.current ] ] * 3, batches.map { |changes| changes.map(&:created_at).uniq }
+    assert_equal [ [ 1, "cursor", Time.current ], [ 2, "runway", Time.current ] ],
+      @user.entries.order(:rank).map { |entry| [ entry.rank, entry.tool.slug, entry.updated_at ] }
+    assert_replays_to_entries @user
+  end
+
   test "a move swaps with the next pick even when a slot between them is empty" do
     place(1, tools(:cursor))
     place(3, tools(:claude_code))
