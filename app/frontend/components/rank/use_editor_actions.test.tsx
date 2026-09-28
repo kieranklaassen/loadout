@@ -40,7 +40,7 @@ describe('useEditorActions', () => {
     const { result } = renderHook(() => useEditorActions('coding'))
     expect(result.current.busy).toBe(false)
 
-    act(() => result.current.saveSlot(1, { effort: 'low' }))
+    act(() => result.current.saveSlot(1, first, { effort: 'low' }))
     expect(result.current.busy).toBe(true)
     expect(result.current.statuses[1]).toEqual({ state: 'saving' })
 
@@ -53,7 +53,7 @@ describe('useEditorActions', () => {
     const { result } = renderHook(() => useEditorActions('coding'))
 
     act(() => {
-      result.current.saveSlot(1, { effort: 'low' })
+      result.current.saveSlot(1, first, { effort: 'low' })
       result.current.moveSlot(second, 'up')
       result.current.removeSlot(first)
       result.current.confirmSuggestion(suggestion({ id: 7 }), { rank: 3 }, 3)
@@ -77,6 +77,28 @@ describe('useEditorActions', () => {
     expect(patch.mock.calls.map((call) => call[1].operations[0].op)).toEqual(['remove_pick', 'move_pick'])
   })
 
+  it('sends the tool the member was shown in the slot with every slot write, or null for an empty slot', () => {
+    const { result } = renderHook(() => useEditorActions('coding'))
+    const actions = [
+      () => result.current.saveSlot(3, null, { tool: 'codex' }),
+      () => result.current.saveSlot(1, first, { tool: 'codex' }),
+      () => result.current.moveSlot(second, 'up'),
+      () => result.current.removeSlot(first),
+    ]
+
+    actions.forEach((action, index) => {
+      act(action)
+      answer(requests[index]!, (request) => request.onSuccess(saved))
+    })
+
+    expect(patch.mock.calls.map((call) => call[1].operations)).toEqual([
+      [{ op: 'set_pick', category: 'coding', rank: 3, tool: 'codex', expected_tool: null }],
+      [{ op: 'set_pick', category: 'coding', rank: 1, tool: 'codex', expected_tool: 'claude-code' }],
+      [{ op: 'move_pick', category: 'coding', rank: 2, direction: 'up', expected_tool: 'cursor' }],
+      [{ op: 'remove_pick', category: 'coding', rank: 1, expected_tool: 'claude-code' }],
+    ])
+  })
+
   describe('a request that fails', () => {
     const failures: [string, (request: Request) => void, string][] = [
       ['is refused with a flash alert', (request) => request.onSuccess({ props: { flash: { alert: 'That slot changed.' } } }), 'That slot changed.'],
@@ -98,12 +120,13 @@ describe('useEditorActions', () => {
       act(() => error && error.state === 'error' && error.retry())
       expect(patch).toHaveBeenCalledTimes(2)
       expect(patch.mock.calls[1]![1]).toEqual(patch.mock.calls[0]![1])
+      expect(patch.mock.calls[1]![1].operations[0].expected_tool).toBe('claude-code')
     })
   })
 
   it('settles a request another visit cancelled as a failed one, so nothing stays at Saving…', () => {
     const { result } = renderHook(() => useEditorActions('coding'))
-    act(() => result.current.saveSlot(1, { effort: 'low' }))
+    act(() => result.current.saveSlot(1, first, { effort: 'low' }))
 
     // Another visit took the queue: the request in flight fires onCancel and onFinish, never an outcome.
     answer(requests[0]!, () => {})

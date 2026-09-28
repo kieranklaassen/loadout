@@ -98,7 +98,7 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
     context: 'context' in draft ? (draft.context ?? '') : (pick?.context ?? ''),
     effort: 'effort' in draft ? (draft.effort ?? '') : (pick?.effort ?? ''),
   }
-  const change = (fields: SlotFields) => actions.saveSlot(rank, fields)
+  const change = (fields: SlotFields) => actions.saveSlot(rank, pick, fields)
   const toolItem = catalog.tools.find((item) => item.slug === shown.tool) ?? pick?.tool
   const modelItem = catalog.models.find((item) => item.slug === shown.model) ?? pick?.model
   const waiting = !pick && suggestions.length > 0

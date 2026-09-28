@@ -44,6 +44,7 @@ export default function TeamList({ kind, top, actions }: { kind: EditorKind; top
   const tools = top?.tools ?? []
   const models = top?.models ?? []
   const kindName = kind.category.name.toLowerCase()
+  const shownAt = (rank: number) => kind.picks.find((pick) => pick.rank === rank) ?? null
 
   return (
     <section aria-labelledby="team-heading" className="mt-12 md:mt-16">
@@ -63,7 +64,7 @@ export default function TeamList({ kind, top, actions }: { kind: EditorKind; top
                 action={toolAction(kind, standing)}
                 busy={actions.busy}
                 onUse={(action) =>
-                  actions.saveSlot(action.rank, { tool: standing.item.slug }, { message: `${standing.item.name} is now your ${rankLabel(action.rank)} pick` })
+                  actions.saveSlot(action.rank, shownAt(action.rank), { tool: standing.item.slug }, { message: `${standing.item.name} is now your ${rankLabel(action.rank)} pick` })
                 }
               />
             ))}
@@ -77,7 +78,7 @@ export default function TeamList({ kind, top, actions }: { kind: EditorKind; top
                 action={modelAction(kind, standing)}
                 busy={actions.busy}
                 onUse={(action) =>
-                  actions.saveSlot(action.rank, { model: standing.item.slug }, { message: `${standing.item.name} is now the model for your ${rankLabel(action.rank)} pick` })
+                  actions.saveSlot(action.rank, shownAt(action.rank), { model: standing.item.slug }, { message: `${standing.item.name} is now the model for your ${rankLabel(action.rank)} pick` })
                 }
               />
             ))}

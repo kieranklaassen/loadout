@@ -16,6 +16,11 @@ import type { PickContext, PickEffort, RankedPick, SharedProps, Suggestion } fro
 // cancels the one in flight, and every write here addresses a pick by its rank, which a
 // removal or a move changes. So while a request is out `busy` is true and every action
 // below ignores new calls; the controls show it (aria-disabled) instead of hiding.
+//
+// Each slot write also sends `expected_tool`: the tool the member was shown in that slot,
+// from the props and never a draft, or null for an empty one. If the slot holds anything
+// else by then the server refuses with "This changed, review it.", so a Retry (which sends
+// the same expectation) or a stale second tab cannot hit the pick that moved into that rank.
 
 const LOADOUT = '/loadout'
 const REFUSED = 'That did not save. Try again.'
@@ -93,10 +98,11 @@ export function useEditorActions(category: string) {
     })
   }
 
-  const saveSlot = whenIdle((rank: number, fields: SlotFields, then?: { message: string }) => {
+  // `shown` is the pick the member saw in the slot, or null when it was empty.
+  const saveSlot = whenIdle((rank: number, shown: RankedPick | null, fields: SlotFields, then?: { message: string }) => {
     setDrafts((current) => ({ ...current, [rank]: { ...current[rank], ...fields } }))
     status(rank, { state: 'saving' })
-    run((options) => router.patch(LOADOUT, { operations: [{ op: 'set_pick', category, rank, ...fields }] }, options), {
+    run((options) => router.patch(LOADOUT, { operations: [{ op: 'set_pick', category, rank, ...fields, expected_tool: shown?.tool.slug ?? null }] }, options), {
       onSaved: () => {
         settle(rank)
         status(rank, { state: 'saved' })
@@ -107,7 +113,7 @@ export function useEditorActions(category: string) {
       },
       onFailed: (message) => {
         settle(rank)
-        status(rank, { state: 'error', message, retry: () => saveSlot(rank, fields, then) })
+        status(rank, { state: 'error', message, retry: () => saveSlot(rank, shown, fields, then) })
       },
     })
   })
@@ -115,7 +121,7 @@ export function useEditorActions(category: string) {
   const moveSlot = whenIdle((pick: RankedPick, direction: 'up' | 'down') => {
     const to = pick.rank + (direction === 'up' ? -1 : 1)
     status(pick.rank, { state: 'saving' })
-    run((options) => router.patch(LOADOUT, { operations: [{ op: 'move_pick', category, rank: pick.rank, direction }] }, options), {
+    run((options) => router.patch(LOADOUT, { operations: [{ op: 'move_pick', category, rank: pick.rank, direction, expected_tool: pick.tool.slug }] }, options), {
       onSaved: () => {
         status(pick.rank, null)
         status(to, { state: 'saved' })
@@ -128,7 +134,7 @@ export function useEditorActions(category: string) {
 
   const removeSlot = whenIdle((pick: RankedPick) => {
     status(pick.rank, { state: 'saving' })
-    run((options) => router.patch(LOADOUT, { operations: [{ op: 'remove_pick', category, rank: pick.rank }] }, options), {
+    run((options) => router.patch(LOADOUT, { operations: [{ op: 'remove_pick', category, rank: pick.rank, expected_tool: pick.tool.slug }] }, options), {
       onSaved: () => {
         status(pick.rank, null)
         setAnnouncement(`Removed ${pick.tool.name} from your ${rankLabel(pick.rank)} pick`)

@@ -203,7 +203,7 @@ describe('autosave', () => {
     expect(patch).toHaveBeenCalledTimes(1)
     expect(patch).toHaveBeenCalledWith(
       '/loadout',
-      { operations: [{ op: 'set_pick', category: 'coding', rank: 3, tool: 'codex' }] },
+      { operations: [{ op: 'set_pick', category: 'coding', rank: 3, tool: 'codex', expected_tool: null }] },
       expect.objectContaining({ preserveScroll: true, preserveState: true }),
     )
   })
@@ -215,7 +215,7 @@ describe('autosave', () => {
     await user.selectOptions(field('1st pick', 'Model'), 'gpt-6-astra')
 
     expect(patch).toHaveBeenCalledTimes(1)
-    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, model: 'gpt-6-astra' }] })
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, model: 'gpt-6-astra', expected_tool: 'claude-code' }] })
   })
 
   it('Not set sends null for the model, the context and the effort', async () => {
@@ -227,10 +227,19 @@ describe('autosave', () => {
     await user.selectOptions(field('1st pick', 'Effort'), '')
 
     expect(patch.mock.calls.map((call) => call[1].operations)).toEqual([
-      [{ op: 'set_pick', category: 'coding', rank: 1, model: null }],
-      [{ op: 'set_pick', category: 'coding', rank: 1, context: null }],
-      [{ op: 'set_pick', category: 'coding', rank: 1, effort: null }],
+      [{ op: 'set_pick', category: 'coding', rank: 1, model: null, expected_tool: 'claude-code' }],
+      [{ op: 'set_pick', category: 'coding', rank: 1, context: null, expected_tool: 'claude-code' }],
+      [{ op: 'set_pick', category: 'coding', rank: 1, effort: null, expected_tool: 'claude-code' }],
     ])
+  })
+
+  it('a new tool in a filled slot sends the saved tool it replaces as the one the member was shown', async () => {
+    const user = userEvent.setup()
+    render(<LoadoutEdit {...props()} />)
+
+    await user.selectOptions(field('1st pick', 'Tool'), 'codex')
+
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, tool: 'codex', expected_tool: 'claude-code' }] })
   })
 
   it('says Saving… while the request is out and Saved once it lands', async () => {
@@ -320,7 +329,7 @@ describe('move and remove', () => {
     await user.click(within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor up' }))
 
     expect(patch).toHaveBeenCalledTimes(1)
-    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'move_pick', category: 'coding', rank: 2, direction: 'up' }] })
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'move_pick', category: 'coding', rank: 2, direction: 'up', expected_tool: 'cursor' }] })
     expect(screen.getByText('Cursor is now 1st')).toBeInTheDocument()
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: '1st pick' }))
   })
@@ -344,9 +353,22 @@ describe('move and remove', () => {
 
     await user.click(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }))
 
-    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'remove_pick', category: 'coding', rank: 1 }] })
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'remove_pick', category: 'coding', rank: 1, expected_tool: 'claude-code' }] })
     expect(screen.getByText('Removed Claude Code from your 1st pick')).toBeInTheDocument()
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: '1st pick' }))
+  })
+
+  it('Retry after the slot changed sends the pick the member removed, not the one now in that slot', async () => {
+    const user = userEvent.setup()
+    patch.mockImplementationOnce((_url, _data, options) => options.onSuccess({ props: { flash: { alert: 'This changed, review it.' } } }))
+    const { rerender } = render(<LoadoutEdit {...props()} />)
+
+    await user.click(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }))
+    rerender(<LoadoutEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: cursorMark, model: null })] })} />)
+    await user.click(within(slot('1st pick')).getByRole('button', { name: 'Retry' }))
+
+    expect(patch).toHaveBeenCalledTimes(2)
+    expect(patch.mock.calls[1]![1]).toEqual({ operations: [{ op: 'remove_pick', category: 'coding', rank: 1, expected_tool: 'claude-code' }] })
   })
 
   it('shows a refused move in the slot with Retry', async () => {
@@ -411,7 +433,7 @@ describe('one request at a time', () => {
 
     await user.selectOptions(field('2nd pick', 'Model'), 'gpt-6-astra')
     expect(patch).toHaveBeenCalledTimes(2)
-    expect(patch.mock.calls[1]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 2, model: 'gpt-6-astra' }] })
+    expect(patch.mock.calls[1]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 2, model: 'gpt-6-astra', expected_tool: 'cursor' }] })
   })
 
   it('removes one pick when Remove is double-clicked', async () => {
@@ -422,7 +444,7 @@ describe('one request at a time', () => {
     await user.dblClick(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }))
 
     expect(patch).toHaveBeenCalledTimes(1)
-    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'remove_pick', category: 'coding', rank: 1 }] })
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'remove_pick', category: 'coding', rank: 1, expected_tool: 'claude-code' }] })
     land(held[0]!)
     expect(screen.getByText('Removed Claude Code from your 1st pick')).toBeInTheDocument()
   })
@@ -508,7 +530,7 @@ describe('one request at a time', () => {
     expect(within(alert).getByRole('button', { name: 'Retry' })).not.toHaveAttribute('aria-disabled')
     await user.click(within(alert).getByRole('button', { name: 'Retry' }))
     expect(patch).toHaveBeenCalledTimes(3)
-    expect(patch.mock.calls[2]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, effort: 'low' }] })
+    expect(patch.mock.calls[2]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, effort: 'low', expected_tool: 'claude-code' }] })
   })
 
   it('does not leave a slot at Saving… when another visit cancels its request', async () => {
@@ -678,11 +700,11 @@ describe('the team list', () => {
     const team = within(screen.getByRole('region', { name: 'What the team uses for Coding' }))
 
     await user.click(team.getByRole('button', { name: 'Use as 3rd pick: Codex' }))
-    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 3, tool: 'codex' }] })
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 3, tool: 'codex', expected_tool: null }] })
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Add your 3rd pick' }))
 
     await user.click(team.getByRole('button', { name: 'Use in 2nd pick: GPT-6 Astra' }))
-    expect(patch.mock.calls[1]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 2, model: 'gpt-6-astra' }] })
+    expect(patch.mock.calls[1]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 2, model: 'gpt-6-astra', expected_tool: 'cursor' }] })
   })
 
   it('hides every button on a full kind', () => {
