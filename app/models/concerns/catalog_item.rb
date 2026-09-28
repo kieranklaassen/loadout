@@ -28,8 +28,11 @@ module CatalogItem
     scope :pending, -> { where(status: "pending") }
     scope :pickable, -> { where(status: "approved") }
     # What a member's name or slug may match: anything but another member's pending
-    # item, whose name stays as unknown to them as one nobody typed.
-    scope :matchable_for, ->(user) { where.not(status: "pending").or(where(created_by: user)) }
+    # item, whose name stays as unknown to them as one nobody typed, unless a pick of
+    # theirs already holds it (a merge can move one there).
+    scope :matchable_for, ->(user) {
+      where.not(status: "pending").or(where(created_by: user)).or(where(id: user.entries.select(reflect_on_association(:entries).foreign_key)))
+    }
     scope :ordered, -> { order(:position, :name) }
   end
 

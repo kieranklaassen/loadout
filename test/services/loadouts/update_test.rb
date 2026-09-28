@@ -107,6 +107,23 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     assert_equal [ theirs, their_model ], users(:two).entries.sole.then { |pick| [ pick.tool, pick.ai_model ] }
   end
 
+  test "another member's pending item the member already holds, after a merge, resolves to itself" do
+    their_tool = Tool.create!(name: "Hedra", status: "pending", created_by: users(:two))
+    their_model = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:two))
+    update(set_pick(1, "Hedra", category: "video", model: "Mystery 3"))
+    ours = @user.entries.sole
+    Catalog::Merge.call(source: ours.tool, target: their_tool)
+    Catalog::Merge.call(source: ours.ai_model, target: their_model)
+
+    assert_no_difference [ "Tool.count", "AiModel.count" ] do
+      update({ op: "suggest", category: "video", tool: their_tool.slug, model: their_model.slug, effort: "high" }, source: "mcp", client_name: "Claude", oauth_client_id: 1)
+      update(set_pick(1, "Hedra", category: "video", model: "Mystery 3", effort: "low"))
+    end
+    suggestion = @user.pick_suggestions.sole
+    assert_equal [ their_tool, their_model, 1 ], [ suggestion.tool, suggestion.ai_model, suggestion.replaces_rank ]
+    assert_equal [ [ their_tool, their_model, "low" ] ], @user.entries.map { |entry| [ entry.tool, entry.ai_model, entry.effort ] }
+  end
+
   test "approved and hidden items still resolve by name" do
     assert_no_difference "Tool.count" do
       update(set_pick(1, "Cursor"), set_pick(2, "Old Thing"))
