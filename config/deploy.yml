@@ -34,6 +34,9 @@ proxy:
   healthcheck:
     path: /up
 
+# bin/docker-entrypoint backs up, migrates and syncs the catalog before /up can answer (default 30).
+deploy_timeout: 120
+
 # Where you keep your container images. Registry server defaults to ghcr.io;
 # username is tenant-specific and required.
 registry:

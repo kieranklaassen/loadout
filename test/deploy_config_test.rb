@@ -38,6 +38,7 @@ class DeployConfigTest < ActiveSupport::TestCase
     assert_equal REQUIRED_ENV["KAMAL_PROXY_HOST"], config.dig("proxy", "host")
     assert_equal "/rails/public/vite", config["asset_path"]
     assert_equal "2.12.0", config["minimum_version"].to_s
+    assert_equal 120, config["deploy_timeout"]
   end
 
   test "fails loud (KeyError) when a required tenant key is missing" do
