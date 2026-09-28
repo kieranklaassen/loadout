@@ -26,13 +26,13 @@ class Loadouts::PickerPropsTest < ActiveSupport::TestCase
 
   test "a member's own pending items are offered to them, and nobody else's" do
     mine = Tool.create!(name: "Zed", status: "pending", created_by: users(:every_ana))
-    Tool.create!(name: "Windsurf", status: "pending", created_by: users(:every_dee))
-    AiModel.create!(name: "Beta Model", status: "pending", created_by: users(:every_ana))
+    theirs = Tool.create!(name: "Windsurf", status: "pending", created_by: users(:every_dee))
+    my_model = AiModel.create!(name: "Beta Model", status: "pending", created_by: users(:every_ana))
 
     ana = props(users(:every_ana))[:catalog]
     assert_includes slugs(ana[:tools]), mine.slug
-    assert_not_includes slugs(ana[:tools]), "windsurf"
-    assert_equal [ true ], ana[:models].select { |model| model[:slug] == "beta-model" }.map { |model| model[:pending] }
+    assert_not_includes slugs(ana[:tools]), theirs.slug
+    assert_equal [ true ], ana[:models].select { |model| model[:slug] == my_model.slug }.map { |model| model[:pending] }
 
     assert_not_includes slugs(props(users(:every_dee))[:catalog][:tools]), mine.slug
   end

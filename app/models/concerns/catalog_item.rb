@@ -45,7 +45,7 @@ module CatalogItem
     end
 
     # Finds an item the member may be matched to by slug or name, or creates a pending
-    # one of theirs for review (with its own slug when another member's shares the name).
+    # one of theirs for review (with a random slug suffix, see random_slug).
     def resolve_or_suggest!(value, user:)
       matchable_for(user).find_by_name_or_slug(value) || create!(name: value.to_s.squish, status: "pending", created_by: user)
     end
@@ -85,12 +85,20 @@ module CatalogItem
     return if name.blank?
 
     self.slug = unique_slug if slug.blank?
+    # Approved, a member's item is public and takes the plain slug when that is free.
+    self.slug = plain_slug if will_save_change_to_status?(from: "pending", to: "approved") && !self.class.exists?(slug: plain_slug)
     self.monogram = self.class.monogram_for(name) if monogram.blank?
     self.hue = self.class.hue_for(name) if new_record? && hue == 220 && created_by_id.present?
   end
 
+  def plain_slug
+    name.parameterize.presence || "item"
+  end
+
   def unique_slug
-    base = name.parameterize.presence || "item"
+    return random_slug if pending? && created_by_id.present?
+
+    base = plain_slug
     candidate = base
     counter = 2
     while self.class.exists?(slug: candidate)
@@ -98,5 +106,14 @@ module CatalogItem
       counter += 1
     end
     candidate
+  end
+
+  # A member's pending item always gets a random suffix, so its slug has the same shape
+  # whether or not another member has an item of that name waiting for review.
+  def random_slug
+    loop do
+      candidate = "#{plain_slug}-#{SecureRandom.base36(4)}"
+      return candidate unless self.class.exists?(slug: candidate)
+    end
   end
 end

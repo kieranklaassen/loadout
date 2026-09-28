@@ -48,7 +48,7 @@ class Admin::CatalogItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "item props carry no usage counts, and only pending items show who added them" do
-    Tool.resolve_or_suggest!("Hedra Studio", user: @member)
+    hedra = Tool.resolve_or_suggest!("Hedra Studio", user: @member)
     Tool.create!(name: "Member Made", status: "approved", created_by: @member)
     sign_in_as @admin
 
@@ -57,7 +57,7 @@ class Admin::CatalogItemsControllerTest < ActionDispatch::IntegrationTest
     everything = inertia.props[:pending] + inertia.props[:items]
     assert everything.none? { |item| item.key?(:people) }
     by_slug = inertia.props[:items].index_by { |item| item[:slug] }
-    assert_equal "Cy Every", by_slug.fetch("hedra-studio").dig(:created_by, :name)
+    assert_equal "Cy Every", by_slug.fetch(hedra.slug).dig(:created_by, :name)
     assert_nil by_slug.fetch("member-made")[:created_by]
     assert_equal %w[id name], inertia.props[:merge_targets][:tool].first.keys
   end

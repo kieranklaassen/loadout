@@ -238,15 +238,15 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to EDITOR
-    zed = Tool.find_by!(slug: "zed")
+    zed = Tool.find_by!(name: "Zed")
     assert_equal [ "Zed", "pending", @ana ], [ zed.name, zed.status, zed.created_by ]
     assert_nil flash[:notice]
-    assert_equal [ true ], inertia_catalog_tools.select { |tool| tool[:slug] == "zed" }.pluck(:pending)
+    assert_equal [ true ], inertia_catalog_tools.select { |tool| tool[:slug] == zed.slug }.pluck(:pending)
     assert_not @ana.entries.exists?(tool: zed), "adding an item never picks it"
 
     sign_in_as users(:every_dee)
     get edit_loadout_path
-    assert_not_includes inertia.props[:catalog][:tools].pluck(:slug), "zed"
+    assert_not_includes inertia.props[:catalog][:tools].pluck(:slug), zed.slug
   end
 
   test "adding a model creates a pending model" do
@@ -276,7 +276,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to EDITOR
     assert_nil inertia_errors_after_redirect[:name]
     ours = Tool.pending.find_by!(created_by: @ana)
-    assert_not_equal theirs.slug, ours.slug
+    [ theirs, ours ].each { |tool| assert_match(/\Awindsurf-[a-z0-9]{4}\z/, tool.slug, "the same shape as for a name nobody typed") }
     assert_equal [ [ ours.slug, true ] ], inertia_catalog_tools.select { |tool| tool[:name].casecmp?("windsurf") }.pluck(:slug, :pending)
 
     assert_no_difference "Tool.count" do

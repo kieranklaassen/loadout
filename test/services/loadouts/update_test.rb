@@ -94,13 +94,13 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
 
     entry = @user.entries.sole
     assert_equal [ "hedra", "pending", @user ], [ entry.tool.name, entry.tool.status, entry.tool.created_by ]
-    assert_equal [ "mystery-3", "pending", @user ], [ entry.ai_model.name, entry.ai_model.status, entry.ai_model.created_by ]
-    assert_not_equal theirs.slug, entry.tool.slug
+    assert_equal [ their_model.slug, "pending", @user ], [ entry.ai_model.name, entry.ai_model.status, entry.ai_model.created_by ]
+    [ theirs, entry.tool ].each { |tool| assert_match(/\Ahedra-[a-z0-9]{4}\z/, tool.slug, "the same shape as for a name nobody typed") }
     assert_empty theirs.entries
     assert_empty their_model.entries
 
     assert_no_difference [ "Tool.count", "AiModel.count" ] do
-      update(set_pick(1, "Hedra", category: "coding", model: "mystery-3"))
+      update(set_pick(1, "Hedra", category: "coding", model: their_model.slug))
       Loadouts::Update.call(user: users(:two), operations: [ set_pick(1, "Hedra", model: "Mystery 3") ], source: "web")
     end
     assert_equal [ entry.tool, entry.ai_model ], @user.entries.find_by!(category: categories(:coding)).then { |pick| [ pick.tool, pick.ai_model ] }
@@ -156,7 +156,7 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
       )
     end
 
-    assert_equal [ [ 1, "zed" ], [ 2, "claude-code" ] ], @user.entries.order(:rank).map { |entry| [ entry.rank, entry.tool.slug ] }
+    assert_equal [ [ 1, "Zed" ], [ 2, "Claude Code" ] ], @user.entries.order(:rank).map { |entry| [ entry.rank, entry.tool.name ] }
     assert_replays_to_entries @user
   end
 

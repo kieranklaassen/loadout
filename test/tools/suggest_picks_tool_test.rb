@@ -93,7 +93,7 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
     body = payload(suggest(%w[cursor claude-code Windsurf Zed].map { |tool| { op: "suggest", category: "coding", tool:, effort: "low" } }))
 
     assert_equal @user.pick_suggestions.open.order(:id).pluck(:id), body["suggestions"].map { |entry| entry["id"] }
-    assert_equal %w[claude-code windsurf zed], body["suggestions"].map { |entry| entry["tool"] }
+    assert_equal [ "Claude Code", "Windsurf", "Zed" ], body["suggestions"].map { |entry| Tool.find_by!(slug: entry["tool"]).name }
     assert_equal [], body["withdrawn"]
     assert_match(/Suggested 3 picks\./, body["message"])
   end

@@ -1,12 +1,30 @@
 require "test_helper"
 
 class AiModelTest < ActiveSupport::TestCase
-  test "suggested items get a monogram and a stable hue" do
+  test "suggested items get a monogram, a stable hue and a slug with a random suffix" do
     item = AiModel.create!(name: "hedra character 3", status: "pending", created_by: users(:one))
 
     assert_equal "Hc", item.monogram
     assert_equal AiModel.hue_for("hedra character 3"), item.hue
-    assert_equal "hedra-character-3", item.slug
+    assert_match(/\Ahedra-character-3-[a-z0-9]{4}\z/, item.slug)
+  end
+
+  test "a suggested slug has the same shape whether or not another member has that name pending" do
+    theirs = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:two))
+    ours = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:one))
+
+    [ theirs, ours ].each { |item| assert_match(/\Amystery-3-[a-z0-9]{4}\z/, item.slug) }
+  end
+
+  test "an approved suggestion takes the plain slug when it is free, else keeps its own" do
+    first = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:one))
+    second = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:two))
+    kept = second.slug
+
+    first.update!(status: "approved")
+    second.update!(status: "approved")
+
+    assert_equal [ "mystery-3", kept ], [ first.reload.slug, second.reload.slug ]
   end
 
   test "the Vibe Check link must be https on an allowed host with no credentials or port" do

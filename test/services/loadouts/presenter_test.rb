@@ -31,7 +31,7 @@ class Loadouts::PresenterTest < ActiveSupport::TestCase
     update(user, { op: "set_pick", category: "coding", rank: 1, tool: "Zed", model: "Beta Model" }, { op: "set_pick", category: "coding", rank: 2, tool: "cursor" })
 
     picks = kind(user, "coding")[:picks]
-    assert_equal [ [ 1, "zed", true, "beta-model", true ], [ 2, "cursor", false, nil, nil ] ],
+    assert_equal [ [ 1, Tool.find_by!(name: "Zed").slug, true, AiModel.find_by!(name: "Beta Model").slug, true ], [ 2, "cursor", false, nil, nil ] ],
       picks.map { |pick| [ pick[:rank], pick[:tool][:slug], pick[:tool][:pending], pick[:model]&.dig(:slug), pick[:model]&.dig(:pending) ] }
 
     profile = PersonPicks.new(viewer: user).for(user)[:kinds].find { |profile_kind| profile_kind[:category][:slug] == "coding" }
