@@ -83,6 +83,28 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     assert_equal [ "pending-check", "prepare backups=1" ], calls
   end
 
+  test "a failed backup stops the boot before migrating, and the database is untouched" do
+    create_database
+    database = File.join(@dir, "storage/production.sqlite3")
+    before = File.binread(database)
+    failing = File.join(@dir, "failing-backup")
+    FileUtils.mkdir_p(failing)
+    # First on PATH: fails .backup, and hands anything else to the real sqlite3 so a
+    # db:prepare that ran anyway would still change the database.
+    File.write(File.join(failing, "sqlite3"), <<~'SH', perm: 0o755)
+      #!/bin/bash
+      [[ "$2" == .backup* ]] && { echo "Error: disk I/O error" >&2; exit 1; }
+      PATH="${PATH#*:}" exec sqlite3 "$@"
+    SH
+
+    result = run_entrypoint("./bin/rails", "server", "FAKE_PENDING_EXIT" => "1", "PATH" => "#{failing}:#{ENV["PATH"]}")
+
+    assert_not result.success?
+    assert_equal [ "pending-check" ], calls
+    assert_equal before, File.binread(database)
+    assert_no_match(/Backed up/, result.stderr)
+  end
+
   test "other commands run untouched" do
     create_database
 
