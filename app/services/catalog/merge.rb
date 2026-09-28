@@ -57,7 +57,7 @@ module Catalog
     end
 
     # All statuses move: the dismissed ones are what the member was once shown. An
-    # open one that now proposes exactly the pick the member already has is done.
+    # open one that would now change nothing about the member's pick is done.
     def repoint_suggestions(open_ids)
       PickSuggestion.where(column => @source.id).update_all(column => @target.id)
       PickSuggestion.where(replaces_column => @source.id).update_all(replaces_column => @target.id)
@@ -65,7 +65,7 @@ module Catalog
       now = Time.current
       PickSuggestion.where(id: open_ids).find_each do |suggestion|
         pick = Entry.find_by(user_id: suggestion.user_id, category_id: suggestion.category_id, tool_id: suggestion.tool_id)
-        next unless pick && [ pick.ai_model_id, pick.context, pick.effort ] == [ suggestion.ai_model_id, suggestion.context, suggestion.effort ]
+        next unless pick && Loadouts::Suggestions.same_pick?(pick, suggestion.slice(:ai_model_id, :context, :effort))
 
         suggestion.update_columns(status: "superseded", resolved_at: now, updated_at: now)
       end

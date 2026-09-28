@@ -173,6 +173,19 @@ class Catalog::MergeTest < ActiveSupport::TestCase
     assert_loadouts_valid
   end
 
+  test "an open suggestion whose named fields all match the pick after a merge is superseded, whatever it leaves blank" do
+    duplicate = AiModel.resolve_or_suggest!("Opus Five", user: @member)
+    kept = ai_models(:opus_5)
+    pick(@member, 1, tools(:cursor), model: kept.slug, context: "1m")
+    now_the_pick = open_suggestion(@member, tools(:cursor), ai_model: duplicate, replaces_rank: 1, replaces_tool_id: tools(:cursor).id, replaces_ai_model_id: kept.id)
+    still_differs = open_suggestion(@member, tools(:cursor), ai_model: duplicate, effort: "high", replaces_rank: 1, replaces_tool_id: tools(:cursor).id, replaces_ai_model_id: kept.id)
+
+    Catalog::Merge.call(source: duplicate, target: kept)
+
+    assert_equal [ "superseded", kept.id ], fields(now_the_pick, :status, :ai_model_id)
+    assert_equal [ "open", kept.id ], fields(still_differs, :status, :ai_model_id)
+  end
+
   test "the target takes on the source's kinds" do
     @source.update!(category_slugs: [ "coding", "video" ])
 

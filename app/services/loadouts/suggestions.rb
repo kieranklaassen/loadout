@@ -34,6 +34,12 @@ module Loadouts
       user.pick_suggestions.open.where(oauth_client_id: oauth_client.id).update_all(status: "withdrawn", resolved_at: now, updated_at: now)
     end
 
+    # The pick already has every field a suggestion names, so confirming it would
+    # change nothing: a field it leaves blank keeps the pick's value.
+    def self.same_pick?(entry, fields)
+      fields.compact.all? { |field, value| entry.public_send(field) == value }
+    end
+
     # The slot a suggestion would land in: where its tool already sits in the kind,
     # else its hint when empty, else the first empty slot, else nil (the member picks).
     def self.target_rank(suggestion, entries)
@@ -55,7 +61,7 @@ module Loadouts
       expire_lapsed
       slots = slots_for(category, client_name: label)
       current = slots.entries.find { |entry| entry.tool_id == tool.id }
-      if current && same_pick?(current, ai_model, context, effort)
+      if current && self.class.same_pick?(current, ai_model_id: ai_model&.id, context:, effort:)
         return Outcome.new(message: "#{tool.name} is already your #{current.rank.ordinalize} pick for #{category.name.downcase} with those details.")
       end
 
@@ -155,12 +161,6 @@ module Loadouts
         "The member turned this exact suggestion down; do not suggest it again before #{(dismissed.resolved_at + DISMISSAL_MEMORY).to_date.to_fs(:long)}."
     end
 
-    # The entry already has every field the suggestion names, so confirming it would
-    # change nothing: a field it leaves blank keeps the entry's value.
-    def same_pick?(entry, ai_model, context, effort)
-      { ai_model_id: ai_model&.id, context:, effort: }.compact.all? { |field, value| entry.public_send(field) == value }
-    end
-
     # What the suggestion was written against (nothing, or the pick it changes) is
     # still what is in the kind.
     def snapshot_matches?(suggestion, current)
@@ -182,7 +182,7 @@ module Loadouts
     def clear_outdated(confirmed, entries)
       current = entries.find { |entry| entry.tool_id == confirmed.tool_id }
       outdated = open_in(confirmed.category).where(tool: confirmed.tool).reject do |other|
-        snapshot_matches?(other, current) && !same_pick?(current, other.ai_model, other.context, other.effort)
+        snapshot_matches?(other, current) && !self.class.same_pick?(current, other.slice(:ai_model_id, :context, :effort))
       end
       close(PickSuggestion.where(id: outdated.map(&:id)), "superseded")
     end
