@@ -39,7 +39,7 @@ export default function AddItem({ catalog }: { catalog: Catalog }) {
     setError(null)
     setSending(true)
     router.post(
-      '/loadout/catalog_items',
+      '/toolbox/catalog_items',
       { kind, name: clean },
       {
         preserveScroll: true,

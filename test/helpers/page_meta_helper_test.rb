@@ -10,11 +10,11 @@ class PageMetaHelperTest < ActionView::TestCase
   end
 
   test "a controller's own preview replaces the defaults it names and keeps the rest" do
-    @page_meta = { title: "Ana's loadout", noindex: true }
+    @page_meta = { title: "Ana's toolbox", noindex: true }
 
     meta = page_meta
 
-    assert_equal "Ana's loadout", meta[:title]
+    assert_equal "Ana's toolbox", meta[:title]
     assert meta[:noindex]
     assert_equal PageMetaHelper::DEFAULT_DESCRIPTION, meta[:description]
     assert_equal "#{request.base_url}/og-default.png", meta[:image]

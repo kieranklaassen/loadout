@@ -28,7 +28,7 @@ module McpOauthHelper
   def authorization_params(client_id:, challenge:, redirect_uri: LOOPBACK_REDIRECT, **overrides)
     {
       response_type: "code", client_id:, redirect_uri:, code_challenge: challenge,
-      code_challenge_method: "S256", state: "state-123", resource: mcp_resource, scope: "loadout"
+      code_challenge_method: "S256", state: "state-123", resource: mcp_resource, scope: "toolbox"
     }.merge(overrides).compact
   end
 

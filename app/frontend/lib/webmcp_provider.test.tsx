@@ -28,7 +28,7 @@ function navigate(props: Record<string, unknown>) {
 const manifest: WebmcpManifest = {
   endpoint: '/webmcp/tools',
   tools: [
-    { name: 'get_my_loadout', description: 'Reads my loadout', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
+    { name: 'get_my_toolbox', description: 'Reads my toolbox', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
     { name: 'list_notes', description: 'List notes', inputSchema: { type: 'object' } },
     { name: 'suggest_picks', description: 'Suggest picks', inputSchema: { type: 'object' }, annotations: { readOnlyHint: false } },
   ],
@@ -53,7 +53,7 @@ describe('WebmcpProvider', () => {
       </StrictMode>,
     )
 
-    expect([...stub.tools.keys()].sort()).toEqual(['get_my_loadout', 'list_notes', 'suggest_picks'])
+    expect([...stub.tools.keys()].sort()).toEqual(['get_my_toolbox', 'list_notes', 'suggest_picks'])
     // StrictMode mounts twice; the first registration is aborted before the second.
     expect(register).toHaveBeenCalledTimes(6)
   })
@@ -90,7 +90,7 @@ describe('WebmcpProvider', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ result: { content: [{ type: 'text', text: '{}' }] } }))))
     render(<WebmcpProvider initialManifest={manifest}>page</WebmcpProvider>)
 
-    await stub.invoke('get_my_loadout')
+    await stub.invoke('get_my_toolbox')
     expect(reload).not.toHaveBeenCalled()
 
     await stub.invoke('suggest_picks', { picks: [] })

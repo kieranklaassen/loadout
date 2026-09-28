@@ -1,7 +1,7 @@
 require "test_helper"
 
 # The replay behind "What we used before". Every scenario is written through
-# Loadouts::Update and travel_to (never by hand-written rows), so a test passes only
+# Toolbox::Update and travel_to (never by hand-written rows), so a test passes only
 # when the writer and the reader agree. Dates are 2026 and days are UTC. A scenario
 # reads "today" as August 10.
 module HistoryReplayAssertions
@@ -45,14 +45,14 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
   def member(handle, visibility: "team") = add_person(handle, visibility:, team: true)
 
   def rank(user, position, tool, model: nil, category: "coding", **choices)
-    Loadouts::Update.call(
+    Toolbox::Update.call(
       user:, source: "web",
       operations: [ { op: "set_pick", category:, rank: position, tool: tool.slug, model: model&.slug, **choices } ]
     )
   end
 
   def write(user, *operations, source: "web", **options)
-    Loadouts::Update.call(user:, source:, operations:, **options)
+    Toolbox::Update.call(user:, source:, operations:, **options)
   end
 
   def eras(viewer, show: nil, today: TODAY)

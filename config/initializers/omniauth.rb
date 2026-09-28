@@ -20,7 +20,7 @@ OmniAuth.config.logger = Rails.logger
 # The redirect_uri registered with Every is built from PUBLIC_BASE_URL when it
 # is set, so a proxy's internal host never leaks into it.
 OmniAuth.config.full_host = lambda do |env|
-  LoadoutHost.base_url(Rack::Request.new(env))
+  ToolboxHost.base_url(Rack::Request.new(env))
 end
 
 OmniAuth.config.on_failure = ->(env) { Sessions::EveryController.action(:failure).call(env) }

@@ -67,6 +67,6 @@ export const personData = (overrides: Partial<PersonData> = {}): PersonData => (
     { category: writingKind, picks: [rankedPick({ rank: 1, tool: claudeMark, model: opusMark })], team_uses: null },
     { category: musicKind, picks: [], team_uses: null },
   ],
-  new_in_loadout: [launch()],
+  new_in_toolbox: [launch()],
   ...overrides,
 })

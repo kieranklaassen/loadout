@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-# A member's own loadout as plain data, built from their confirmed picks (Entry) and
+# A member's own toolbox as plain data, built from their confirmed picks (Entry) and
 # their open suggestions, for the Rank editor and the readers that still take one
 # member's picks. Anything about other people goes through the shared read layer.
-module Loadouts
+module Toolbox
   class Presenter
     def initialize(user)
       @user = user

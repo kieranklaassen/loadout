@@ -30,7 +30,7 @@ const member: CurrentUser = {
 }
 
 const signIn = (user: CurrentUser | null) => {
-  page.props = { current_user: user, flash: {}, public_host: 'loadout.every.to' }
+  page.props = { current_user: user, flash: {}, public_host: 'toolbox.every.to' }
 }
 
 beforeEach(() => signIn(null))

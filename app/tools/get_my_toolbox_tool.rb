@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-class GetMyLoadoutTool < ApplicationTool
-  tool_name "get_my_loadout"
+class GetMyToolboxTool < ApplicationTool
+  tool_name "get_my_toolbox"
   description <<~TEXT.squish
-    Returns the signed-in member's Loadout, kind of work by kind of work: up to three
+    Returns the signed-in member's Toolbox, kind of work by kind of work: up to three
     confirmed picks ranked 1 to 3 (a tool, the model they use in it if any, a context size
     and an effort if they set them), and their open suggestions, including yours, which
     wait for the member to confirm them on the site and are visible to nobody else.
@@ -16,12 +16,12 @@ class GetMyLoadoutTool < ApplicationTool
   annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: false)
 
   def call
-    kinds = Loadouts::Presenter.new(user).kinds
+    kinds = Toolbox::Presenter.new(user).kinds
     {
       handle: user.handle,
       visibility: user.visibility,
       url: (link_to(:profile_path, user.handle) if user.handle),
-      confirm_at: link_to(:edit_loadout_path),
+      confirm_at: link_to(:edit_toolbox_path),
       to_confirm: kinds.sum { |kind| kind[:to_confirm] },
       kinds: kinds.map { |kind| kind_prop(kind) }
     }

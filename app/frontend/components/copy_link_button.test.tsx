@@ -16,13 +16,13 @@ describe('CopyLinkButton', () => {
   })
 
   it('copies the link and shows a copied state that resets', async () => {
-    render(<CopyLinkButton url="https://loadout.every.to/ana" />)
+    render(<CopyLinkButton url="https://toolbox.every.to/ana" />)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /copy link/i }))
     })
 
-    expect(writeText).toHaveBeenCalledWith('https://loadout.every.to/ana')
+    expect(writeText).toHaveBeenCalledWith('https://toolbox.every.to/ana')
     expect(screen.getByRole('button', { name: /link copied/i })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/copied/i)
 

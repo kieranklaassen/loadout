@@ -29,10 +29,10 @@ class WellKnownControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "PUBLIC_BASE_URL wins over the request host" do
-    Rails.application.config.x.public_base_url = "https://loadout.every.to"
+    Rails.application.config.x.public_base_url = "https://toolbox.every.to"
     get "/.well-known/oauth-protected-resource"
 
-    assert_equal "https://loadout.every.to/mcp", response.parsed_body["resource"]
+    assert_equal "https://toolbox.every.to/mcp", response.parsed_body["resource"]
   ensure
     Rails.application.config.x.public_base_url = nil
   end

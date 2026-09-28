@@ -23,7 +23,7 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
   def teammate(handle) = add_person(handle, visibility: "team", team: true)
 
   def rank(user, position, tool, model: nil, category: "coding", **choices)
-    Loadouts::Update.call(
+    Toolbox::Update.call(
       user:, source: "web",
       operations: [ { op: "set_pick", category:, rank: position, tool: tool.slug, model: model&.slug, **choices } ]
     )
@@ -226,20 +226,20 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
   test "a visitor is asked to sign in to rank the kind" do
     get kind_path("coding")
 
-    assert_equal({ label: "Sign in to rank coding", href: "/loadout/edit?kind=coding" }, page_props[:cta])
+    assert_equal({ label: "Sign in to rank coding", href: "/toolbox/edit?kind=coding" }, page_props[:cta])
   end
 
   test "a member with no pick in the kind is asked to rank it, and one with a pick to edit it" do
     sign_in_as newcomer
     get kind_path("knowledge-work")
-    assert_equal({ label: "Rank your knowledge work picks", href: "/loadout/edit?kind=knowledge-work" }, page_props[:cta])
+    assert_equal({ label: "Rank your knowledge work picks", href: "/toolbox/edit?kind=knowledge-work" }, page_props[:cta])
 
     sign_in_as users(:every_dee)
     get kind_path("coding")
-    assert_equal({ label: "Edit your coding picks", href: "/loadout/edit?kind=coding" }, page_props[:cta])
+    assert_equal({ label: "Edit your coding picks", href: "/toolbox/edit?kind=coding" }, page_props[:cta])
 
     get kind_path("video")
-    assert_equal({ label: "Rank your video picks", href: "/loadout/edit?kind=video" }, page_props[:cta])
+    assert_equal({ label: "Rank your video picks", href: "/toolbox/edit?kind=video" }, page_props[:cta])
   end
 
   test "the call to action link only selects a kind in the editor" do
@@ -250,7 +250,7 @@ class KindsControllerTest < ActionDispatch::IntegrationTest
     get cta[:href]
 
     assert_response :success
-    assert_inertia_component "loadout/edit"
+    assert_inertia_component "toolbox/edit"
     assert_equal "coding", page_props[:selected_kind]
     assert_equal 2, users(:every_dee).entries.where(category: categories(:coding)).count, "visiting the link changed nothing"
   end

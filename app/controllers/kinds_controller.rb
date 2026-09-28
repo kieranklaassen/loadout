@@ -15,9 +15,9 @@ class KindsController < InertiaController
     kind = rankings.kind(category)
     eras = NumberOneHistory.new(viewer: Current.user, show: params[:show]).eras(category)
     @page_meta = {
-      title: "#{category.name} on Loadout",
+      title: "#{category.name} on Toolbox",
       description: "Which AI tools and models the Every team uses for #{category.name.downcase}.",
-      url: "#{LoadoutHost.base_url(request)}/kinds/#{category.slug}"
+      url: "#{ToolboxHost.base_url(request)}/kinds/#{category.slug}"
     }
 
     render inertia: "kinds/show", props: {
@@ -39,6 +39,6 @@ class KindsController < InertiaController
       elsif Current.user.entries.exists?(category:) then "Edit your #{name} picks"
       else "Rank your #{name} picks"
       end
-    { label:, href: edit_loadout_path(kind: category.slug) }
+    { label:, href: edit_toolbox_path(kind: category.slug) }
   end
 end

@@ -49,7 +49,7 @@ describe('AppShell header', () => {
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(within(nav).getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
       ['Home', '/'],
-      ['Your loadout', '/loadout/edit'],
+      ['Your toolbox', '/toolbox/edit'],
       ['Agents', '/agents'],
       ['Settings', '/settings'],
     ])
@@ -58,9 +58,9 @@ describe('AppShell header', () => {
   })
 
   it('marks the current page in the nav, with Kind pages counting as Home', () => {
-    signIn(member, {}, '/loadout/edit')
+    signIn(member, {}, '/toolbox/edit')
     const { unmount } = render(<AppShell>content</AppShell>)
-    expect(screen.getByRole('link', { name: 'Your loadout' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Your toolbox' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
     unmount()
 
@@ -130,7 +130,7 @@ describe('AppShell header', () => {
     render(<AppShell header="logo">content</AppShell>)
     expect(screen.queryByRole('button', { name: 'Account menu' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Every Loadout home' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Every Toolbox home' })).toHaveAttribute('href', '/')
   })
 })
 
@@ -159,20 +159,20 @@ describe('AppShell account menu', () => {
 
 describe('AppShell footer and flash', () => {
   it('renders the footer lockup with the host from public_host', () => {
-    signIn(null, { public_host: 'loadout.example.com' })
+    signIn(null, { public_host: 'toolbox.example.com' })
     render(<AppShell>content</AppShell>)
 
     const footer = screen.getByRole('contentinfo')
-    expect(within(footer).getByText('loadout.example.com')).toBeInTheDocument()
-    expect(within(footer).getByText('Loadout')).toBeInTheDocument()
+    expect(within(footer).getByText('toolbox.example.com')).toBeInTheDocument()
+    expect(within(footer).getByText('Toolbox')).toBeInTheDocument()
     expect(within(footer).getByAltText('Every')).toBeInTheDocument()
-    expect(footer).not.toHaveTextContent('every.to/loadout')
+    expect(footer).not.toHaveTextContent('every.to/toolbox')
   })
 
-  it('falls back to loadout.every.to when the server sends no public_host', () => {
+  it('falls back to toolbox.every.to when the server sends no public_host', () => {
     render(<AppShell>content</AppShell>)
 
-    expect(within(screen.getByRole('contentinfo')).getByText('loadout.every.to')).toBeInTheDocument()
+    expect(within(screen.getByRole('contentinfo')).getByText('toolbox.every.to')).toBeInTheDocument()
   })
 
   it('shows flash messages as a status or an alert', () => {

@@ -23,7 +23,7 @@ class Settings::HistoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "application/json", response.media_type
     assert_match(/\Aattachment;/, response.headers["Content-Disposition"])
-    assert_match(/loadout-history\.json/, response.headers["Content-Disposition"])
+    assert_match(/toolbox-history\.json/, response.headers["Content-Disposition"])
     assert_equal "nosniff", response.headers["X-Content-Type-Options"]
     assert_includes response.headers["Cache-Control"], "no-store"
   end

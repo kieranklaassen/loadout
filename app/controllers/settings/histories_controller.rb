@@ -10,7 +10,7 @@ class Settings::HistoriesController < InertiaController
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Cache-Control"] = "no-store"
     send_data JSON.pretty_generate(exported_at: Time.current.iso8601, changes: changes.map { |change| row(change) }),
-      filename: "loadout-history.json", type: "application/json", disposition: "attachment"
+      filename: "toolbox-history.json", type: "application/json", disposition: "attachment"
   end
 
   private

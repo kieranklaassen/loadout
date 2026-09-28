@@ -1,4 +1,4 @@
-namespace :loadout do
+namespace :toolbox do
   desc "Render the site-wide share card to public/og-default.png"
   task default_og: :environment do
     path = Rails.public_path.join("og-default.png")
@@ -11,10 +11,10 @@ namespace :loadout do
   task remove_member: :environment do
     email = ENV["EMAIL"].to_s.strip
     user = User.find_by(email_address: email) if email.present?
-    abort "No member with the email #{email.inspect}. Usage: EMAIL=person@every.to bin/rails loadout:remove_member" unless user
+    abort "No member with the email #{email.inspect}. Usage: EMAIL=person@every.to bin/rails toolbox:remove_member" unless user
 
     user.destroy!
-    puts "Removed #{user.email_address} and everything they had in Loadout. Tools and models they added stay in the catalog."
+    puts "Removed #{user.email_address} and everything they had in Toolbox. Tools and models they added stay in the catalog."
   end
 
   desc "Revoke every agent connection and withdraw the suggestions agents left open; members connect and approve again"

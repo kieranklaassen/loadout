@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Loadouts::SuggestionsTest < ActiveSupport::TestCase
+class Toolbox::SuggestionsTest < ActiveSupport::TestCase
   CHANGED = "This changed, review it.".freeze
 
   setup do
@@ -11,11 +11,11 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
   end
 
   def suggest(tool, category: "coding", source: "mcp", client_name: "Claude", oauth_client_id: 1, **fields)
-    Loadouts::Update.call(user: @user, operations: [ { op: "suggest", category:, tool:, **fields } ], source:, client_name:, oauth_client_id:)
+    Toolbox::Update.call(user: @user, operations: [ { op: "suggest", category:, tool:, **fields } ], source:, client_name:, oauth_client_id:)
   end
 
   def as_member(*operations)
-    Loadouts::Update.call(user: @user, operations:, source: "web")
+    Toolbox::Update.call(user: @user, operations:, source: "web")
   end
 
   def confirm(suggestion, **fields)
@@ -31,7 +31,7 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
   end
 
   def error_from(&block)
-    assert_raises(Loadouts::Update::Error, &block).message
+    assert_raises(Toolbox::Update::Error, &block).message
   end
 
   test "suggest keeps entries, readers and loadout_updated_at untouched and records who suggested (AE3)" do
@@ -179,7 +179,7 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
     superseded = suggest("cursor").suggestions.sole
     suggest("cursor", model: "claude-opus-5-5")
     withdrawn = suggest("claude-code").suggestions.sole
-    Loadouts::Update.call(user: @user, operations: [ { op: "withdraw", suggestion_id: withdrawn.id } ], source: "mcp", client_name: "Claude", oauth_client_id: 1)
+    Toolbox::Update.call(user: @user, operations: [ { op: "withdraw", suggestion_id: withdrawn.id } ], source: "mcp", client_name: "Claude", oauth_client_id: 1)
     dismissed = suggest("Windsurf").suggestions.sole
     as_member({ op: "dismiss", suggestion_id: dismissed.id })
     confirmed = suggest("Zed").suggestions.sole
@@ -371,14 +371,14 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
     theirs = suggest("claude-code", client_name: "Codex", oauth_client_id: 2).suggestions.sole
     changes = @user.entry_changes.count
 
-    result = Loadouts::Update.call(user: @user, operations: [ { op: "withdraw", suggestion_id: mine.id } ], source: "mcp", client_name: "Claude", oauth_client_id: 1)
+    result = Toolbox::Update.call(user: @user, operations: [ { op: "withdraw", suggestion_id: mine.id } ], source: "mcp", client_name: "Claude", oauth_client_id: 1)
 
     assert_equal "withdrawn", mine.reload.status
     assert_not_nil mine.resolved_at
     assert_empty result.changes
     assert_equal changes, @user.entry_changes.count
-    error = assert_raises(Loadouts::Update::Error) do
-      Loadouts::Update.call(user: @user, operations: [ { op: "withdraw", suggestion_id: theirs.id } ], source: "mcp", client_name: "Claude", oauth_client_id: 1)
+    error = assert_raises(Toolbox::Update::Error) do
+      Toolbox::Update.call(user: @user, operations: [ { op: "withdraw", suggestion_id: theirs.id } ], source: "mcp", client_name: "Claude", oauth_client_id: 1)
     end
     assert_equal "That suggestion is no longer open.", error.message
     assert_equal "open", theirs.reload.status
@@ -390,9 +390,9 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
     ours = suggest("cursor", oauth_client_id: claude.id).suggestions.sole
     same_name = suggest("claude-code", oauth_client_id: other_claude.id).suggestions.sole
     web_mcp = suggest("Windsurf", source: "webmcp", client_name: nil, oauth_client_id: nil).suggestions.sole
-    someone_else = Loadouts::Update.call(user: users(:two), operations: [ { op: "suggest", category: "coding", tool: "cursor" } ], source: "mcp", client_name: "Claude", oauth_client_id: claude.id).suggestions.sole
+    someone_else = Toolbox::Update.call(user: users(:two), operations: [ { op: "suggest", category: "coding", tool: "cursor" } ], source: "mcp", client_name: "Claude", oauth_client_id: claude.id).suggestions.sole
 
-    assert_equal 1, Loadouts::Suggestions.withdraw_for_client(user: @user, oauth_client: claude)
+    assert_equal 1, Toolbox::Suggestions.withdraw_for_client(user: @user, oauth_client: claude)
 
     assert_equal [ "withdrawn", "open", "open", "open" ], [ ours, same_name, web_mcp, someone_else ].map { |suggestion| suggestion.reload.status }
   end
@@ -402,7 +402,7 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
     other = OauthClient.create!(client_name: "Claude", redirect_uris: [ "http://127.0.0.1:33419/callback" ])
     ours = suggest("cursor", oauth_client_id: claude.id).suggestions.sole
     theirs = suggest("claude-code", oauth_client_id: other.id).suggestions.sole
-    grant = OauthGrant.issue!(user: @user, client: claude, resource: "http://www.example.com/mcp", scope: "loadout")
+    grant = OauthGrant.issue!(user: @user, client: claude, resource: "http://www.example.com/mcp", scope: "toolbox")
 
     grant.revoke!
 

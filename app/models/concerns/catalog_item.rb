@@ -1,6 +1,6 @@
 # Shared shape of a Tool (Cursor, Runway) and an AiModel (Claude Opus 5.5).
 # Approved items appear in pickers; pending items were added by a member and
-# wait for admin review but already show on that member's loadout; hidden items
+# wait for admin review but already show on that member's toolbox; hidden items
 # leave the pickers and stay on existing entries.
 module CatalogItem
   extend ActiveSupport::Concern

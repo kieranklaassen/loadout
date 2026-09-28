@@ -1,4 +1,4 @@
-# The dated history of a loadout. Every change to a member's picks appends one
+# The dated history of a toolbox. Every change to a member's picks appends one
 # row; the timeline, "recent changes" and the number-one history read from here.
 #
 # The legacy actions (added, removed, updated, made_primary) have no rank and stay

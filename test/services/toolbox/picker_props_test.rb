@@ -1,8 +1,8 @@
 require "test_helper"
 
-class Loadouts::PickerPropsTest < ActiveSupport::TestCase
+class Toolbox::PickerPropsTest < ActiveSupport::TestCase
   def props(user, kind: nil)
-    Loadouts::PickerProps.new(user, kinds: Loadouts::Presenter.new(user).kinds, kind:).to_h
+    Toolbox::PickerProps.new(user, kinds: Toolbox::Presenter.new(user).kinds, kind:).to_h
   end
 
   def slugs(items) = items.map { |item| item[:slug] }
@@ -51,12 +51,12 @@ class Loadouts::PickerPropsTest < ActiveSupport::TestCase
     assert_equal "coding", props(ana)[:selected_kind], "coding has two picks"
     assert_equal "coding", props(ana, kind: "no-such-kind")[:selected_kind]
 
-    Loadouts::Update.call(user: ana, operations: [ { op: "set_pick", category: "coding", rank: 3, tool: "runway" } ], source: "web")
+    Toolbox::Update.call(user: ana, operations: [ { op: "set_pick", category: "coding", rank: 3, tool: "runway" } ], source: "web")
     assert_equal "knowledge-work", props(ana)[:selected_kind]
   end
 
   test "the member's kinds are built when not passed in" do
-    assert_equal "coding", Loadouts::PickerProps.new(users(:every_ana)).to_h[:selected_kind]
+    assert_equal "coding", Toolbox::PickerProps.new(users(:every_ana)).to_h[:selected_kind]
   end
 
   test "with every kind full the first kind opens" do
@@ -64,7 +64,7 @@ class Loadouts::PickerPropsTest < ActiveSupport::TestCase
     operations = %w[coding knowledge-work video].flat_map do |category|
       %w[cursor claude-code runway].each_with_index.map { |tool, index| { op: "set_pick", category:, rank: index + 1, tool: } }
     end
-    Loadouts::Update.call(user:, operations:, source: "web")
+    Toolbox::Update.call(user:, operations:, source: "web")
 
     assert_equal "coding", props(user)[:selected_kind]
   end

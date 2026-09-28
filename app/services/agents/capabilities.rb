@@ -7,7 +7,7 @@
 module Agents
   module Capabilities
     CAN = {
-      "Read your loadout, your open suggestions and your recent changes" => %w[get_my_loadout get_recent_changes],
+      "Read your toolbox, your open suggestions and your recent changes" => %w[get_my_toolbox get_recent_changes],
       "Look up the kinds of work and the catalog of tools and models" => %w[list_categories search_catalog],
       "Read what your teammates share with you, such as the tools and models they rank" => %w[get_team_rankings],
       "Add or change your picks as suggestions, which stay hidden until you confirm them" => %w[suggest_picks]
@@ -22,7 +22,7 @@ module Agents
 
     # Approving an agent does not cover a browser agent that drives the page (KTD10).
     WEBMCP_NOTE = "A browser agent that uses WebMCP works inside your signed-in session, so it can also click buttons on the page, " \
-      "including Confirm. Only let one drive your Loadout if you trust it."
+      "including Confirm. Only let one drive your Toolbox if you trust it."
 
     module_function
 

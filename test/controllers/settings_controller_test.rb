@@ -8,9 +8,9 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
 
   test "renders the account settings and the connected agents" do
     client = OauthClient.create!(client_name: "Cursor", redirect_uris: [ McpOauthHelper::LOOPBACK_REDIRECT ])
-    OauthGrant.issue!(user: @cy, client:, resource: "http://www.example.com/mcp", scope: "loadout")
+    OauthGrant.issue!(user: @cy, client:, resource: "http://www.example.com/mcp", scope: "toolbox")
     OauthGrant.issue!(user: users(:every_ana), client: OauthClient.create!(client_name: "Codex", redirect_uris: [ McpOauthHelper::LOOPBACK_REDIRECT ]),
-      resource: "http://www.example.com/mcp", scope: "loadout")
+      resource: "http://www.example.com/mcp", scope: "toolbox")
 
     get settings_path
 
@@ -27,7 +27,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_path
     assert_equal "cyrus", @cy.reload.handle
-    assert_equal "Your profile now lives at #{LoadoutHost::DEFAULT_HOST}/cyrus.", flash[:notice]
+    assert_equal "Your profile now lives at #{ToolboxHost::DEFAULT_HOST}/cyrus.", flash[:notice]
 
     get "/cy"
     assert_response :not_found
@@ -36,11 +36,11 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   test "a taken or reserved handle is rejected with a message" do
     patch settings_path, params: { handle: "ana" }
     follow_redirect!
-    assert_equal "#{LoadoutHost::DEFAULT_HOST}/ana is taken.", inertia.props[:errors][:handle]
+    assert_equal "#{ToolboxHost::DEFAULT_HOST}/ana is taken.", inertia.props[:errors][:handle]
 
     patch settings_path, params: { handle: "settings" }
     follow_redirect!
-    assert_equal "#{LoadoutHost::DEFAULT_HOST}/settings is reserved.", inertia.props[:errors][:handle]
+    assert_equal "#{ToolboxHost::DEFAULT_HOST}/settings is reserved.", inertia.props[:errors][:handle]
     assert_equal "cy", @cy.reload.handle
   end
 
@@ -117,8 +117,8 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "deleting the account removes the user, entries, changes, suggestions and periods and signs out" do
-    Loadouts::Update.call(user: @cy, operations: [ { op: "set_pick", category: "video", rank: 1, tool: "runway" } ], source: "web")
-    Loadouts::Update.call(user: @cy, operations: [ { op: "suggest", category: "coding", tool: "claude-code" } ], source: "webmcp", client_name: "WebMCP")
+    Toolbox::Update.call(user: @cy, operations: [ { op: "set_pick", category: "video", rank: 1, tool: "runway" } ], source: "web")
+    Toolbox::Update.call(user: @cy, operations: [ { op: "suggest", category: "coding", tool: "claude-code" } ], source: "webmcp", client_name: "WebMCP")
     patch settings_path, params: { visibility: "team" }
     assert @cy.entry_changes.any?
     assert @cy.pick_suggestions.any?
@@ -134,7 +134,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_not VisibilityPeriod.exists?(user_id: @cy.id)
     assert_not Session.exists?(user_id: @cy.id)
 
-    get edit_loadout_path
+    get edit_toolbox_path
     assert_redirected_to new_session_path
   end
 

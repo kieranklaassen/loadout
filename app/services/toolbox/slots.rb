@@ -9,7 +9,7 @@
 # Ranks are unique per member and kind, and SQLite checks a unique index row by
 # row, so rows that change rank are first parked PARKED ranks above where they are
 # and then given their final rank, inside the caller's transaction (KTD6).
-module Loadouts
+module Toolbox
   class Slots
     PARKED = 10
 

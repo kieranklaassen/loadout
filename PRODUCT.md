@@ -7,10 +7,10 @@
 web
 
 ## Users
-Every staff and their circle: people who use AI tools every day and want to see which tools and models the team relies on, and to share their own picks. In v1 the door is Sign in with Every. A member claims a link (`loadout.every.to/<you>`), ranks up to three picks per kind of work in about a minute, or lets their own agent (Claude, Claude Code, Cursor, Codex) propose picks over MCP and confirms them on the site. Visitors and other Every accounts read only what people chose to share with them.
+Every staff and their circle: people who use AI tools every day and want to see which tools and models the team relies on, and to share their own picks. In v1 the door is Sign in with Every. A member claims a link (`toolbox.every.to/<you>`), ranks up to three picks per kind of work in about a minute, or lets their own agent (Claude, Claude Code, Cursor, Codex) propose picks over MCP and confirms them on the site. Visitors and other Every accounts read only what people chose to share with them.
 
 ## Product Purpose
-Answer "Which AI tools does Every use?" for each kind of work (coding, knowledge work, writing, research, classification, image, video, animation, text to speech, speech to text, music), and "What's in your AI loadout?" for one person. Success is a member with a complete ranked loadout in about a minute, and a team page that stays true because it counts only people who chose to share.
+Answer "Which AI tools does Every use?" for each kind of work (coding, knowledge work, writing, research, classification, image, video, animation, text to speech, speech to text, music), and "What's in your AI toolbox?" for one person. Success is a member with a complete ranked toolbox in about a minute, and a team page that stays true because it counts only people who chose to share.
 
 ## Positioning
 "The AI tools Every uses": a dark, Every-branded page of the tools and models real Every staff use for each kind of work, counted as plain "N of M" people. A neighboring profile or link-in-bio product has no team's actual usage to aggregate.
@@ -26,10 +26,10 @@ Members rank in the Rank editor or connect an agent at `/agents` with a normal s
 - Three visibility levels: Only me (the default), Every team and Anyone with the link. One rule decides who may open a page, and every count, name, search hit, PERSON option, profile and share card follows it. Narrowing takes effect at once, and a hidden page answers exactly like a handle nobody claimed. A share card already unfurled elsewhere cannot be recalled.
 - The counting rule: "N of M". M is the people in the selected SHOW group (Every team, or everyone else) whom the viewer may open and who have at least one confirmed pick; N is the people among them who have the item. Only people who chose to share are counted, plus your own picks with a note when they are private. Suggestions and pending catalog items count nowhere. "Every subscribers" is a disabled option: there is no data source yet.
 - Tools show a square mark and models a round one: the real single-colour mark where the catalog has one, otherwise the first letter of the name in the serif face. No typographic tiles.
-- One write path for loadouts (`Loadouts::Update`), shared by the web editor, MCP and WebMCP. Agents may run only `suggest` and `withdraw`; history lives in `entry_changes`.
+- One write path for toolboxes (`Toolbox::Update`), shared by the web editor, MCP and WebMCP. Agents may run only `suggest` and `withdraw`; history lives in `entry_changes`.
 - Catalog is seeded from `config/catalog.yml` and synced on every deploy. Launch dates and Vibe Check links are admin-owned.
 - Look and feel: "Every dark" (near-black page, #111111 panels, Newsreader headings, Hanken Grotesk UI, Geist Mono captions, all fonts self-hosted). The design of record is `docs/design/every-loadout/`.
-- Hosts are configurable: `PUBLIC_BASE_URL` is the one setting, and `loadout.every.to` is the default display host. Moving to `every.to/loadout` is a separate deploy task.
+- Hosts are configurable: `PUBLIC_BASE_URL` is the one setting, and `toolbox.every.to` is the default display host. Moving to `every.to/toolbox` is a separate deploy task.
 - Stack: Rails 8.1, Inertia, React 19, Tailwind 4, SQLite, Kamal.
 - Undecided: whether the product opens beyond Every sign-in, any pricing or licensing, and where an Every subscribers audience would come from.
 
@@ -45,7 +45,7 @@ Members rank in the Rank editor or connect an agent at `/agents` with a normal s
 
 ## Product Principles
 1. The member's real usage is the content; never pad a page with aspirational tools.
-2. Filling a loadout must take about a minute, by hand or by agent.
+2. Filling a toolbox must take about a minute, by hand or by agent.
 3. Private by default; sharing is deliberate, and a count only ever includes people who chose to share.
 4. The team page earns its value from aggregate truth, not gamification: counts of people, never scores.
 5. Agents propose, people decide. An agent's pick is a suggestion until its owner confirms it on the web.

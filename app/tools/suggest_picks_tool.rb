@@ -2,11 +2,11 @@
 
 # The only tool that writes, and it writes suggestions: a PickSuggestion is invisible to
 # everyone but its owner until the owner confirms it on the web. Nothing here can confirm,
-# remove or reorder a pick; the schema only knows Loadouts::Update::AGENT_OPERATIONS.
+# remove or reorder a pick; the schema only knows Toolbox::Update::AGENT_OPERATIONS.
 class SuggestPicksTool < ApplicationTool
   tool_name "suggest_picks"
   description <<~TEXT.squish
-    Proposes picks for the signed-in member's Loadout. Everything you send is a suggestion:
+    Proposes picks for the signed-in member's Toolbox. Everything you send is a suggestion:
     it is hidden from everyone else and does not appear on the member's page until the member
     confirms it on the site. You cannot confirm, change, remove or reorder their picks.
     A pick is a tool (the app, like Cursor) with an optional model (like Claude Opus 5.5),
@@ -17,7 +17,7 @@ class SuggestPicksTool < ApplicationTool
     of one of your own suggestions). `category` is a slug from list_categories; `tool` and
     `model` are slugs from search_catalog (a name that is not in the catalog becomes a new
     item flagged for review, so check spelling first). A member ranks up to three picks
-    per kind of work and a tool appears once per kind. Read get_my_loadout first so you
+    per kind of work and a tool appears once per kind. Read get_my_toolbox first so you
     suggest a change instead of a duplicate, ask the member before you guess, and do not
     suggest again something they dismissed: the error says when. A kind holds at most three
     open suggestions (the oldest gives way), and a newer one from you for the same tool
@@ -28,11 +28,11 @@ class SuggestPicksTool < ApplicationTool
       operations: {
         type: "array",
         minItems: 1,
-        maxItems: Loadouts::Update::MAX_OPERATIONS,
+        maxItems: Toolbox::Update::MAX_OPERATIONS,
         items: {
           type: "object",
           properties: {
-            op: { type: "string", enum: Loadouts::Update::AGENT_OPERATIONS },
+            op: { type: "string", enum: Toolbox::Update::AGENT_OPERATIONS },
             category: { type: "string", maxLength: 60, description: "For suggest: the kind of work, a slug from list_categories." },
             tool: { type: "string", maxLength: 60, description: "For suggest: tool slug from search_catalog (preferred) or its name." },
             model: { type: [ "string", "null" ], maxLength: 60, description: "For suggest: model slug from search_catalog (preferred) or its name. Omit when the member names no model." },
@@ -68,7 +68,7 @@ class SuggestPicksTool < ApplicationTool
     def message(proposed, withdrawn, notes)
       sentences = []
       if proposed.any?
-        links = proposed.map { |suggestion| link_to(:edit_loadout_path, kind: suggestion.category.slug) }.uniq.to_sentence
+        links = proposed.map { |suggestion| link_to(:edit_toolbox_path, kind: suggestion.category.slug) }.uniq.to_sentence
         sentences << "Suggested #{proposed.size} #{"pick".pluralize(proposed.size)}. Nothing is on the member's page yet: each stays a suggestion until the member confirms it on the site (#{links})."
       end
       sentences << "Withdrew #{withdrawn.size} #{"suggestion".pluralize(withdrawn.size)}." if withdrawn.any?

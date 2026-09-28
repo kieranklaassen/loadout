@@ -1,9 +1,9 @@
-# Where Loadout is served from, and the two Every sites it links to, in one place.
+# Where Toolbox is served from, and the two Every sites it links to, in one place.
 # PUBLIC_BASE_URL is the single knob: the OAuth issuer, share links, the MCP resource
 # and every host printed on a page derive from it, so moving the app is a
 # configuration change. Nothing else spells the host.
-module LoadoutHost
-  DEFAULT_HOST = "loadout.every.to"
+module ToolboxHost
+  DEFAULT_HOST = "toolbox.every.to"
   JOIN_EVERY_URL = "https://every.to"
   ALL_VIBE_CHECKS_URL = "https://checks.every.to"
 
@@ -15,7 +15,7 @@ module LoadoutHost
     configured_base_url || request&.base_url || "https://#{DEFAULT_HOST}"
   end
 
-  # "loadout.every.to", as printed on pages, cards and messages.
+  # "toolbox.every.to", as printed on pages, cards and messages.
   def host
     configured_base_url&.sub(%r{\Ahttps?://}, "") || DEFAULT_HOST
   end

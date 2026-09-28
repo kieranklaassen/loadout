@@ -36,7 +36,7 @@ development, and only there, the sign-in page also lists users under "Dev login"
 
 Admins are `users.admin`, or an address in `ADMIN_EMAILS` once Every verified
 it. Remove someone who left Every with
-`EMAIL=person@every.to bin/rails loadout:remove_member` (see DEPLOYING.md).
+`EMAIL=person@every.to bin/rails toolbox:remove_member` (see DEPLOYING.md).
 
 Every Inertia page is authenticated by default (the gate lives on
 `InertiaController`); make a page public with `allow_unauthenticated_access`.
@@ -53,7 +53,7 @@ surfaces** (see [docs/modules/webmcp.md](docs/modules/webmcp.md)):
   `additionalProperties: false`, and set `read_only_hint: true` only when the
   tool never writes.
 - **Agent writes are suggestions.** The one write tool, `suggest_picks`, goes
-  through `Loadouts::Update`, where sources `mcp` and `webmcp` may run only
+  through `Toolbox::Update`, where sources `mcp` and `webmcp` may run only
   `suggest` and `withdraw`; the member confirms on the web. Confirm, dismiss,
   remove, move, visibility, handle, bio, history export, account deletion and
   agent revocation are web-only: never add a registry tool for them. Read tools
@@ -86,17 +86,17 @@ config. Secrets resolve at deploy time via shell indirection — none are commit
   problems (YAML frontmatter; see the README there).
 - **[CONCEPTS.md](CONCEPTS.md)** — the project's shared vocabulary.
 - **[docs/changelog/](docs/changelog/)** — the template's upgrade entries, up to
-  the version this app runs. Loadout adds none of its own (see below).
+  the version this app runs. Toolbox adds none of its own (see below).
 
 ## Template upgrades
 
-This repo is Loadout, an app started from compound-stack-rails 0.8.0, not the
+This repo is Toolbox, an app started from compound-stack-rails 0.8.0, not the
 template. `.template-manifest.yml` records the template version it runs; an
 upgrade agent applies the template's newer changelog entries for the adopted
 modules, bumps the manifest, and opens a reviewable PR, **never a direct push**.
-Loadout's own changes get no `docs/changelog/` entry and no manifest bump.
+Toolbox's own changes get no `docs/changelog/` entry and no manifest bump.
 
 `docs/modules/frontend.md`, `feature_flags.md` and `webmcp.md` now also describe
-Loadout's own changes, so adapt an upgrade entry that touches those modules
+Toolbox's own changes, so adapt an upgrade entry that touches those modules
 rather than applying it as written. `auth` was replaced by Sign in with Every;
 `docs/modules/auth.md` still describes the template's password sign-in.

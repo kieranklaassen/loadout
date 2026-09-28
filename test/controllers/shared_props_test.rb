@@ -26,10 +26,10 @@ class SharedPropsTest < ActionDispatch::IntegrationTest
 
   test "every page gets the display host, from configuration" do
     get new_session_path
-    assert_equal "loadout.every.to", inertia.props[:public_host]
+    assert_equal "toolbox.every.to", inertia.props[:public_host]
 
-    Rails.configuration.x.public_base_url = "https://loadout.example.test"
+    Rails.configuration.x.public_base_url = "https://toolbox.example.test"
     get new_session_path
-    assert_equal "loadout.example.test", inertia.props[:public_host]
+    assert_equal "toolbox.example.test", inertia.props[:public_host]
   end
 end

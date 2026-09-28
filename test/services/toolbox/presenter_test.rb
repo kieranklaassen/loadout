@@ -1,8 +1,8 @@
 require "test_helper"
 
-class Loadouts::PresenterTest < ActiveSupport::TestCase
+class Toolbox::PresenterTest < ActiveSupport::TestCase
   def update(user, *operations, source: "web", **context)
-    Loadouts::Update.call(user:, operations:, source:, **context)
+    Toolbox::Update.call(user:, operations:, source:, **context)
   end
 
   def suggest(user, tool, category: "coding", **fields)
@@ -10,11 +10,11 @@ class Loadouts::PresenterTest < ActiveSupport::TestCase
   end
 
   def kind(user, slug)
-    Loadouts::Presenter.new(user).kinds.find { |kind| kind[:category][:slug] == slug }
+    Toolbox::Presenter.new(user).kinds.find { |kind| kind[:category][:slug] == slug }
   end
 
   test "kinds lists every kind in catalog order with the confirmed picks by rank" do
-    kinds = Loadouts::Presenter.new(users(:every_ana)).kinds
+    kinds = Toolbox::Presenter.new(users(:every_ana)).kinds
 
     assert_equal %w[coding knowledge-work video], kinds.map { |kind| kind[:category][:slug] }
     assert_equal({ slug: "coding", name: "Coding", blurb: "Writing, reviewing, and shipping code." }, kinds.first[:category])
@@ -39,7 +39,7 @@ class Loadouts::PresenterTest < ActiveSupport::TestCase
   end
 
   test "team_top is what the member's own audience uses, keyed by kind" do
-    top = Loadouts::Presenter.new(users(:every_ana)).team_top
+    top = Toolbox::Presenter.new(users(:every_ana)).team_top
 
     assert_equal %w[coding knowledge-work video], top.keys
     assert_equal [ [ "claude-code", 2 ], [ "cursor", 1 ] ], top["coding"][:tools].map { |tool| [ tool[:item][:slug], tool[:yours_rank] ] }

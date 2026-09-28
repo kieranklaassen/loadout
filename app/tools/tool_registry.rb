@@ -16,7 +16,7 @@ module ToolRegistry
   TOOLS = [
     ListCategoriesTool,
     SearchCatalogTool,
-    GetMyLoadoutTool,
+    GetMyToolboxTool,
     GetTeamRankingsTool,
     GetRecentChangesTool,
     SuggestPicksTool
@@ -26,13 +26,13 @@ module ToolRegistry
   ENDPOINT_PATH = "/webmcp/tools"
 
   INSTRUCTIONS = <<~TEXT.squish
-    Loadout shows which AI tools and models a team uses for each kind of work. You act for
+    Toolbox shows which AI tools and models a team uses for each kind of work. You act for
     the signed-in member. A pick is a tool (the app, like Cursor), optionally with a model
     (like Claude Opus 5.5), a context size and an effort level, and a member ranks up to
     three picks per kind of work. Everything you write is a suggestion: nothing shows on the
     member's page until they confirm it on the site, and you cannot confirm, remove or
     reorder picks or change who sees their page. Find kinds of work with list_categories,
-    catalog slugs with search_catalog, read what is there with get_my_loadout, and propose
+    catalog slugs with search_catalog, read what is there with get_my_toolbox, and propose
     picks with suggest_picks. Ask the member before you guess, only suggest what they say
     they use, and do not suggest again what they dismissed. get_team_rankings shows what the
     team uses: counts are people, not scores. Vibe Check takes are links to pages that need
@@ -51,7 +51,7 @@ module ToolRegistry
 
   # Where the browser calls a tool: a same-origin path under wherever the app is served.
   def endpoint
-    LoadoutHost.path_to(ENDPOINT_PATH)
+    ToolboxHost.path_to(ENDPOINT_PATH)
   end
 
   # `source` is "mcp" or "webmcp"; over MCP, `client_name` and `oauth_client_id` name the

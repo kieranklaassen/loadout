@@ -4,8 +4,8 @@
 # "Claude-Code" into the seeded Claude Code. Picks, their history and suggestions
 # move to the target, then the source is deleted. A member who ranked both tools in
 # one kind keeps the lower rank (the higher pick); the other is removed through
-# Loadouts::Slots as a system change, so ranks close up and the change rows still
-# replay to the loadout. A model may repeat across a member's picks, so a model
+# Toolbox::Slots as a system change, so ranks close up and the change rows still
+# replay to the toolbox. A model may repeat across a member's picks, so a model
 # merge never removes one.
 module Catalog
   class Merge
@@ -52,7 +52,7 @@ module Catalog
         twin = Entry.find_by(entry.slice(:user_id, :category_id).merge(tool_id: @target.id))
         next unless twin
 
-        Loadouts::Slots.new(user: entry.user, category: entry.category, source: "system").remove(rank: [ entry.rank, twin.rank ].max)
+        Toolbox::Slots.new(user: entry.user, category: entry.category, source: "system").remove(rank: [ entry.rank, twin.rank ].max)
       end
     end
 
@@ -65,7 +65,7 @@ module Catalog
       now = Time.current
       PickSuggestion.where(id: open_ids).find_each do |suggestion|
         pick = Entry.find_by(user_id: suggestion.user_id, category_id: suggestion.category_id, tool_id: suggestion.tool_id)
-        next unless pick && Loadouts::Suggestions.same_pick?(pick, suggestion.slice(:ai_model_id, :context, :effort))
+        next unless pick && Toolbox::Suggestions.same_pick?(pick, suggestion.slice(:ai_model_id, :context, :effort))
 
         suggestion.update_columns(status: "superseded", resolved_at: now, updated_at: now)
       end

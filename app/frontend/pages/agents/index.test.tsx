@@ -16,7 +16,7 @@ vi.mock('@inertiajs/react', () => ({
   ),
   router: { delete: del },
   usePage: () => ({
-    props: { flash: {}, public_host: 'loadout.example.test', current_user: { name: 'Cy Every', avatar_url: null, handle: 'cy' } },
+    props: { flash: {}, public_host: 'toolbox.example.test', current_user: { name: 'Cy Every', avatar_url: null, handle: 'cy' } },
     url: '/agents',
   }),
 }))
@@ -25,10 +25,10 @@ type Props = ComponentProps<typeof AgentsIndex>
 type Agent = Props['agents'][number]
 
 const MCP_URL = 'https://mcp.example.test/mcp'
-const CURSOR_URL = 'cursor://anysphere.cursor-deeplink/mcp/install?name=loadout&config=abc'
-const PROMPT = 'Suggest picks for my Loadout. Ask me before you guess.'
+const CURSOR_URL = 'cursor://anysphere.cursor-deeplink/mcp/install?name=toolbox&config=abc'
+const PROMPT = 'Suggest picks for my Toolbox. Ask me before you guess.'
 const CAPABILITIES = {
-  can: ['Read your loadout', 'Suggest picks, which stay hidden until you confirm'],
+  can: ['Read your toolbox', 'Suggest picks, which stay hidden until you confirm'],
   cannot: ['Confirm or dismiss suggestions', 'Change who can see your page'],
   webmcp_note: 'A browser agent that uses WebMCP works inside your signed-in session, so it can also click buttons on the page.',
 }
@@ -73,11 +73,11 @@ describe('Agents page', () => {
       render(<AgentsIndex {...props()} />)
 
       expect(screen.getByRole('heading', { level: 1, name: 'Let your agent fill it in' })).toBeInTheDocument()
-      expect(card('Claude Code')).toHaveTextContent(`claude mcp add --transport http loadout ${MCP_URL}`)
+      expect(card('Claude Code')).toHaveTextContent(`claude mcp add --transport http toolbox ${MCP_URL}`)
       expect(card('Claude')).toHaveTextContent(MCP_URL)
-      expect(card('Cursor')).toHaveTextContent(JSON.stringify({ mcpServers: { loadout: { url: MCP_URL } } }))
-      expect(card('Codex')).toHaveTextContent(`codex mcp add loadout --url ${MCP_URL}`)
-      expect(document.body.textContent).not.toContain('every.to/loadout')
+      expect(card('Cursor')).toHaveTextContent(JSON.stringify({ mcpServers: { toolbox: { url: MCP_URL } } }))
+      expect(card('Codex')).toHaveTextContent(`codex mcp add toolbox --url ${MCP_URL}`)
+      expect(document.body.textContent).not.toContain('every.to/toolbox')
     })
 
     it('offers the Cursor deep link from the prop and the manual steps for the others', () => {
@@ -86,7 +86,7 @@ describe('Agents page', () => {
       expect(within(card('Cursor')).getByRole('link', { name: 'Add to Cursor' })).toHaveAttribute('href', CURSOR_URL)
       expect(card('Claude')).toHaveTextContent('Settings → Connectors → Add custom connector')
       expect(card('Claude Code')).toHaveTextContent('/mcp')
-      expect(card('Codex')).toHaveTextContent('codex mcp login loadout')
+      expect(card('Codex')).toHaveTextContent('codex mcp login toolbox')
     })
 
     it('copies exactly the command a card shows', async () => {
@@ -96,7 +96,7 @@ describe('Agents page', () => {
         fireEvent.click(within(card('Codex')).getByRole('button', { name: /copy/i }))
       })
 
-      expect(writeText).toHaveBeenCalledWith(`codex mcp add loadout --url ${MCP_URL}`)
+      expect(writeText).toHaveBeenCalledWith(`codex mcp add toolbox --url ${MCP_URL}`)
       expect(within(card('Codex')).getByRole('button', { name: /copied/i })).toBeInTheDocument()
     })
 

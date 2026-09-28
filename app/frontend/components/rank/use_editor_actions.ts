@@ -7,8 +7,8 @@ import type { PickContext, PickEffort, RankedPick, SharedProps, Suggestion } fro
 
 // Every write the Rank editor makes goes through here: a slot save, a move, a removal,
 // and confirming or dismissing a suggestion. Each is an Inertia visit to the web
-// endpoints (PATCH /loadout, POST and DELETE /loadout/suggestions/:id) that redirects
-// back with fresh props, so the page never holds a second copy of the loadout. The
+// endpoints (PATCH /toolbox, POST and DELETE /toolbox/suggestions/:id) that redirects
+// back with fresh props, so the page never holds a second copy of the toolbox. The
 // hook tracks what to show while a request is out, what to say when it is refused, and
 // where focus and the live region should go afterwards.
 //
@@ -22,7 +22,7 @@ import type { PickContext, PickEffort, RankedPick, SharedProps, Suggestion } fro
 // else by then the server refuses with "This changed, review it.", so a Retry (which sends
 // the same expectation) or a stale second tab cannot hit the pick that moved into that rank.
 
-const LOADOUT = '/loadout'
+const TOOLBOX = '/toolbox'
 const REFUSED = 'That did not save. Try again.'
 
 /** The fields one slot can change; a key left out keeps the slot's value and null clears it. */
@@ -102,7 +102,7 @@ export function useEditorActions(category: string) {
   const saveSlot = whenIdle((rank: number, shown: RankedPick | null, fields: SlotFields, then?: { message: string }) => {
     setDrafts((current) => ({ ...current, [rank]: { ...current[rank], ...fields } }))
     status(rank, { state: 'saving' })
-    run((options) => router.patch(LOADOUT, { operations: [{ op: 'set_pick', category, rank, ...fields, expected_tool: shown?.tool.slug ?? null }] }, options), {
+    run((options) => router.patch(TOOLBOX, { operations: [{ op: 'set_pick', category, rank, ...fields, expected_tool: shown?.tool.slug ?? null }] }, options), {
       onSaved: () => {
         settle(rank)
         status(rank, { state: 'saved' })
@@ -121,7 +121,7 @@ export function useEditorActions(category: string) {
   const moveSlot = whenIdle((pick: RankedPick, direction: 'up' | 'down') => {
     const to = pick.rank + (direction === 'up' ? -1 : 1)
     status(pick.rank, { state: 'saving' })
-    run((options) => router.patch(LOADOUT, { operations: [{ op: 'move_pick', category, rank: pick.rank, direction, expected_tool: pick.tool.slug }] }, options), {
+    run((options) => router.patch(TOOLBOX, { operations: [{ op: 'move_pick', category, rank: pick.rank, direction, expected_tool: pick.tool.slug }] }, options), {
       onSaved: () => {
         status(pick.rank, null)
         status(to, { state: 'saved' })
@@ -134,7 +134,7 @@ export function useEditorActions(category: string) {
 
   const removeSlot = whenIdle((pick: RankedPick) => {
     status(pick.rank, { state: 'saving' })
-    run((options) => router.patch(LOADOUT, { operations: [{ op: 'remove_pick', category, rank: pick.rank, expected_tool: pick.tool.slug }] }, options), {
+    run((options) => router.patch(TOOLBOX, { operations: [{ op: 'remove_pick', category, rank: pick.rank, expected_tool: pick.tool.slug }] }, options), {
       onSaved: () => {
         status(pick.rank, null)
         setAnnouncement(`Removed ${pick.tool.name} from your ${rankLabel(pick.rank)} pick`)
@@ -147,7 +147,7 @@ export function useEditorActions(category: string) {
   // `landing` is the slot the pick ends up in, for the announcement and focus.
   const confirmSuggestion = whenIdle((suggestion: Suggestion, options: ConfirmOptions, landing: number) => {
     setSuggestionError(null)
-    run((visit) => router.post(`${LOADOUT}/suggestions/${suggestion.id}/confirm`, options, visit), {
+    run((visit) => router.post(`${TOOLBOX}/suggestions/${suggestion.id}/confirm`, options, visit), {
       onSaved: () => {
         setAnnouncement(`Confirmed ${suggestion.tool.name} as your ${rankLabel(landing)} pick`)
         focusSlot(landing)
@@ -158,7 +158,7 @@ export function useEditorActions(category: string) {
 
   const dismissSuggestion = whenIdle((suggestion: Suggestion) => {
     setSuggestionError(null)
-    run((visit) => router.delete(`${LOADOUT}/suggestions/${suggestion.id}`, visit), {
+    run((visit) => router.delete(`${TOOLBOX}/suggestions/${suggestion.id}`, visit), {
       onSaved: () => {
         setAnnouncement(`Removed the suggestion of ${suggestion.tool.name}`)
         if (suggestion.target_rank) focusSlot(suggestion.target_rank)

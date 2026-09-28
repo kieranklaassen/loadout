@@ -19,7 +19,7 @@ export type PersonData = {
   person: { handle: string; name: string; avatar_url: string | null }
   ranked_count: number
   kinds: PersonKind[]
-  new_in_loadout: Launch[]
+  new_in_toolbox: Launch[]
 }
 
 // The first pick of a kind that carries a team note is taller in both columns, so the tool and model lines stay level.
@@ -118,7 +118,7 @@ export function PersonTable({ data, show }: { data: PersonData; show: Show }) {
   )
 }
 
-/** Where a launched model sits in the person's loadout: "2nd pick for Coding, in Claude Code". */
+/** Where a launched model sits in the person's toolbox: "2nd pick for Coding, in Claude Code". */
 function placement(data: PersonData, launch: Launch) {
   for (const kind of data.kinds) {
     const pick = kind.picks.find((candidate) => candidate.model?.slug === launch.model.slug)
@@ -128,14 +128,14 @@ function placement(data: PersonData, launch: Launch) {
 }
 
 /** The launched models this person has picked. Rendered only when there are some. */
-export function NewInLoadout({ data }: { data: PersonData }) {
-  if (data.new_in_loadout.length === 0) return null
+export function NewInToolbox({ data }: { data: PersonData }) {
+  if (data.new_in_toolbox.length === 0) return null
 
   return (
     <div className="panel w-full max-w-[520px] px-7 py-6">
-      <SectionLabel as="p">New in {data.person.name}'s loadout</SectionLabel>
+      <SectionLabel as="p">New in {data.person.name}'s toolbox</SectionLabel>
       <ul className="divide-y divide-line">
-        {data.new_in_loadout.map((launch) => (
+        {data.new_in_toolbox.map((launch) => (
           <li key={launch.model.slug} className="py-4 first:pt-3.5 last:pb-0">
             <div className="flex items-center gap-3.5">
               <Mark item={launch.model} size="lg" />

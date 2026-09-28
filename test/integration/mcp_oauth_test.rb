@@ -9,17 +9,17 @@ class McpOauthTest < ActionDispatch::IntegrationTest
   test "the full PKCE dance ends in MCP initialize, tools/list, and a suggest_picks that names the client by id (F2)" do
     client_id, tokens = connect_agent(user: @user, client_name: "Claude Code")
 
-    assert_equal [ "Bearer", 3600, "loadout" ], tokens.values_at("token_type", "expires_in", "scope")
+    assert_equal [ "Bearer", 3600, "toolbox" ], tokens.values_at("token_type", "expires_in", "scope")
     assert tokens["refresh_token"].present?
     assert_equal "no-store", response.headers["Cache-Control"]
 
     initialize = mcp_request("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "claude-code", version: "1" } }, token: tokens["access_token"])
     assert_response :success
-    assert_equal "loadout", initialize.dig("result", "serverInfo", "name")
+    assert_equal "toolbox", initialize.dig("result", "serverInfo", "name")
     assert_match(/Ask the member before you guess/, initialize.dig("result", "instructions"))
 
     names = mcp_request("tools/list", token: tokens["access_token"]).dig("result", "tools").map { |tool| tool["name"] }
-    assert_equal %w[list_categories search_catalog get_my_loadout get_team_rankings get_recent_changes suggest_picks], names
+    assert_equal %w[list_categories search_catalog get_my_toolbox get_team_rankings get_recent_changes suggest_picks], names
 
     entries_before = @user.entries.count
     result = mcp_request("tools/call", { name: "suggest_picks", arguments: { operations: [ { op: "suggest", category: "video", tool: "runway", rank: 1 } ] } }, token: tokens["access_token"])["result"]
@@ -39,7 +39,7 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     refused = mcp_request("tools/call", { name: "suggest_picks", arguments: { operations: [ { op: "confirm", suggestion_id: 1 } ] } }, token: tokens["access_token"])["result"]
     assert_equal true, refused["isError"]
 
-    mine = JSON.parse(mcp_request("tools/call", { name: "get_my_loadout", arguments: {} }, token: tokens["access_token"]).dig("result", "content", 0, "text"))
+    mine = JSON.parse(mcp_request("tools/call", { name: "get_my_toolbox", arguments: {} }, token: tokens["access_token"]).dig("result", "content", 0, "text"))
     assert_equal [ "cy", "only_me" ], mine.values_at("handle", "visibility")
 
     team = JSON.parse(mcp_request("tools/call", { name: "get_team_rankings", arguments: {} }, token: tokens["access_token"]).dig("result", "content", 0, "text"))

@@ -3,7 +3,7 @@
 class GetRecentChangesTool < ApplicationTool
   tool_name "get_recent_changes"
   description <<~TEXT.squish
-    Returns the signed-in member's most recent Loadout changes, newest first, as plain sentences
+    Returns the signed-in member's most recent Toolbox changes, newest first, as plain sentences
     ("Set Cursor as first pick for coding", "Confirmed Runway as second pick for video") with the
     date, the action (set, moved, removed, confirmed, suggested or dismissed) and where the
     change came from (`web`, `mcp` with the agent's `client_name`, or `webmcp`). Suggestions
@@ -21,7 +21,7 @@ class GetRecentChangesTool < ApplicationTool
   annotations(read_only_hint: true, destructive_hint: false, idempotent_hint: true, open_world_hint: false)
 
   def call
-    changes = Loadouts::Presenter.new(user).recent_changes(limit: arguments.fetch(:limit, 12))
+    changes = Toolbox::Presenter.new(user).recent_changes(limit: arguments.fetch(:limit, 12))
     { changes: changes.map { |change| change_prop(change) } }
   end
 

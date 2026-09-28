@@ -59,7 +59,7 @@ DEMO_MEMBERS.each do |member|
       { op: "set_pick", category:, rank: index + 1, tool:, model:, context:, effort: }
     end
   end
-  Loadouts::Update.call(user:, operations:, source: "web")
+  Toolbox::Update.call(user:, operations:, source: "web")
 end
 
 DEMO_LAUNCHES.each do |slug, days_ago|
@@ -71,8 +71,8 @@ end
 kieran = User.find_by!(email_address: "kieran@every.to")
 unless kieran.pick_suggestions.exists?
   claude = OauthClient.find_or_create_by!(client_name: "Claude") { |client| client.redirect_uris = [ "http://127.0.0.1:33418/callback" ] }
-  Loadouts::Update.call(user: kieran, source: "webmcp", operations: [ { op: "suggest", category: "research", tool: "perplexity", rank: 1 } ])
-  Loadouts::Update.call(
+  Toolbox::Update.call(user: kieran, source: "webmcp", operations: [ { op: "suggest", category: "research", tool: "perplexity", rank: 1 } ])
+  Toolbox::Update.call(
     user: kieran, source: "mcp", client_name: claude.client_name, oauth_client_id: claude.id,
     operations: [ { op: "suggest", category: "coding", tool: "cursor", model: "composer-2-5", context: "200k", effort: "high" } ]
   )

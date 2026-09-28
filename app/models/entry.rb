@@ -1,6 +1,6 @@
-# One confirmed pick in a member's loadout: in this kind of work, at this rank
+# One confirmed pick in a member's toolbox: in this kind of work, at this rank
 # (1 to 3), I use this tool, optionally with a model, a context size and an effort.
-# Written only through Loadouts::Update; an agent's proposal is a PickSuggestion
+# Written only through Toolbox::Update; an agent's proposal is a PickSuggestion
 # until the member confirms it, so every reader of entries sees confirmed picks only.
 class Entry < ApplicationRecord
   MAX_RANK = 3

@@ -23,7 +23,7 @@ with SSR wired but off by default.
 
 ## Design system in this app: Every dark
 
-Loadout is dark and Every-branded. The tokens live in `app/frontend/entrypoints/application.css`
+Toolbox is dark and Every-branded. The tokens live in `app/frontend/entrypoints/application.css`
 (`@theme`), and the design of record is `docs/design/every-loadout/` (`DESIGN-BRIEF.md` and the
 page mocks, which are layout truth only: their names, counts and dates are placeholders). Tailwind
 scans only `app/frontend`, so utility classes never go in ERB.

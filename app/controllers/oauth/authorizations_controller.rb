@@ -43,10 +43,10 @@ class Oauth::AuthorizationsController < InertiaController
   private
     def load_client
       @client = OauthClient.find_by(client_id: string_param(:client_id)) if string_param(:client_id)
-      return render_invalid("This app isn't registered with Loadout. Ask it to connect again.") unless @client
+      return render_invalid("This app isn't registered with Toolbox. Ask it to connect again.") unless @client
 
       @redirect_uri = string_param(:redirect_uri)
-      render_invalid("This app asked to send you somewhere it never registered, so Loadout stopped here.") unless @client.redirect_uri_registered?(@redirect_uri)
+      render_invalid("This app asked to send you somewhere it never registered, so Toolbox stopped here.") unless @client.redirect_uri_registered?(@redirect_uri)
     end
 
     def validate_request

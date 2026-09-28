@@ -202,7 +202,7 @@ class ProfileCard
 
     <<~SVG
       <g transform="translate(#{PAD_X} #{logo_top.round(2)}) scale(#{scale.round(5)})" fill="#{PAPER}">#{Artwork::LOGO}</g>
-      #{text("Loadout", x: x.round(2), y: baseline(top + LOCKUP_HEIGHT / 2, LOCKUP_SIZE, SERIF_MID), family: SERIF, size: LOCKUP_SIZE, fill: SKY, style: "italic", spacing: -0.02 * LOCKUP_SIZE)}
+      #{text("Toolbox", x: x.round(2), y: baseline(top + LOCKUP_HEIGHT / 2, LOCKUP_SIZE, SERIF_MID), family: SERIF, size: LOCKUP_SIZE, fill: SKY, style: "italic", spacing: -0.02 * LOCKUP_SIZE)}
     SVG
   end
 

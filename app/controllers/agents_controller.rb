@@ -3,7 +3,7 @@
 class AgentsController < InertiaController
   include OauthServer
 
-  SUGGESTED_PROMPT = "Suggest picks for my Loadout from what you know about how I work. Ask me before you guess, and I'll confirm them on the site.".freeze
+  SUGGESTED_PROMPT = "Suggest picks for my Toolbox from what you know about how I work. Ask me before you guess, and I'll confirm them on the site.".freeze
 
   def index
     render inertia: "agents/index", props: {
@@ -46,6 +46,6 @@ class AgentsController < InertiaController
 
     def cursor_install_url
       config = Base64.strict_encode64({ url: mcp_resource_url }.to_json)
-      "cursor://anysphere.cursor-deeplink/mcp/install?#{URI.encode_www_form(name: "loadout", config:)}"
+      "cursor://anysphere.cursor-deeplink/mcp/install?#{URI.encode_www_form(name: "toolbox", config:)}"
     end
 end

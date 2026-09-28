@@ -27,19 +27,19 @@ class OnboardingController < InertiaController
 
     visibility = params[:visibility].presence || user.visibility
     if user.update(handle: availability[:handle], visibility:, onboarded_at: user.onboarded_at || Time.current)
-      redirect_to edit_loadout_path, status: :see_other
+      redirect_to edit_toolbox_path, status: :see_other
     else
       field = user.errors.attribute_names.first
       onboarding_error(field, user.errors.full_messages_for(field).first)
     end
   rescue ActiveRecord::RecordNotUnique
-    onboarding_error(:handle, "#{LoadoutHost.host}/#{availability[:handle]} was just taken. Try another.")
+    onboarding_error(:handle, "#{ToolboxHost.host}/#{availability[:handle]} was just taken. Try another.")
   end
 
   private
 
   def redirect_onboarded
-    redirect_to edit_loadout_path, status: :see_other if Current.user.onboarded?
+    redirect_to edit_toolbox_path, status: :see_other if Current.user.onboarded?
   end
 
   def onboarding_error(field, message)

@@ -87,6 +87,6 @@ Rails.application.configure do
     config.hosts = [ URI.parse(ENV["PUBLIC_BASE_URL"]).host ]
     config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   elsif ENV["SECRET_KEY_BASE_DUMMY"].blank?
-    raise "PUBLIC_BASE_URL is required in production, for example https://loadout.every.to."
+    raise "PUBLIC_BASE_URL is required in production, for example https://toolbox.every.to."
   end
 end

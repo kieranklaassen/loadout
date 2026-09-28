@@ -18,11 +18,11 @@ export const profileProps = (overrides: Partial<ProfileProps> = {}): ProfileProp
     { category: writingKind, picks: [rankedPick({ rank: 1, tool: claudeMark, model: null })], team_uses: null },
     { category: musicKind, picks: [], team_uses: null },
   ],
-  new_in_loadout: [],
+  new_in_toolbox: [],
   bio: 'Claude Code for everything that ships.',
   viewer_can_compare: false,
   you: {},
-  copy_url: 'https://loadout.every.to/dan',
+  copy_url: 'https://toolbox.every.to/dan',
   ...overrides,
 })
 

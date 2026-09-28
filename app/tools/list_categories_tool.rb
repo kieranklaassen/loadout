@@ -3,7 +3,7 @@
 class ListCategoriesTool < ApplicationTool
   tool_name "list_categories"
   description <<~TEXT.squish
-    Lists the kinds of work a Loadout is organized by, with each one's slug, name, one-line
+    Lists the kinds of work a Toolbox is organized by, with each one's slug, name, one-line
     blurb, and how many confirmed picks (0 to 3) the member already has there. Use the slugs as
     `category` in search_catalog, suggest_picks and get_team_rankings. Useful for walking the
     member through the kinds they have not filled in yet; ask them what they use rather than

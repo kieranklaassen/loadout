@@ -94,7 +94,7 @@ export default function KindPage({ filters, notice, category, ranked, tools, mod
 
   return (
     <AppShell>
-      <Head title={`${category.name} on Loadout`} />
+      <Head title={`${category.name} on Toolbox`} />
 
       <Link href={homeHref({ show })} className="text-link text-sm text-fg-muted">
         <span aria-hidden="true">←</span> The AI tools Every uses

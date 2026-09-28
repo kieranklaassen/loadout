@@ -16,7 +16,7 @@ vi.mock('@inertiajs/react', () => ({
   ),
   router,
   usePage: () => ({
-    props: { flash: {}, public_host: 'loadout.example.test', current_user: { name: 'Cy Every', avatar_url: null, handle: 'cy' } },
+    props: { flash: {}, public_host: 'toolbox.example.test', current_user: { name: 'Cy Every', avatar_url: null, handle: 'cy' } },
     url: '/settings',
   }),
 }))
@@ -50,12 +50,12 @@ describe('Settings', () => {
     expect(name).toHaveAttribute('readonly')
     expect(screen.getByText('Shown on your page. Change it in your Every account.')).toBeInTheDocument()
     expect(linkField()).toHaveValue('cy')
-    expect(screen.getByText('loadout.example.test/', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByText('toolbox.example.test/', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByText('Changing it breaks old links to your page.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'One line about how you work' })).toHaveValue('Video tools.')
     expect(screen.getByRole('radio', { name: /only me/i })).toBeChecked()
     expect(screen.getByText(VISIBILITY_CONSEQUENCE.only_me)).toBeInTheDocument()
-    expect(document.body.textContent).not.toContain('loadout.every.to')
+    expect(document.body.textContent).not.toContain('toolbox.every.to')
   })
 
   it('keeps Save off until something changes, then sends handle, bio and level in one PATCH', async () => {
@@ -115,7 +115,7 @@ describe('Settings', () => {
     vi.useFakeTimers()
     const { rerender } = render(<SettingsShow account={account} agents={[]} />)
 
-    expect(screen.getByText('loadout.example.test/cy is yours.')).toBeInTheDocument()
+    expect(screen.getByText('toolbox.example.test/cy is yours.')).toBeInTheDocument()
     fireEvent.change(linkField(), { target: { value: 'Cyrus' } })
     expect(screen.getByText('Checking…')).toBeInTheDocument()
     expect(save()).toBeDisabled()
@@ -126,11 +126,11 @@ describe('Settings', () => {
       expect.objectContaining({ only: ['availability'], preserveUrl: true }),
     )
 
-    rerender(<SettingsShow account={account} agents={[]} availability={{ handle: 'cyrus', available: false, message: 'loadout.example.test/cyrus is taken.' }} />)
-    expect(screen.getByText('loadout.example.test/cyrus is taken.')).toBeInTheDocument()
+    rerender(<SettingsShow account={account} agents={[]} availability={{ handle: 'cyrus', available: false, message: 'toolbox.example.test/cyrus is taken.' }} />)
+    expect(screen.getByText('toolbox.example.test/cyrus is taken.')).toBeInTheDocument()
     expect(save()).toBeDisabled()
 
-    rerender(<SettingsShow account={account} agents={[]} availability={{ handle: 'cyrus', available: true, message: 'loadout.example.test/cyrus is yours.' }} />)
+    rerender(<SettingsShow account={account} agents={[]} availability={{ handle: 'cyrus', available: true, message: 'toolbox.example.test/cyrus is yours.' }} />)
     expect(save()).toBeEnabled()
     fireEvent.click(save())
     expect(router.patch).toHaveBeenCalledWith('/settings', expect.objectContaining({ handle: 'cyrus' }), expect.any(Object))

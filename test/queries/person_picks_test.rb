@@ -15,7 +15,7 @@ class PersonPicksTest < ActiveSupport::TestCase
   test "a person's picks by kind in catalog order, with the kinds they have not ranked" do
     result = picks.for(@ana)
 
-    assert_equal %i[person ranked_count kinds new_in_loadout], result.keys
+    assert_equal %i[person ranked_count kinds new_in_toolbox], result.keys
     assert_equal({ handle: "ana", name: "Ana Every", avatar_url: "https://every.to/avatars/ana.png" }, result[:person])
     assert_equal 2, result[:ranked_count]
     assert_equal %w[coding knowledge-work video], result[:kinds].map { |kind| kind[:category][:slug] }
@@ -36,7 +36,7 @@ class PersonPicksTest < ActiveSupport::TestCase
     result = picks.for(@ana)
 
     assert_equal [ nil ], result[:kinds].pluck(:team_uses).uniq
-    assert_empty result[:new_in_loadout]
+    assert_empty result[:new_in_toolbox]
   end
 
   test "team uses: only where the first pick differs from what the team uses most" do
@@ -63,17 +63,17 @@ class PersonPicksTest < ActiveSupport::TestCase
     assert_nil kind(result, "coding")[:team_uses], "dee's first pick is the team's top tool and model"
   end
 
-  test "AE5: new in a loadout lists the launches the person uses, in the launch shape" do
+  test "AE5: new in a toolbox lists the launches the person uses, in the launch shape" do
     result = picks.for(@ana, team: true)
 
-    assert_equal 1, result[:new_in_loadout].size
-    launch = result[:new_in_loadout].first
+    assert_equal 1, result[:new_in_toolbox].size
+    launch = result[:new_in_toolbox].first
     assert_equal %i[model released_on vibe_check_url newest adoption mostly_in], launch.keys
     assert_equal ai_models(:opus_5_5).to_prop, launch[:model]
     assert_equal({ n: 2, of: 2 }, launch[:adoption])
 
     entries(:dee_claude_code).update!(ai_model: ai_models(:gpt_6))
-    assert_empty picks.for(@dee, team: true)[:new_in_loadout], "dee's models are GPT-6, which is not a launch"
+    assert_empty picks.for(@dee, team: true)[:new_in_toolbox], "dee's models are GPT-6, which is not a launch"
   end
 
   test "the person an audience selects can be passed straight in" do
@@ -96,13 +96,13 @@ class PersonPicksTest < ActiveSupport::TestCase
     assert_equal ai_models(:opus_5).slug, kind(result, "coding")[:picks].first[:model][:slug]
   end
 
-  test "someone who shares but has no picks gets an empty loadout, not nothing" do
+  test "someone who shares but has no picks gets an empty toolbox, not nothing" do
     add_person("quinn", visibility: "team", team: true)
     result = picks.for(User.find_by!(handle: "quinn"), team: true)
 
     assert_equal 0, result[:ranked_count]
     assert_equal [ [], [], [] ], result[:kinds].pluck(:picks)
-    assert_empty result[:new_in_loadout]
+    assert_empty result[:new_in_toolbox]
   end
 
   test "pending items show only to their owner, who sees them marked" do

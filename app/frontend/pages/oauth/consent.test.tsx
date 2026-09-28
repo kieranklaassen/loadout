@@ -13,7 +13,7 @@ vi.mock('@inertiajs/react', () => ({
   ),
   router: { delete: vi.fn() },
   usePage: () => ({
-    props: { flash: {}, public_host: 'loadout.example.test', current_user: { name: 'Cy Every', avatar_url: null, handle: 'cy' } },
+    props: { flash: {}, public_host: 'toolbox.example.test', current_user: { name: 'Cy Every', avatar_url: null, handle: 'cy' } },
     url: '/oauth/authorize',
   }),
 }))
@@ -21,7 +21,7 @@ vi.mock('@inertiajs/react', () => ({
 type Props = ComponentProps<typeof Consent>
 
 const CAPABILITIES = {
-  can: ['Read your loadout', 'Suggest picks, which stay hidden until you confirm'],
+  can: ['Read your toolbox', 'Suggest picks, which stay hidden until you confirm'],
   cannot: ['Confirm or dismiss suggestions', 'Change who can see your page'],
   webmcp_note: 'A browser agent that uses WebMCP works inside your signed-in session, so it can also click buttons on the page.',
 }
@@ -49,7 +49,7 @@ describe('Consent page', () => {
   it('names the client who is asking and who is signed in', () => {
     render(<Consent {...props()} />)
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Claude Code wants to fill in your loadout' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Claude Code wants to fill in your toolbox' })).toBeInTheDocument()
     expect(screen.getByText('Cy Every')).toBeInTheDocument()
   })
 
@@ -142,10 +142,10 @@ describe('Consent page', () => {
 
 describe('OAuth error page', () => {
   it('shows the message and no way back to the client', () => {
-    render(<OauthError message="This app asked to send you somewhere it never registered, so Loadout stopped here." />)
+    render(<OauthError message="This app asked to send you somewhere it never registered, so Toolbox stopped here." />)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('That connection didn’t check out')
-    expect(screen.getByText(/never registered, so Loadout stopped here/)).toBeInTheDocument()
+    expect(screen.getByText(/never registered, so Toolbox stopped here/)).toBeInTheDocument()
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'))
     expect(hrefs.length).toBeGreaterThan(0)
     for (const href of hrefs) expect(href).toMatch(/^\//)

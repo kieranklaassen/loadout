@@ -33,7 +33,7 @@ const member = (overrides: Partial<CurrentUser> = {}): CurrentUser => ({
 })
 
 const signIn = (user: CurrentUser | null) => {
-  page.props = { current_user: user, flash: {}, public_host: 'loadout.every.to' }
+  page.props = { current_user: user, flash: {}, public_host: 'toolbox.every.to' }
 }
 
 const writeText = vi.fn().mockResolvedValue(undefined)
@@ -50,9 +50,9 @@ describe('Profile page', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Dan Every' })).toBeInTheDocument()
     expect(screen.getByText('Claude Code for everything that ships.')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: "Dan's loadout" })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: "Dan's toolbox" })).toBeInTheDocument()
     expect(screen.getByText('2 of 3 ranked')).toBeInTheDocument()
-    expect(document.title).toBe("Dan Every's loadout")
+    expect(document.title).toBe("Dan Every's toolbox")
   })
 
   it('leaves out the bio when there is none', () => {
@@ -92,7 +92,7 @@ describe('Profile page', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy link' }))
     })
 
-    expect(writeText).toHaveBeenCalledWith('https://loadout.every.to/dan')
+    expect(writeText).toHaveBeenCalledWith('https://toolbox.every.to/dan')
     expect(screen.getByRole('button', { name: 'Link copied' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /share on x/i })).not.toBeInTheDocument()
   })
@@ -115,7 +115,7 @@ describe('Profile page without picks', () => {
     signIn(member({ handle: 'dan', name: 'Dan Every' }))
     render(<ProfileShow {...empty()} />)
 
-    expect(screen.getByRole('link', { name: 'Rank your first tools' })).toHaveAttribute('href', '/loadout/edit')
+    expect(screen.getByRole('link', { name: 'Rank your first tools' })).toHaveAttribute('href', '/toolbox/edit')
   })
 })
 

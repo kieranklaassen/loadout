@@ -27,7 +27,7 @@ class ApplicationTool < MCP::Tool
       client_name: server_context[:client_name], oauth_client_id: server_context[:oauth_client_id]
     )
     text_response(tool.call)
-  rescue Error, Loadouts::Update::Error => e
+  rescue Error, Toolbox::Update::Error => e
     error_response(e.message)
   end
 
@@ -55,7 +55,7 @@ class ApplicationTool < MCP::Tool
 
   private
     def run_operations!(operations)
-      Loadouts::Update.call(user:, operations:, source:, client_name:, oauth_client_id:)
+      Toolbox::Update.call(user:, operations:, source:, client_name:, oauth_client_id:)
     end
 
     # Text somebody else chose (a person's name, an agent's client name), as data: control
@@ -73,8 +73,8 @@ class ApplicationTool < MCP::Tool
     end
 
     # A link to a page of the app that stays relative to the host it is served from:
-    # link_to(:edit_loadout_path, kind: "coding") is "/loadout/edit?kind=coding".
+    # link_to(:edit_toolbox_path, kind: "coding") is "/toolbox/edit?kind=coding".
     def link_to(route, ...)
-      LoadoutHost.path_to(Rails.application.routes.url_helpers.public_send(route, ...))
+      ToolboxHost.path_to(Rails.application.routes.url_helpers.public_send(route, ...))
     end
 end

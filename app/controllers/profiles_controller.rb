@@ -48,7 +48,7 @@ class ProfilesController < InertiaController
   def page_meta_for(user, picks)
     name = picks[:person][:name]
     meta = {
-      title: "#{name}'s loadout",
+      title: "#{name}'s toolbox",
       description: description_for(name, picks[:kinds]),
       url: profile_url(user),
       type: "profile"
@@ -56,7 +56,7 @@ class ProfilesController < InertiaController
     return meta.merge(noindex: true) unless user.visible_to?(nil)
     return meta unless ProfileCard.new(user).picks?
 
-    meta.merge(image: "#{profile_url(user)}/og.png?v=#{user.loadout_updated_at.to_i}", image_alt: "#{name}'s loadout on Loadout")
+    meta.merge(image: "#{profile_url(user)}/og.png?v=#{user.loadout_updated_at.to_i}", image_alt: "#{name}'s toolbox on Toolbox")
   end
 
   # Their first pick in up to three kinds: "Cursor with Claude Opus 5.5 for coding and Claude for writing".

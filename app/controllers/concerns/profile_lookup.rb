@@ -16,6 +16,6 @@ module ProfileLookup
   end
 
   def public_base_url
-    LoadoutHost.base_url(request)
+    ToolboxHost.base_url(request)
   end
 end

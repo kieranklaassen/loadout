@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { personData } from '../../test/home_fixtures'
-import { NewInLoadout, PersonTable } from './person_view'
+import { NewInToolbox, PersonTable } from './person_view'
 
 vi.mock('@inertiajs/react', () => ({
   Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
@@ -62,19 +62,19 @@ describe('PersonTable', () => {
   })
 })
 
-describe('NewInLoadout', () => {
-  it('names the launched model, where it sits in the loadout and the Vibe Check', () => {
-    render(<NewInLoadout data={personData()} />)
+describe('NewInToolbox', () => {
+  it('names the launched model, where it sits in the toolbox and the Vibe Check', () => {
+    render(<NewInToolbox data={personData()} />)
 
-    expect(screen.getByText("New in Dan's loadout")).toBeInTheDocument()
+    expect(screen.getByText("New in Dan's toolbox")).toBeInTheDocument()
     expect(screen.getByText('Claude Opus 5.5')).toBeInTheDocument()
     expect(screen.getByText('1st pick for Coding, in Claude Code. Out Sep 22.')).toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'Vibe Check for Claude Opus 5.5' })
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
-  it('renders nothing when no launched model is in the loadout', () => {
-    const { container } = render(<NewInLoadout data={personData({ new_in_loadout: [] })} />)
+  it('renders nothing when no launched model is in the toolbox', () => {
+    const { container } = render(<NewInToolbox data={personData({ new_in_toolbox: [] })} />)
 
     expect(container).toBeEmptyDOMElement()
   })

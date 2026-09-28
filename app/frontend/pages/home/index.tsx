@@ -5,7 +5,7 @@ import Filters, { ViewToggle, type HomeFilters, type PersonOption } from '../../
 import Hero, { type HeroData } from '../../components/team/hero'
 import LaunchRow from '../../components/team/launch_row'
 import OverallTopTen, { type Overall } from '../../components/team/overall_top_ten'
-import { NewInLoadout, PersonTable, type PersonData } from '../../components/team/person_view'
+import { NewInToolbox, PersonTable, type PersonData } from '../../components/team/person_view'
 import { SearchField, SearchResults, useSearch, type SearchData } from '../../components/team/search_results'
 import WhatWeUseTable, { type WhatWeUseRow } from '../../components/team/what_we_use_table'
 import type { Launch, SharedProps } from '../../types'
@@ -72,7 +72,7 @@ export default function Home({
                 </Link>
               </>
             ) : (
-              'Loadout is where each of us ranks the tools and models we use for every kind of work. See what the team relies on, then add yours.'
+              'Toolbox is where each of us ranks the tools and models we use for every kind of work. See what the team relies on, then add yours.'
             )}
           </p>
           <div className="mt-7">
@@ -94,7 +94,7 @@ export default function Home({
             !subject && <p className={note}>You share with anyone with the link, so you are listed here and in search.</p>
           )}
         </div>
-        {person ? <NewInLoadout data={person} /> : hero && <div className="hidden w-full md:block lg:w-auto"><Hero hero={hero} /></div>}
+        {person ? <NewInToolbox data={person} /> : hero && <div className="hidden w-full md:block lg:w-auto"><Hero hero={hero} /></div>}
       </section>
 
       {!person && launches.length > 0 && (

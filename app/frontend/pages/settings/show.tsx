@@ -247,7 +247,7 @@ export default function SettingsShow({ account, agents, availability }: Props) {
             <Agents agents={agents} />
             <Section id="data-heading" title="Your data">
               <p className="mt-3 max-w-[460px] text-[15px] leading-normal text-fg-soft">
-                Every change to your loadout is kept with its date, so the team page can show what switched when. You can download all of it.
+                Every change to your toolbox is kept with its date, so the team page can show what switched when. You can download all of it.
               </p>
               <a href="/settings/history" download className={`${buttonClasses('secondary')} mt-4`}>
                 Download my history

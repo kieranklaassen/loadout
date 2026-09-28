@@ -35,7 +35,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     get "/ana"
 
     assert page_props[:kinds].all? { |kind| kind[:team_uses].nil? }
-    assert_empty page_props[:new_in_loadout]
+    assert_empty page_props[:new_in_toolbox]
     assert_empty page_props.keys & %i[recent_changes categories is_owner profile]
   end
 
@@ -44,7 +44,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     get "/ana"
     assert_equal "Writes code and essays.", page_props[:bio]
-    assert_not_includes all_keys(page_props.slice(:person, :kinds, :new_in_loadout, :you)), :bio
+    assert_not_includes all_keys(page_props.slice(:person, :kinds, :new_in_toolbox, :you)), :bio
 
     sign_in_as users(:every_dee)
     get root_path, params: { person: "ana" }
@@ -58,7 +58,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     get "/ana"
 
-    assert_no_private_fields(page_props.slice(:person, :kinds, :new_in_loadout, :you, :copy_url))
+    assert_no_private_fields(page_props.slice(:person, :kinds, :new_in_toolbox, :you, :copy_url))
   end
 
   test "a team profile opens for a team viewer, and a link profile for any signed-in member" do
@@ -269,8 +269,8 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
   test "link preview meta tags describe a link-visible profile and point at its card" do
     get "/ana"
 
-    assert_select "title", text: "Ana Every's loadout"
-    assert_select "meta[property='og:title'][content=?]", "Ana Every's loadout"
+    assert_select "title", text: "Ana Every's toolbox"
+    assert_select "meta[property='og:title'][content=?]", "Ana Every's toolbox"
     assert_select "meta[property='og:description'][content=?]",
       "Ana Every's top picks: Cursor with Claude Opus 5.5 for coding and Claude with Claude Opus 5.5 for knowledge work."
     assert_select "meta[property='og:image'][content=?]", "http://www.example.com/ana/og.png?v=#{users(:every_ana).loadout_updated_at.to_i}"
@@ -306,13 +306,13 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the link to copy and the card come from the configured public address" do
-    Rails.configuration.x.public_base_url = "https://loadout.example.test"
+    Rails.configuration.x.public_base_url = "https://toolbox.example.test"
 
     get "/ana"
 
-    assert_equal "https://loadout.example.test/ana", page_props[:copy_url]
-    assert_select "meta[property='og:url'][content=?]", "https://loadout.example.test/ana"
-    assert_select "meta[property='og:image'][content^='https://loadout.example.test/ana/og.png']"
+    assert_equal "https://toolbox.example.test/ana", page_props[:copy_url]
+    assert_select "meta[property='og:url'][content=?]", "https://toolbox.example.test/ana"
+    assert_select "meta[property='og:image'][content^='https://toolbox.example.test/ana/og.png']"
   ensure
     Rails.configuration.x.public_base_url = nil
   end

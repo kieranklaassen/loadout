@@ -9,7 +9,7 @@
 @plugin '@tailwindcss/forms';
 
 /*
- * Loadout is "Every dark" (docs/design/every-loadout/DESIGN-BRIEF.md): a near-black
+ * Toolbox is "Every dark" (docs/design/every-loadout/DESIGN-BRIEF.md): a near-black
  * page with a faint dot grid, #111111 cards, Newsreader serif headings, Hanken
  * Grotesk UI and Geist Mono captions. The design-rules test fails on any old
  * paper-and-ink class or token name.

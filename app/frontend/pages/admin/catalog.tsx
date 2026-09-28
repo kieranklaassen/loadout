@@ -218,7 +218,7 @@ function ItemRow({ item, targets }: { item: AdminCatalogItem; targets: MergeTarg
   const [open, setOpen] = useState(false)
 
   const remove = () => {
-    if (window.confirm(`Delete ${item.name}? This only works when nobody has it on their loadout.`)) router.delete(itemUrl(item), visit)
+    if (window.confirm(`Delete ${item.name}? This only works when nobody has it on their toolbox.`)) router.delete(itemUrl(item), visit)
   }
 
   return (

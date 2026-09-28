@@ -5,7 +5,7 @@ class SearchCatalogTool < ApplicationTool
 
   tool_name "search_catalog"
   description <<~TEXT.squish
-    Searches Loadout's catalog of approved AI tools (apps like Cursor, Claude Code, ChatGPT,
+    Searches Toolbox's catalog of approved AI tools (apps like Cursor, Claude Code, ChatGPT,
     Runway) and models (like Claude Opus 5.5 or GPT-6 Astra) by name, slug, or maker.
     Pass `category` (a slug from list_categories) to rank the items usually used for that
     kind of work first, or pass only `category` to browse its suggestions. Returns

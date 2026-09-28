@@ -28,7 +28,7 @@ class SettingsController < InertiaController
       settings_error(field, user.errors.full_messages_for(field).first)
     end
   rescue ActiveRecord::RecordNotUnique
-    settings_error(:handle, "#{LoadoutHost.host}/#{attributes[:handle]} was just taken. Try another.")
+    settings_error(:handle, "#{ToolboxHost.host}/#{attributes[:handle]} was just taken. Try another.")
   end
 
   def destroy
@@ -39,13 +39,13 @@ class SettingsController < InertiaController
     user.destroy!
     cookies.delete(:session_id)
     Current.session = nil
-    redirect_to root_path, status: :see_other, notice: "Your account and loadout are deleted."
+    redirect_to root_path, status: :see_other, notice: "Your account and toolbox are deleted."
   end
 
   private
 
   def saved_message(user)
-    user.saved_change_to_handle? ? "Your profile now lives at #{LoadoutHost.host}/#{user.handle}." : "Saved."
+    user.saved_change_to_handle? ? "Your profile now lives at #{ToolboxHost.host}/#{user.handle}." : "Saved."
   end
 
   def settings_error(field, message)

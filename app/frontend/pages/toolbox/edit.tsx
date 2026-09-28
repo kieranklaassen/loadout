@@ -15,7 +15,7 @@ type Props = {
   team_top: TeamTop
 }
 
-export default function LoadoutEdit({ kinds, catalog, enums, selected_kind, visibility, team_top }: Props) {
+export default function ToolboxEdit({ kinds, catalog, enums, selected_kind, visibility, team_top }: Props) {
   const kind = kinds.find((candidate) => candidate.category.slug === selected_kind) ?? kinds[0]!
 
   return (

@@ -16,7 +16,7 @@ vi.mock('@inertiajs/react', () => ({
   ),
   router,
   usePage: () => ({
-    props: { flash: {}, public_host: 'loadout.example.test', current_user: { name: 'Olive Jones', avatar_url: null, handle: null } },
+    props: { flash: {}, public_host: 'toolbox.example.test', current_user: { name: 'Olive Jones', avatar_url: null, handle: null } },
     url: '/welcome',
   }),
 }))
@@ -43,9 +43,9 @@ describe('Claim your link', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Claim your link' })).toBeInTheDocument()
     expect(linkField()).toHaveValue('olive-jones')
-    expect(screen.getByText('loadout.example.test/', { selector: 'span' })).toBeInTheDocument()
-    expect(screen.getByText('loadout.example.test/olive-jones is yours.')).toBeInTheDocument()
-    expect(document.body.textContent).not.toContain('loadout.every.to')
+    expect(screen.getByText('toolbox.example.test/', { selector: 'span' })).toBeInTheDocument()
+    expect(screen.getByText('toolbox.example.test/olive-jones is yours.')).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('toolbox.every.to')
   })
 
   it('shows the preview: name, link and two empty kinds, updating with the handle', () => {
@@ -53,13 +53,13 @@ describe('Claim your link', () => {
 
     const preview = screen.getByText('Preview').parentElement as HTMLElement
     expect(within(preview).getByText('Olive Jones')).toBeInTheDocument()
-    expect(within(preview).getByText('loadout.example.test/olive-jones')).toBeInTheDocument()
+    expect(within(preview).getByText('toolbox.example.test/olive-jones')).toBeInTheDocument()
     expect(within(preview).getByText('Coding')).toBeInTheDocument()
     expect(within(preview).getByText('Knowledge work')).toBeInTheDocument()
     expect(within(preview).getAllByText('Empty')).toHaveLength(2)
 
     fireEvent.change(linkField(), { target: { value: 'olive' } })
-    expect(within(preview).getByText('loadout.example.test/olive')).toBeInTheDocument()
+    expect(within(preview).getByText('toolbox.example.test/olive')).toBeInTheDocument()
   })
 
   it('offers the three levels, private by default, and says what the chosen one means', async () => {
@@ -123,21 +123,21 @@ describe('Claim your link', () => {
   })
 
   it('shows the answer for the current value: taken blocks saving, free allows it', () => {
-    const taken = { handle: 'map-person', available: false, message: 'loadout.example.test/map-person is taken.' }
+    const taken = { handle: 'map-person', available: false, message: 'toolbox.example.test/map-person is taken.' }
     const { rerender } = render(<OnboardingShow {...baseProps} availability={taken} />)
     fireEvent.change(linkField(), { target: { value: 'map-person' } })
 
-    expect(screen.getByText('loadout.example.test/map-person is taken.')).toBeInTheDocument()
+    expect(screen.getByText('toolbox.example.test/map-person is taken.')).toBeInTheDocument()
     expect(linkField()).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeDisabled()
 
-    rerender(<OnboardingShow {...baseProps} availability={{ ...taken, available: true, message: 'loadout.example.test/map-person is yours.' }} />)
-    expect(screen.getByText('loadout.example.test/map-person is yours.')).toBeInTheDocument()
+    rerender(<OnboardingShow {...baseProps} availability={{ ...taken, available: true, message: 'toolbox.example.test/map-person is yours.' }} />)
+    expect(screen.getByText('toolbox.example.test/map-person is yours.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeEnabled()
   })
 
   it('ignores an answer that belongs to an earlier value', () => {
-    render(<OnboardingShow {...baseProps} availability={{ handle: 'older', available: true, message: 'loadout.example.test/older is yours.' }} />)
+    render(<OnboardingShow {...baseProps} availability={{ handle: 'older', available: true, message: 'toolbox.example.test/older is yours.' }} />)
 
     fireEvent.change(linkField(), { target: { value: 'newer' } })
 
@@ -149,9 +149,9 @@ describe('Claim your link', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Save and rank my first tools' }))
     const options = router.patch.mock.calls[0][2]
-    act(() => options.onError({ handle: 'loadout.example.test/olive-jones was just taken. Try another.' }))
+    act(() => options.onError({ handle: 'toolbox.example.test/olive-jones was just taken. Try another.' }))
 
-    expect(screen.getByText('loadout.example.test/olive-jones was just taken. Try another.')).toBeInTheDocument()
+    expect(screen.getByText('toolbox.example.test/olive-jones was just taken. Try another.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save and rank my first tools' })).toBeDisabled()
 
     fireEvent.change(linkField(), { target: { value: 'olive-j' } })

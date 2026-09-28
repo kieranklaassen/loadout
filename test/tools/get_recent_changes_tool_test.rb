@@ -11,13 +11,13 @@ class GetRecentChangesToolTest < ActiveSupport::TestCase
 
   test "tells the member's whole story newest first: suggested, confirmed and dismissed included" do
     user = users(:every_cy)
-    suggest = ->(tool) { Loadouts::Update.call(user:, operations: [ { op: "suggest", category: "video", tool: } ], source: "mcp", client_name: "Claude Code", oauth_client_id: 9).suggestions.sole }
+    suggest = ->(tool) { Toolbox::Update.call(user:, operations: [ { op: "suggest", category: "video", tool: } ], source: "mcp", client_name: "Claude Code", oauth_client_id: 9).suggestions.sole }
     confirmed = suggest.("runway")
     travel 1.minute
-    Loadouts::Update.call(user:, operations: [ { op: "confirm", suggestion_id: confirmed.id } ], source: "web")
+    Toolbox::Update.call(user:, operations: [ { op: "confirm", suggestion_id: confirmed.id } ], source: "web")
     travel 1.minute
     dismissed = suggest.("Hedra")
-    Loadouts::Update.call(user:, operations: [ { op: "dismiss", suggestion_id: dismissed.id } ], source: "web")
+    Toolbox::Update.call(user:, operations: [ { op: "dismiss", suggestion_id: dismissed.id } ], source: "web")
 
     story = changes(user).first(4).map { |change| change.values_at("sentence", "action", "source", "client_name") }
 

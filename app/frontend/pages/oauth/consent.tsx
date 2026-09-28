@@ -31,7 +31,7 @@ export default function Consent({ client, redirect_host, authorization, authenti
         </div>
 
         <h1 id="consent-heading" className="font-serif leading-[1.02] tracking-[-0.02em] mt-6 text-center text-[32px] text-balance [overflow-wrap:anywhere] md:text-[40px]">
-          {client.name} wants to fill in your loadout
+          {client.name} wants to fill in your toolbox
         </h1>
         {current_user && (
           <p className="mt-2.5 text-center text-[15px] text-fg-muted">

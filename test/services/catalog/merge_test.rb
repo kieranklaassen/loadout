@@ -10,7 +10,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
   end
 
   def pick(user, rank, tool, category: "coding", **fields)
-    Loadouts::Update.call(user:, source: "web", operations: [ { op: "set_pick", category:, rank:, tool: tool.slug, **fields } ])
+    Toolbox::Update.call(user:, source: "web", operations: [ { op: "set_pick", category:, rank:, tool: tool.slug, **fields } ])
   end
 
   def coding_tools(user)
@@ -31,7 +31,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
 
   # The unique indexes already forbid a repeated tool or rank; this adds what only
   # the merge can get wrong: a gap left where a pick was removed.
-  def assert_loadouts_valid
+  def assert_toolboxs_valid
     Entry.all.group_by { |entry| [ entry.user_id, entry.category_id ] }.each do |(user_id, category_id), entries|
       expected = (1..entries.size).to_a
       assert_equal expected, entries.map(&:rank).sort, "ranks should stay contiguous (user #{user_id}, category #{category_id})"
@@ -52,7 +52,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
     assert_equal [ "removed", "system", nil, 3, @target.id ], removed.attributes.values_at("action", "source", "client_name", "rank", "tool_id")
     assert_not Tool.exists?(@source.id)
     assert_replays_to_entries @member
-    assert_loadouts_valid
+    assert_toolboxs_valid
   end
 
   test "removing the lower-ranked duplicate moves the picks below it up, in one batch" do
@@ -69,7 +69,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
     assert_equal 1, rows.map { |row| row.details["batch"] }.uniq.size
     assert_equal [ @target.id, tools(:cursor).id ], rows.map(&:tool_id)
     assert_replays_to_entries @member
-    assert_loadouts_valid
+    assert_toolboxs_valid
   end
 
   test "when the source is the higher pick it survives as the target, with its own model, context and effort" do
@@ -84,7 +84,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
     assert_equal [ [ 1, @target ], [ 2, tools(:cursor) ] ], coding_tools(@member)
     assert_equal [ [ "removed", 3, @target.id ] ], merge_rows(@member).map { |row| [ row.action, row.rank, row.tool_id ] }
     assert_replays_to_entries @member
-    assert_loadouts_valid
+    assert_toolboxs_valid
   end
 
   test "a member with only the source keeps the rank, and the history now names the target" do
@@ -129,7 +129,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
     assert_equal [ [ 1, tools(:cursor) ], [ 2, @target ] ], coding_tools(ana)
     assert_equal [ 1, 0, 1 ], [ merge_rows(@member).count, merge_rows(@other).count, merge_rows(ana).count ]
     [ @member, @other, ana ].each { |user| assert_replays_to_entries user }
-    assert_loadouts_valid
+    assert_toolboxs_valid
   end
 
   test "suggestions move to the target, and an open one that repeats the surviving pick is superseded" do
@@ -170,7 +170,7 @@ class Catalog::MergeTest < ActiveSupport::TestCase
     assert_equal "superseded", repeats.reload.status
     assert_equal [ "open", kept.id, kept.id ], fields(differs, :status, :ai_model_id, :replaces_ai_model_id)
     assert_replays_to_entries @member
-    assert_loadouts_valid
+    assert_toolboxs_valid
   end
 
   test "an open suggestion whose named fields all match the pick after a merge is superseded, whatever it leaves blank" do

@@ -19,7 +19,7 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
     result[:content].first[:text]
   end
 
-  test "over MCP it stores a suggestion that carries the OAuth client id and leaves the loadout alone (AE3)" do
+  test "over MCP it stores a suggestion that carries the OAuth client id and leaves the toolbox alone (AE3)" do
     body = nil
     assert_no_difference -> { Entry.count } do
       assert_difference -> { @user.pick_suggestions.open.count } => 1 do
@@ -48,8 +48,8 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
 
     assert_match(/nothing is on the member's page yet/i, text)
     assert_match(/until the member confirms it on the site/, text)
-    assert_includes text, "/loadout/edit?kind=video"
-    assert_includes text, "/loadout/edit?kind=coding"
+    assert_includes text, "/toolbox/edit?kind=video"
+    assert_includes text, "/toolbox/edit?kind=coding"
   end
 
   test "colleagues see nothing of a suggestion" do
@@ -114,13 +114,13 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
     body = payload(suggest([ { op: "suggest", category: "coding", tool: "claude-code", context: "1m" } ]))
 
     assert_equal [ "claude-code", nil, "1m", nil ], body["suggestions"].sole.values_at("tool", "model", "context", "effort")
-    mine = JSON.parse(ToolRegistry.call("get_my_loadout", arguments: {}, user: @user, source: "mcp")[:content].first[:text])
+    mine = JSON.parse(ToolRegistry.call("get_my_toolbox", arguments: {}, user: @user, source: "mcp")[:content].first[:text])
     assert_equal [ nil, "1m", nil ], mine["kinds"].find { |kind| kind["slug"] == "coding" }["suggestions"].sole.values_at("model", "context", "effort")
   end
 
   test "an exact suggestion the member dismissed is refused with a readable reason" do
     id = payload(suggest([ { op: "suggest", category: "video", tool: "runway" } ]))["suggestions"].sole["id"]
-    Loadouts::Update.call(user: @user, operations: [ { op: "dismiss", suggestion_id: id } ], source: "web")
+    Toolbox::Update.call(user: @user, operations: [ { op: "dismiss", suggestion_id: id } ], source: "web")
 
     assert_match(/dismissed on .* do not suggest it again/i, error_text(suggest([ { op: "suggest", category: "video", tool: "runway" } ])))
   end

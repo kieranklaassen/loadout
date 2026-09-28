@@ -45,10 +45,10 @@ Rails.application.routes.draw do
   get "welcome", to: "onboarding#show", as: :welcome
   patch "welcome", to: "onboarding#update"
   get "handles/check", to: "handles#check", as: :check_handle
-  resource :loadout, only: %i[edit update]
-  post "loadout/suggestions/:id/confirm" => "loadouts#confirm", as: :confirm_loadout_suggestion, constraints: { id: /\d+/ }
-  delete "loadout/suggestions/:id" => "loadouts#dismiss", as: :loadout_suggestion, constraints: { id: /\d+/ }
-  post "loadout/catalog_items" => "loadouts#add_item", as: :loadout_catalog_items
+  resource :toolbox, controller: "toolbox", only: %i[edit update]
+  post "toolbox/suggestions/:id/confirm" => "toolbox#confirm", as: :confirm_toolbox_suggestion, constraints: { id: /\d+/ }
+  delete "toolbox/suggestions/:id" => "toolbox#dismiss", as: :toolbox_suggestion, constraints: { id: /\d+/ }
+  post "toolbox/catalog_items" => "toolbox#add_item", as: :toolbox_catalog_items
   resource :settings, only: %i[show update destroy] do
     resource :history, only: :show, module: :settings
   end

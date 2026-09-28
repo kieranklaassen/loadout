@@ -38,7 +38,7 @@ module Admin
       @item.destroy!
       redirect_back_or_to admin_catalog_items_path, notice: "#{@item.name} deleted."
     rescue ActiveRecord::DeleteRestrictionError
-      redirect_back_or_to admin_catalog_items_path, alert: "#{@item.name} is on someone's loadout. Hide or merge it instead."
+      redirect_back_or_to admin_catalog_items_path, alert: "#{@item.name} is on someone's toolbox. Hide or merge it instead."
     end
 
     def merge

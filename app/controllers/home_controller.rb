@@ -17,7 +17,7 @@ class HomeController < InertiaController
   # Every prop but the constant is a lambda, so a search-only partial reload (the page
   # asks for `search` alone on each keystroke) skips the audience, rankings and launch reads.
   def index
-    @page_meta = { url: "#{LoadoutHost.base_url(request)}/" }
+    @page_meta = { url: "#{ToolboxHost.base_url(request)}/" }
 
     render inertia: "home/index", props: {
       filters: -> { audience.filters.merge(overall: params[:overall] == "1", q: query) },
@@ -31,7 +31,7 @@ class HomeController < InertiaController
       overall: -> { rankings.overall },
       person: -> { person },
       cta: -> { call_to_action },
-      all_vibe_checks_url: LoadoutHost::ALL_VIBE_CHECKS_URL,
+      all_vibe_checks_url: ToolboxHost::ALL_VIBE_CHECKS_URL,
       search: InertiaRails.optional { Search.new(viewer: Current.user, show: params[:show]).call(params[:q]) }
     }
   end
@@ -59,9 +59,9 @@ class HomeController < InertiaController
   # Visitors are asked to join, members with nothing ranked to start, and members with picks get none.
   def call_to_action
     if Current.user.nil?
-      { label: "Join Every", href: LoadoutHost::JOIN_EVERY_URL }
+      { label: "Join Every", href: ToolboxHost::JOIN_EVERY_URL }
     elsif Current.user.entries.none?
-      { label: "Rank your first tools", href: edit_loadout_path }
+      { label: "Rank your first tools", href: edit_toolbox_path }
     end
   end
 end

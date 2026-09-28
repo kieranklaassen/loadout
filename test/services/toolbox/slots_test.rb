@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Loadouts::SlotsTest < ActiveSupport::TestCase
+class Toolbox::SlotsTest < ActiveSupport::TestCase
   setup do
     @user = users(:one)
     @coding = categories(:coding)
@@ -8,7 +8,7 @@ class Loadouts::SlotsTest < ActiveSupport::TestCase
   end
 
   def slots(source: "web", client_name: nil)
-    Loadouts::Slots.new(user: @user, category: @coding, source:, client_name:)
+    Toolbox::Slots.new(user: @user, category: @coding, source:, client_name:)
   end
 
   def place(rank, tool, **attributes)
@@ -61,7 +61,7 @@ class Loadouts::SlotsTest < ActiveSupport::TestCase
   test "a tool already ranked elsewhere in the kind is a readable error" do
     place(1, tools(:cursor))
 
-    error = assert_raises(Loadouts::Update::Error) { place(2, tools(:cursor)) }
+    error = assert_raises(Toolbox::Update::Error) { place(2, tools(:cursor)) }
 
     assert_equal "Cursor is already your 1st pick for coding.", error.message
     assert_equal [ [ 1, "cursor" ] ], ranked_tools
@@ -70,7 +70,7 @@ class Loadouts::SlotsTest < ActiveSupport::TestCase
   test "a fourth pick is rejected because ranks stop at three" do
     fill_three
 
-    error = assert_raises(Loadouts::Update::Error) { place(4, tools(:runway)) }
+    error = assert_raises(Toolbox::Update::Error) { place(4, tools(:runway)) }
 
     assert_match(/up to 3 picks/, error.message)
     assert_equal 3, @user.entries.count
@@ -124,7 +124,7 @@ class Loadouts::SlotsTest < ActiveSupport::TestCase
   test "removing an empty slot is a readable error" do
     place(1, tools(:cursor))
 
-    error = assert_raises(Loadouts::Update::Error) { slots.remove(rank: 2) }
+    error = assert_raises(Toolbox::Update::Error) { slots.remove(rank: 2) }
 
     assert_equal "Nothing is ranked 2nd for coding.", error.message
   end
@@ -175,8 +175,8 @@ class Loadouts::SlotsTest < ActiveSupport::TestCase
     place(1, tools(:cursor))
     place(2, tools(:claude_code))
 
-    up = assert_raises(Loadouts::Update::Error) { slots.move(rank: 1, direction: "up") }
-    down = assert_raises(Loadouts::Update::Error) { slots.move(rank: 2, direction: "down") }
+    up = assert_raises(Toolbox::Update::Error) { slots.move(rank: 1, direction: "up") }
+    down = assert_raises(Toolbox::Update::Error) { slots.move(rank: 2, direction: "down") }
 
     assert_equal "Cursor is already your first pick for coding.", up.message
     assert_equal "Claude Code is already your last pick for coding.", down.message

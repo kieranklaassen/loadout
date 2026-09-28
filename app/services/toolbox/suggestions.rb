@@ -3,7 +3,7 @@
 # What an agent may propose and what only the member decides (R10, KTD10, KTD18).
 # An agent's pick is a PickSuggestion row, never an entry; the member confirms or
 # dismisses it on the web, and a row is never edited once listed, so "suggest"
-# always inserts a new one. Loadouts::Update calls this for the suggest, withdraw,
+# always inserts a new one. Toolbox::Update calls this for the suggest, withdraw,
 # confirm and dismiss operations.
 #
 # Rules: at most MAX_OPEN_PER_KIND open per kind (the oldest gives way); a newer
@@ -13,7 +13,7 @@
 # unconfirmed one lapses after PickSuggestion::TTL. Placement is decided at confirm:
 # the hint if that slot is empty, else the first empty one, else the member says which
 # pick to replace. Superseded, withdrawn and expired suggestions write no change row.
-module Loadouts
+module Toolbox
   class Suggestions
     MAX_OPEN_PER_KIND = 3
     DISMISSAL_MEMORY = 30.days

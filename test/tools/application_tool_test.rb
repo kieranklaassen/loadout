@@ -67,7 +67,7 @@ class ApplicationToolTest < ActiveSupport::TestCase
     assert_equal [ "Cursor", 12 ], [ suggestion.client_name, suggestion.oauth_client_id ]
   end
 
-  test "a Loadouts::Update::Error becomes an isError result" do
+  test "a Toolbox::Update::Error becomes an isError result" do
     response = WriteTool.call(op: "nope", server_context: { user: users(:one), source: "mcp" })
     assert response.error?
     assert_match(/Unknown operation/, text(response))

@@ -6,7 +6,7 @@ const manifest: WebmcpManifest = {
   endpoint: '/webmcp/tools',
   tools: [
     {
-      name: 'get_my_loadout',
+      name: 'get_my_toolbox',
       description: 'Returns the signed-in email.',
       inputSchema: { type: 'object', properties: {}, required: [] },
       annotations: { readOnlyHint: true, destructiveHint: false },
@@ -76,11 +76,11 @@ describe('callTool', () => {
     setCsrfMeta('token-123')
     const fetchMock = stubFetch(200, { result: okResult })
 
-    const result = await callTool('/webmcp/tools', 'get_my_loadout', { q: 1 })
+    const result = await callTool('/webmcp/tools', 'get_my_toolbox', { q: 1 })
 
     expect(result).toEqual(okResult)
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe('/webmcp/tools/get_my_loadout')
+    expect(url).toBe('/webmcp/tools/get_my_toolbox')
     expect(init.method).toBe('POST')
     expect(init.credentials).toBe('same-origin')
     expect((init.headers as Record<string, string>)['X-CSRF-Token']).toBe('token-123')
@@ -89,21 +89,21 @@ describe('callTool', () => {
 
   it('turns an HTTP error into an isError result carrying status and body', async () => {
     stubFetch(401, { error: 'Sign in' })
-    const result = await callTool('/webmcp/tools', 'get_my_loadout', {})
+    const result = await callTool('/webmcp/tools', 'get_my_toolbox', {})
     expect(result.isError).toBe(true)
     expect(JSON.parse(result.content[0]!.text)).toEqual({ status: 401, error: 'Sign in' })
   })
 
   it('turns a network failure into an isError result instead of throwing', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
-    const result = await callTool('/webmcp/tools', 'get_my_loadout', {})
+    const result = await callTool('/webmcp/tools', 'get_my_toolbox', {})
     expect(result.isError).toBe(true)
     expect(result.content[0]!.text).toContain('unreachable')
   })
 
   it('refuses an endpoint that is not a same-origin path, without fetching', async () => {
     const fetchMock = stubFetch(200, { result: okResult })
-    const result = await callTool('//evil.example/tools', 'get_my_loadout', {})
+    const result = await callTool('//evil.example/tools', 'get_my_toolbox', {})
     expect(result.isError).toBe(true)
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -115,7 +115,7 @@ describe('registerTools', () => {
     const controller = new AbortController()
 
     registerTools(stub, manifest, controller.signal)
-    const tool = stub.tools.get('get_my_loadout')!
+    const tool = stub.tools.get('get_my_toolbox')!
     expect(tool.description).toBe('Returns the signed-in email.')
     expect(tool.inputSchema).toEqual(manifest.tools[0]!.inputSchema)
     expect(tool.annotations).toEqual({ readOnlyHint: true })
@@ -129,7 +129,7 @@ describe('registerTools', () => {
     stubFetch(200, { result: okResult })
     registerTools(stub, manifest, new AbortController().signal)
 
-    await expect(stub.invoke('get_my_loadout')).resolves.toEqual(okResult)
+    await expect(stub.invoke('get_my_toolbox')).resolves.toEqual(okResult)
   })
 
   it("cancels the request when the agent aborts the call's own signal", async () => {
@@ -146,7 +146,7 @@ describe('registerTools', () => {
     registerTools(stub, manifest, new AbortController().signal)
 
     const call = new AbortController()
-    const pending = stub.invoke('get_my_loadout', {}, { signal: call.signal })
+    const pending = stub.invoke('get_my_toolbox', {}, { signal: call.signal })
     call.abort()
 
     const result = (await pending) as { isError: boolean; content: [{ text: string }] }
@@ -159,7 +159,7 @@ describe('registerTools', () => {
     const controller = new AbortController()
     registerTools(stub, manifest, controller.signal)
     await Promise.resolve()
-    expect(stub.tools.has('get_my_loadout')).toBe(true)
+    expect(stub.tools.has('get_my_toolbox')).toBe(true)
 
     controller.abort()
     expect(stub.tools.size).toBe(0)
@@ -169,7 +169,7 @@ describe('registerTools', () => {
     const writeManifest: WebmcpManifest = {
       endpoint: '/webmcp/tools',
       tools: [
-        { name: 'get_my_loadout', description: 'Reads', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
+        { name: 'get_my_toolbox', description: 'Reads', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
         { name: 'suggest_picks', description: 'Suggests', inputSchema: { type: 'object' }, annotations: { readOnlyHint: false } },
         { name: 'no_hint', description: 'Says nothing about writes', inputSchema: { type: 'object' } },
       ],
@@ -192,7 +192,7 @@ describe('registerTools', () => {
       const onWrite = vi.fn()
       registerTools(stub, writeManifest, new AbortController().signal, onWrite)
 
-      await stub.invoke('get_my_loadout')
+      await stub.invoke('get_my_toolbox')
 
       expect(onWrite).not.toHaveBeenCalled()
     })
@@ -229,6 +229,6 @@ describe('registerTools', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(warn).toHaveBeenCalledTimes(1)
-    expect(String(warn.mock.calls[0]?.[0])).toContain('get_my_loadout')
+    expect(String(warn.mock.calls[0]?.[0])).toContain('get_my_toolbox')
   })
 })

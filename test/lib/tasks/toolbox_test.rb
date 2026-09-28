@@ -1,18 +1,18 @@
 require "test_helper"
 require "rake"
 
-class LoadoutTasksTest < ActiveSupport::TestCase
+class ToolboxTasksTest < ActiveSupport::TestCase
   RESOURCE = "http://www.example.com/mcp"
 
   setup do
-    Rails.application.load_tasks unless Rake::Task.task_defined?("loadout:remove_member")
+    Rails.application.load_tasks unless Rake::Task.task_defined?("toolbox:remove_member")
   end
 
   test "remove_member deletes the person with their picks, history, suggestions, periods, sessions and agent grants" do
     ana = users(:every_ana)
     dee_picks = users(:every_dee).entries.count
     client = connect_client("Cursor")
-    grant = OauthGrant.issue!(user: ana, client:, resource: RESOURCE, scope: "loadout")
+    grant = OauthGrant.issue!(user: ana, client:, resource: RESOURCE, scope: "toolbox")
     code = issue_code(client, ana)
     ana.sessions.create!
     Tool.create!(name: "Ana's Find", status: "pending", created_by: ana)
@@ -21,7 +21,7 @@ class LoadoutTasksTest < ActiveSupport::TestCase
     assert_operator ana.entry_changes.count, :>, 0
     assert_operator ana.visibility_periods.count, :>, 0
 
-    output = run_task("loadout:remove_member", EMAIL: " Ana@Every.to ")
+    output = run_task("toolbox:remove_member", EMAIL: " Ana@Every.to ")
 
     assert_match(/ana@every\.to/, output)
     assert_not User.exists?(ana.id)
@@ -35,17 +35,17 @@ class LoadoutTasksTest < ActiveSupport::TestCase
 
   test "remove_member with an unknown or missing email deletes nothing" do
     assert_no_difference [ -> { User.count }, -> { Entry.count } ] do
-      assert_raises(SystemExit) { run_task("loadout:remove_member", EMAIL: "nobody@every.to") }
-      assert_raises(SystemExit) { run_task("loadout:remove_member", EMAIL: "") }
+      assert_raises(SystemExit) { run_task("toolbox:remove_member", EMAIL: "nobody@every.to") }
+      assert_raises(SystemExit) { run_task("toolbox:remove_member", EMAIL: "") }
     end
   end
 
   test "revoke_agent_grants ends every grant and its unused codes, and withdraws open agent suggestions only" do
     ana, dee = users(:every_ana), users(:every_dee)
     cursor_client, codex_client = connect_client("Cursor"), connect_client("Codex")
-    first = OauthGrant.issue!(user: ana, client: cursor_client, resource: RESOURCE, scope: "loadout")
-    second = OauthGrant.issue!(user: dee, client: codex_client, resource: RESOURCE, scope: "loadout")
-    earlier = OauthGrant.issue!(user: dee, client: cursor_client, resource: RESOURCE, scope: "loadout")
+    first = OauthGrant.issue!(user: ana, client: cursor_client, resource: RESOURCE, scope: "toolbox")
+    second = OauthGrant.issue!(user: dee, client: codex_client, resource: RESOURCE, scope: "toolbox")
+    earlier = OauthGrant.issue!(user: dee, client: cursor_client, resource: RESOURCE, scope: "toolbox")
     earlier.update!(revoked_at: 3.days.ago)
     revoked_then = earlier.reload.revoked_at
     unused_code = issue_code(cursor_client, ana)
@@ -55,7 +55,7 @@ class LoadoutTasksTest < ActiveSupport::TestCase
     webmcp = pick_suggestions(:ana_runway)
     entries_before = Entry.count
 
-    output = run_task("loadout:revoke_agent_grants")
+    output = run_task("toolbox:revoke_agent_grants")
 
     assert_match(/2 grants/, output)
     assert_empty OauthGrant.active
@@ -74,7 +74,7 @@ class LoadoutTasksTest < ActiveSupport::TestCase
   end
 
   test "revoke_agent_grants with nothing connected changes nothing" do
-    output = run_task("loadout:revoke_agent_grants")
+    output = run_task("toolbox:revoke_agent_grants")
 
     assert_match(/0 grants/, output)
     assert_equal "open", pick_suggestions(:ana_runway).status
@@ -97,7 +97,7 @@ class LoadoutTasksTest < ActiveSupport::TestCase
   end
 
   def issue_code(client, user)
-    OauthAuthorizationCode.issue!(client:, user:, redirect_uri: client.redirect_uris.first, code_challenge: "challenge", resource: RESOURCE, scope: "loadout")
+    OauthAuthorizationCode.issue!(client:, user:, redirect_uri: client.redirect_uris.first, code_challenge: "challenge", resource: RESOURCE, scope: "toolbox")
   end
 
   def agent_suggestion(user, client, status: "open", tool: tools(:runway))

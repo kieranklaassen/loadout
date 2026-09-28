@@ -4,11 +4,11 @@
 module OauthServer
   extend ActiveSupport::Concern
 
-  SCOPE = "loadout".freeze
+  SCOPE = "toolbox".freeze
 
   private
     def public_base_url
-      LoadoutHost.base_url(request)
+      ToolboxHost.base_url(request)
     end
 
     def mcp_resource_url

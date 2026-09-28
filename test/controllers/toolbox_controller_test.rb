@@ -1,7 +1,7 @@
 require "test_helper"
 
-class LoadoutsControllerTest < ActionDispatch::IntegrationTest
-  EDITOR = "http://www.example.com/loadout/edit".freeze
+class ToolboxControllerTest < ActionDispatch::IntegrationTest
+  EDITOR = "http://www.example.com/toolbox/edit".freeze
   BACK = { "Referer" => EDITOR }.freeze
 
   setup do
@@ -10,11 +10,11 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def patch_operations(*operations, headers: BACK)
-    patch loadout_path, params: { operations: }, headers:, as: :json
+    patch toolbox_path, params: { operations: }, headers:, as: :json
   end
 
   def inertia_catalog_tools
-    get edit_loadout_path
+    get edit_toolbox_path
     inertia.props[:catalog][:tools]
   end
 
@@ -24,14 +24,14 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def fill_coding
-    Loadouts::Update.call(user: @ana, operations: [ { op: "set_pick", category: "coding", rank: 3, tool: Tool.create!(name: "Windsurf", status: "approved").slug } ], source: "web")
+    Toolbox::Update.call(user: @ana, operations: [ { op: "set_pick", category: "coding", rank: 3, tool: Tool.create!(name: "Windsurf", status: "approved").slug } ], source: "web")
   end
 
   test "the editor renders the owner's kinds with picks and suggestions" do
-    get edit_loadout_path
+    get edit_toolbox_path
 
     assert_response :success
-    assert_inertia_component "loadout/edit"
+    assert_inertia_component "toolbox/edit"
     kinds = inertia.props[:kinds]
     assert_equal %w[coding knowledge-work video], kinds.map { |kind| kind[:category][:slug] }
     coding, _knowledge_work, video = kinds
@@ -42,7 +42,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the editor also gets the catalog, the choices, the open kind, who can see the page and what the team uses" do
-    get edit_loadout_path(kind: "video")
+    get edit_toolbox_path(kind: "video")
 
     props = inertia.props
     assert_equal %w[catalog enums kinds selected_kind team_top visibility], (props.keys & %w[kinds catalog enums selected_kind visibility team_top]).sort
@@ -60,17 +60,17 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the open kind defaults to the first with room and ignores an unknown one" do
-    get edit_loadout_path
+    get edit_toolbox_path
     assert_equal "coding", inertia.props[:selected_kind]
 
-    get edit_loadout_path(kind: "made-up")
+    get edit_toolbox_path(kind: "made-up")
     assert_equal "coding", inertia.props[:selected_kind]
   end
 
   test "a member who shares with nobody sees their own picks counted and is told only they can see them" do
     sign_in_as users(:every_cy)
 
-    get edit_loadout_path
+    get edit_toolbox_path
 
     assert_equal "only_me", inertia.props[:visibility]
     cursor = inertia.props[:team_top]["coding"][:tools].find { |tool| tool[:item][:slug] == "cursor" }
@@ -135,7 +135,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "no operations saves nothing" do
-    patch loadout_path, params: {}, as: :json
+    patch toolbox_path, params: {}, as: :json
 
     assert_equal "Nothing to save.", flash[:notice]
   end
@@ -157,7 +157,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   test "confirming places the suggestion and redirects back" do
     suggestion = pick_suggestions(:ana_runway)
 
-    post confirm_loadout_suggestion_path(suggestion), headers: BACK, as: :json
+    post confirm_toolbox_suggestion_path(suggestion), headers: BACK, as: :json
 
     assert_redirected_to EDITOR
     assert_nil flash[:notice]
@@ -169,9 +169,9 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
 
   test "confirming with the slot to replace and the snapshot shown replaces that pick" do
     fill_coding
-    suggestion = Loadouts::Update.call(user: @ana, operations: [ { op: "suggest", category: "coding", tool: "runway" } ], source: "webmcp").suggestions.sole
+    suggestion = Toolbox::Update.call(user: @ana, operations: [ { op: "suggest", category: "coding", tool: "runway" } ], source: "webmcp").suggestions.sole
 
-    post confirm_loadout_suggestion_path(suggestion), params: { rank: 2, expected: { tool: "claude-code", model: nil } }, headers: BACK, as: :json
+    post confirm_toolbox_suggestion_path(suggestion), params: { rank: 2, expected: { tool: "claude-code", model: nil } }, headers: BACK, as: :json
 
     assert_nil flash[:alert]
     assert_equal %w[cursor runway windsurf], @ana.entries.where(category: categories(:coding)).order(:rank).map { |entry| entry.tool.slug }
@@ -179,10 +179,10 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
 
   test "a stale snapshot comes back as This changed, review it and writes nothing" do
     fill_coding
-    suggestion = Loadouts::Update.call(user: @ana, operations: [ { op: "suggest", category: "coding", tool: "runway" } ], source: "webmcp").suggestions.sole
+    suggestion = Toolbox::Update.call(user: @ana, operations: [ { op: "suggest", category: "coding", tool: "runway" } ], source: "webmcp").suggestions.sole
 
     assert_no_difference -> { Entry.count } do
-      post confirm_loadout_suggestion_path(suggestion), params: { rank: 2, expected: { tool: "cursor", model: nil } }, headers: BACK, as: :json
+      post confirm_toolbox_suggestion_path(suggestion), params: { rank: 2, expected: { tool: "cursor", model: nil } }, headers: BACK, as: :json
     end
 
     assert_equal "This changed, review it.", flash[:alert]
@@ -191,9 +191,9 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
 
   test "a full kind with no slot chosen asks which pick to replace" do
     fill_coding
-    suggestion = Loadouts::Update.call(user: @ana, operations: [ { op: "suggest", category: "coding", tool: "runway" } ], source: "webmcp").suggestions.sole
+    suggestion = Toolbox::Update.call(user: @ana, operations: [ { op: "suggest", category: "coding", tool: "runway" } ], source: "webmcp").suggestions.sole
 
-    post confirm_loadout_suggestion_path(suggestion), headers: BACK, as: :json
+    post confirm_toolbox_suggestion_path(suggestion), headers: BACK, as: :json
 
     assert_equal "All three slots are taken. Choose which pick to replace.", flash[:alert]
   end
@@ -201,7 +201,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   test "dismissing closes the suggestion and keeps the entries" do
     suggestion = pick_suggestions(:ana_runway)
 
-    delete loadout_suggestion_path(suggestion), headers: BACK, as: :json
+    delete toolbox_suggestion_path(suggestion), headers: BACK, as: :json
 
     assert_redirected_to EDITOR
     assert_equal "dismissed", suggestion.reload.status
@@ -210,11 +210,11 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "another member's suggestion can be neither confirmed nor dismissed" do
-    foreign = Loadouts::Update.call(user: users(:every_dee), operations: [ { op: "suggest", category: "video", tool: "runway" } ], source: "mcp", client_name: "Claude", oauth_client_id: 3).suggestions.sole
+    foreign = Toolbox::Update.call(user: users(:every_dee), operations: [ { op: "suggest", category: "video", tool: "runway" } ], source: "mcp", client_name: "Claude", oauth_client_id: 3).suggestions.sole
 
-    post confirm_loadout_suggestion_path(foreign), headers: BACK, as: :json
+    post confirm_toolbox_suggestion_path(foreign), headers: BACK, as: :json
     assert flash[:alert].present?
-    delete loadout_suggestion_path(foreign), headers: BACK, as: :json
+    delete toolbox_suggestion_path(foreign), headers: BACK, as: :json
     assert flash[:alert].present?
 
     assert_equal "open", foreign.reload.status
@@ -224,9 +224,9 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   test "nothing confirms on a GET" do
     suggestion = pick_suggestions(:ana_runway)
 
-    get "/loadout/suggestions/#{suggestion.id}/confirm"
+    get "/toolbox/suggestions/#{suggestion.id}/confirm"
     assert_response :not_found
-    get "/loadout/suggestions/#{suggestion.id}"
+    get "/toolbox/suggestions/#{suggestion.id}"
     assert_response :not_found
 
     assert_equal "open", suggestion.reload.status
@@ -234,7 +234,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
 
   test "adding a tool the catalog lacks creates a pending one for the member, offered to them and to nobody else" do
     assert_difference -> { Tool.pending.count }, 1 do
-      post loadout_catalog_items_path, params: { kind: "tool", name: "  Zed  " }, headers: BACK, as: :json
+      post toolbox_catalog_items_path, params: { kind: "tool", name: "  Zed  " }, headers: BACK, as: :json
     end
 
     assert_redirected_to EDITOR
@@ -245,13 +245,13 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_not @ana.entries.exists?(tool: zed), "adding an item never picks it"
 
     sign_in_as users(:every_dee)
-    get edit_loadout_path
+    get edit_toolbox_path
     assert_not_includes inertia.props[:catalog][:tools].pluck(:slug), zed.slug
   end
 
   test "adding a model creates a pending model" do
     assert_difference -> { AiModel.pending.count }, 1 do
-      post loadout_catalog_items_path, params: { kind: "model", name: "Beta Model" }, headers: BACK, as: :json
+      post toolbox_catalog_items_path, params: { kind: "model", name: "Beta Model" }, headers: BACK, as: :json
     end
 
     assert_equal [ "Beta Model", @ana ], AiModel.pending.sole.then { |model| [ model.name, model.created_by ] }
@@ -259,9 +259,9 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
 
   test "an item the member can already pick is not added again" do
     assert_no_difference [ "Tool.count", "AiModel.count" ] do
-      post loadout_catalog_items_path, params: { kind: "tool", name: "cursor" }, headers: BACK, as: :json
+      post toolbox_catalog_items_path, params: { kind: "tool", name: "cursor" }, headers: BACK, as: :json
       assert_equal "Already in the list.", follow_redirect!.then { inertia.props[:errors][:name] }
-      post loadout_catalog_items_path, params: { kind: "model", name: "CLAUDE OPUS 5.5" }, headers: BACK, as: :json
+      post toolbox_catalog_items_path, params: { kind: "model", name: "CLAUDE OPUS 5.5" }, headers: BACK, as: :json
       assert_equal "Already in the list.", follow_redirect!.then { inertia.props[:errors][:name] }
     end
   end
@@ -270,7 +270,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     theirs = Tool.create!(name: "Windsurf", status: "pending", created_by: users(:every_dee))
 
     assert_difference -> { Tool.pending.where(created_by: @ana).count }, 1 do
-      post loadout_catalog_items_path, params: { kind: "tool", name: "windsurf" }, headers: BACK, as: :json
+      post toolbox_catalog_items_path, params: { kind: "tool", name: "windsurf" }, headers: BACK, as: :json
     end
 
     assert_redirected_to EDITOR
@@ -280,14 +280,14 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ [ ours.slug, true ] ], inertia_catalog_tools.select { |tool| tool[:name].casecmp?("windsurf") }.pluck(:slug, :pending)
 
     assert_no_difference "Tool.count" do
-      post loadout_catalog_items_path, params: { kind: "tool", name: "Windsurf" }, headers: BACK, as: :json
+      post toolbox_catalog_items_path, params: { kind: "tool", name: "Windsurf" }, headers: BACK, as: :json
       assert_equal "Already in the list.", follow_redirect!.then { inertia.props[:errors][:name] }
     end
   end
 
   test "a hidden name is not added, and the member is told an admin took it out" do
     assert_no_difference "Tool.count" do
-      post loadout_catalog_items_path, params: { kind: "tool", name: "Old Thing" }, headers: BACK, as: :json
+      post toolbox_catalog_items_path, params: { kind: "tool", name: "Old Thing" }, headers: BACK, as: :json
       assert_equal "An admin took that one out of the list.", follow_redirect!.then { inertia.props[:errors][:name] }
     end
   end
@@ -295,13 +295,13 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
   test "a name must be two to sixty characters and the kind a tool or a model" do
     assert_no_difference [ "Tool.count", "AiModel.count" ] do
       [ [ "tool", "Z" ], [ "tool", " " ], [ "model", "x" * 61 ], [ "prompt", "Zed" ], [ nil, "Zed" ] ].each do |kind, name|
-        post loadout_catalog_items_path, params: { kind:, name: }, headers: BACK, as: :json
+        post toolbox_catalog_items_path, params: { kind:, name: }, headers: BACK, as: :json
         assert_redirected_to EDITOR
         assert inertia_errors_after_redirect[:name].present?, "#{kind.inspect} #{name.inspect} was accepted"
       end
     end
 
-    post loadout_catalog_items_path, params: { kind: "tool", name: "x" * 60 }, headers: BACK, as: :json
+    post toolbox_catalog_items_path, params: { kind: "tool", name: "x" * 60 }, headers: BACK, as: :json
     assert Tool.pending.exists?(created_by: @ana)
   end
 
@@ -309,7 +309,7 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     sign_out
 
     assert_no_difference "Tool.count" do
-      post loadout_catalog_items_path, params: { kind: "tool", name: "Zed" }, as: :json
+      post toolbox_catalog_items_path, params: { kind: "tool", name: "Zed" }, as: :json
     end
     assert_redirected_to new_session_path
   end
@@ -318,13 +318,13 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     suggestion = pick_suggestions(:ana_runway)
     sign_out
 
-    get edit_loadout_path
+    get edit_toolbox_path
     assert_redirected_to new_session_path
-    patch loadout_path, params: { operations: [] }, as: :json
+    patch toolbox_path, params: { operations: [] }, as: :json
     assert_redirected_to new_session_path
-    post confirm_loadout_suggestion_path(suggestion), as: :json
+    post confirm_toolbox_suggestion_path(suggestion), as: :json
     assert_redirected_to new_session_path
-    delete loadout_suggestion_path(suggestion), as: :json
+    delete toolbox_suggestion_path(suggestion), as: :json
     assert_redirected_to new_session_path
 
     assert_equal "open", suggestion.reload.status

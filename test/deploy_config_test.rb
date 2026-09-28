@@ -8,15 +8,15 @@ class DeployConfigTest < ActiveSupport::TestCase
 
   # Every tenant-specific key the render requires (no defaults).
   REQUIRED_ENV = {
-    "KAMAL_SERVICE" => "loadout",
-    "KAMAL_IMAGE" => "ghcr.io/example/loadout",
+    "KAMAL_SERVICE" => "toolbox",
+    "KAMAL_IMAGE" => "ghcr.io/example/toolbox",
     "KAMAL_WEB_HOST" => "203.0.113.10",
-    "KAMAL_PROXY_HOST" => "loadout.example.test",
+    "KAMAL_PROXY_HOST" => "toolbox.example.test",
     "KAMAL_REGISTRY_USERNAME" => "example-user",
-    "KAMAL_STORAGE_VOLUME" => "loadout_storage",
+    "KAMAL_STORAGE_VOLUME" => "toolbox_storage",
     "KAMAL_BUILDER_ARCH" => "amd64",
     "KAMAL_SSH_USER" => "deploy",
-    "PUBLIC_BASE_URL" => "https://loadout.example.test",
+    "PUBLIC_BASE_URL" => "https://toolbox.example.test",
     "EVERY_OAUTH_BASE_URL" => "https://every.example.test"
   }.freeze
 
@@ -51,7 +51,7 @@ class DeployConfigTest < ActiveSupport::TestCase
 
     assert_includes config.dig("env", "secret"), "EVERY_OAUTH_CLIENT_ID"
     assert_includes config.dig("env", "secret"), "EVERY_OAUTH_CLIENT_SECRET"
-    assert_equal "https://loadout.example.test", config.dig("env", "clear", "PUBLIC_BASE_URL")
+    assert_equal "https://toolbox.example.test", config.dig("env", "clear", "PUBLIC_BASE_URL")
   end
 
   test "no resolved secret or hardcoded IP is committed to deploy.yml" do

@@ -5,7 +5,7 @@ class SessionsController < InertiaController
   def new
     return redirect_to root_path if authenticated?
 
-    render inertia: "auth/sign_in", props: { join_every_url: LoadoutHost::JOIN_EVERY_URL, dev_login_people: (dev_login_people if Rails.env.development?) }.compact
+    render inertia: "auth/sign_in", props: { join_every_url: ToolboxHost::JOIN_EVERY_URL, dev_login_people: (dev_login_people if Rails.env.development?) }.compact
   end
 
   def destroy

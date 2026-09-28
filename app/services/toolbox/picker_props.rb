@@ -4,7 +4,7 @@
 # (Presenter#kinds): the catalog they may pick from, the context and effort choices,
 # and which kind is open.
 #
-#   Loadouts::PickerProps.new(user, kinds: presenter.kinds, kind: params[:kind]).to_h
+#   Toolbox::PickerProps.new(user, kinds: presenter.kinds, kind: params[:kind]).to_h
 #
 # kinds is the member's Presenter#kinds; leave it out and they are built here.
 #
@@ -15,7 +15,7 @@
 # enums     { context: Entry::CONTEXTS, effort: Entry::EFFORTS }, the only choices a slot accepts.
 # selected_kind  the slug asked for, else the first kind with fewer than three confirmed
 #           picks, else the first kind.
-module Loadouts
+module Toolbox
   class PickerProps
     def initialize(user, kinds: nil, kind: nil)
       @user = user

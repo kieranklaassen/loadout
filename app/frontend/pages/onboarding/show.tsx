@@ -86,7 +86,7 @@ export default function OnboardingShow({ suggested_handle, name, avatar_url, vis
           <SectionLabel as="p">Step 1 of 2 · Then rank your first tools</SectionLabel>
           <h1 className="font-serif leading-[1.02] tracking-[-0.02em] mt-3.5 text-[40px] md:text-[56px]">Claim your link</h1>
           <p className="mt-4 max-w-[520px] text-lg leading-normal text-fg-soft">
-            This is the address of your loadout. You can change it later in settings.
+            This is the address of your toolbox. You can change it later in settings.
           </p>
 
           <form onSubmit={submit} className="mt-8">

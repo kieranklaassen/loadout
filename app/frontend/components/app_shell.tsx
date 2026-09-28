@@ -10,7 +10,7 @@ const CONTAINER = 'mx-auto w-full max-w-[1440px] px-4 md:px-8 lg:px-22'
 
 const NAV = [
   { label: 'Home', href: '/', active: (path: string) => path === '/' || path.startsWith('/kinds') },
-  { label: 'Your loadout', href: '/loadout/edit', active: (path: string) => path.startsWith('/loadout') },
+  { label: 'Your toolbox', href: '/toolbox/edit', active: (path: string) => path.startsWith('/toolbox') },
   { label: 'Agents', href: '/agents', active: (path: string) => path.startsWith('/agents') },
   { label: 'Settings', href: '/settings', active: (path: string) => path.startsWith('/settings') },
 ]
@@ -98,7 +98,7 @@ export default function AppShell({
     <div className="flex min-h-screen flex-col">
       <header className="relative z-20">
         <div className={`${CONTAINER} flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-5 md:flex-nowrap md:py-6`}>
-          <Link href="/" aria-label="Every Loadout home">
+          <Link href="/" aria-label="Every Toolbox home">
             <Wordmark />
           </Link>
 

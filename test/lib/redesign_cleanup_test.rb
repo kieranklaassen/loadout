@@ -1,6 +1,6 @@
 require "test_helper"
 
-# The Every Loadout redesign retired a model: the members-only map, a go-to and a note on
+# The Every Toolbox redesign retired a model: the members-only map, a go-to and a note on
 # every pick, a public flag, visibility checks scattered through the code, and a host
 # written out in place. These greps keep those names from coming back. Each rule searches
 # the shipped source and lists, by path prefix, the few places allowed to say it; the
@@ -28,10 +28,10 @@ class RedesignCleanupTest < ActiveSupport::TestCase
       fires_on: [ "MapStats.new(user)", "class MapsController", "Flipper.enabled?(:public_map)" ],
       quiet_on: [ "TeamRankings", "the map function" ]
     ),
-    "the update_loadout tool" => Rule.new(
-      pattern: /update_loadout/,
-      fires_on: [ "ToolRegistry.find('update_loadout')", "update_loadout!(operations)" ],
-      quiet_on: [ "run_operations!(operations)", "Loadouts::Update" ]
+    "the update_toolbox tool" => Rule.new(
+      pattern: /update_toolbox/,
+      fires_on: [ "ToolRegistry.find('update_toolbox')", "update_toolbox!(operations)" ],
+      quiet_on: [ "run_operations!(operations)", "Toolbox::Update" ]
     ),
     "the picks.ts module" => Rule.new(
       pattern: %r{\bpicks\.ts\b|lib/picks['"]},
@@ -49,10 +49,10 @@ class RedesignCleanupTest < ActiveSupport::TestCase
       quiet_on: [ "expires_in 0.seconds, public: false", "public_host", "visible_to?(nil)" ]
     ),
     "the host written out" => Rule.new(
-      pattern: %r{loadout\.every\.to|every\.to/loadout},
-      fires_on: [ %(HOST = "loadout.every.to"), "https://every.to/loadout/dan" ],
-      quiet_on: [ "LoadoutHost.host", "https://every.to/join", "https://checks.every.to/opus" ],
-      allow: %w[app/models/loadout_host.rb app/frontend/lib/public_host.ts],
+      pattern: %r{toolbox\.every\.to|every\.to/toolbox},
+      fires_on: [ %(HOST = "toolbox.every.to"), "https://every.to/toolbox/dan" ],
+      quiet_on: [ "ToolboxHost.host", "https://every.to/join", "https://checks.every.to/opus" ],
+      allow: %w[app/models/toolbox_host.rb app/frontend/lib/public_host.ts],
       skip_tests: true
     ),
     "a visibility value compared outside User::Visibility" => Rule.new(

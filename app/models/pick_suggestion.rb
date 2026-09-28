@@ -1,4 +1,4 @@
-# What an agent proposes for a member's loadout. It lives apart from Entry so that
+# What an agent proposes for a member's toolbox. It lives apart from Entry so that
 # nothing which reads confirmed picks can show an unconfirmed one; only the owner
 # sees it, and only the owner, on the web, can confirm or dismiss it. A suggestion
 # that would change an occupied slot carries a snapshot of that slot (replaces_*)

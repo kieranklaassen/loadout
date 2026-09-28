@@ -6,7 +6,7 @@ module User::Handle
   FORMAT = /\A[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?\z/
   RESERVED = %w[
     about account admin agents api app apps assets auth blog cable categories catalog connect
-    dev docs every explore faq help home icon kinds login logout loadout manifest map maps mcp me
+    dev docs every explore faq help home icon kinds login logout toolbox manifest map maps mcp me
     new oauth og onboarding privacy profile profiles public rails search service-worker session
     sessions settings signin signout signup static support terms tools up users webmcp welcome
     well-known www
@@ -39,14 +39,14 @@ module User::Handle
       probe.validate
       problem = probe.errors.objects.find { |error| error.attribute == :handle && error.type != :taken }
       if problem
-        message = problem.type == :reserved ? "#{LoadoutHost.host}/#{handle} is reserved." : "Use 2 to 30 lowercase letters, numbers, and dashes."
+        message = problem.type == :reserved ? "#{ToolboxHost.host}/#{handle} is reserved." : "Use 2 to 30 lowercase letters, numbers, and dashes."
         return { handle:, available: false, message: }
       end
 
       if where(handle:).where.not(id: except&.id).exists?
-        { handle:, available: false, message: "#{LoadoutHost.host}/#{handle} is taken." }
+        { handle:, available: false, message: "#{ToolboxHost.host}/#{handle} is taken." }
       else
-        { handle:, available: true, message: "#{LoadoutHost.host}/#{handle} is yours." }
+        { handle:, available: true, message: "#{ToolboxHost.host}/#{handle} is yours." }
       end
     end
 

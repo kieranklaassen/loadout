@@ -13,19 +13,19 @@ class ProductionHostsTest < ActiveSupport::TestCase
     puts "PROBE:" + {
       hosts: Rails.application.config.hosts.map(&:to_s),
       health_by_ip: probe.("/up", "172.18.0.5"),
-      health_by_host: probe.("/up", "loadout.example.test"),
+      health_by_host: probe.("/up", "toolbox.example.test"),
       other_path_by_ip: probe.("/anything", "172.18.0.5"),
       other_host: probe.("/", "evil.test"),
-      public_host: probe.("/", "loadout.example.test")
+      public_host: probe.("/", "toolbox.example.test")
     }.to_json
   RUBY
 
   test "production serves the public host, lets the proxy check /up by container IP, and refuses other hosts" do
-    output, status = boot_production({ "PUBLIC_BASE_URL" => "https://loadout.example.test" }, PROBE)
+    output, status = boot_production({ "PUBLIC_BASE_URL" => "https://toolbox.example.test" }, PROBE)
 
     assert status.success?, output
     result = JSON.parse(output[/^PROBE:(.*)$/, 1])
-    assert_equal [ "loadout.example.test" ], result["hosts"]
+    assert_equal [ "toolbox.example.test" ], result["hosts"]
     assert_equal [ 200, 200 ], result.values_at("health_by_ip", "health_by_host")
     assert_equal [ 403, 403 ], result.values_at("other_path_by_ip", "other_host")
     assert_not_equal 403, result["public_host"]

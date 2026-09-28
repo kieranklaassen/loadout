@@ -1,10 +1,10 @@
 require "test_helper"
 
-class Loadouts::UpdateTest < ActiveSupport::TestCase
+class Toolbox::UpdateTest < ActiveSupport::TestCase
   setup { @user = users(:one) }
 
   def update(*operations, source: "web", client_name: nil, oauth_client_id: nil)
-    Loadouts::Update.call(user: @user, operations:, source:, client_name:, oauth_client_id:)
+    Toolbox::Update.call(user: @user, operations:, source:, client_name:, oauth_client_id:)
   end
 
   def set_pick(rank, tool, category: "coding", **fields)
@@ -54,20 +54,20 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
   end
 
   test "context and effort must come from the lists" do
-    error = assert_raises(Loadouts::Update::Error) { update(set_pick(1, "cursor", context: "500k")) }
+    error = assert_raises(Toolbox::Update::Error) { update(set_pick(1, "cursor", context: "500k")) }
     assert_equal "Context must be one of 200k or 1m.", error.message
 
-    error = assert_raises(Loadouts::Update::Error) { update(set_pick(1, "cursor", effort: "extreme")) }
+    error = assert_raises(Toolbox::Update::Error) { update(set_pick(1, "cursor", effort: "extreme")) }
     assert_equal "Effort must be one of low, medium or high.", error.message
 
     assert_empty @user.entries
   end
 
   test "an empty slot needs a tool, and the rank must be 1 to 3" do
-    assert_equal "Name a tool.", assert_raises(Loadouts::Update::Error) { update({ op: "set_pick", category: "coding", rank: 1 }) }.message
-    assert_equal "Send a rank from 1 to 3.", assert_raises(Loadouts::Update::Error) { update({ op: "set_pick", category: "coding", tool: "cursor" }) }.message
-    assert_equal "Send a rank from 1 to 3.", assert_raises(Loadouts::Update::Error) { update(set_pick("first", "cursor")) }.message
-    assert_match(/up to 3 picks/, assert_raises(Loadouts::Update::Error) { update(set_pick(4, "cursor")) }.message)
+    assert_equal "Name a tool.", assert_raises(Toolbox::Update::Error) { update({ op: "set_pick", category: "coding", rank: 1 }) }.message
+    assert_equal "Send a rank from 1 to 3.", assert_raises(Toolbox::Update::Error) { update({ op: "set_pick", category: "coding", tool: "cursor" }) }.message
+    assert_equal "Send a rank from 1 to 3.", assert_raises(Toolbox::Update::Error) { update(set_pick("first", "cursor")) }.message
+    assert_match(/up to 3 picks/, assert_raises(Toolbox::Update::Error) { update(set_pick(4, "cursor")) }.message)
   end
 
   test "an unknown tool from the web becomes a pending catalog item that shows immediately, with no daily cap" do
@@ -101,7 +101,7 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
 
     assert_no_difference [ "Tool.count", "AiModel.count" ] do
       update(set_pick(1, "Hedra", category: "coding", model: their_model.slug))
-      Loadouts::Update.call(user: users(:two), operations: [ set_pick(1, "Hedra", model: "Mystery 3") ], source: "web")
+      Toolbox::Update.call(user: users(:two), operations: [ set_pick(1, "Hedra", model: "Mystery 3") ], source: "web")
     end
     assert_equal [ entry.tool, entry.ai_model ], @user.entries.find_by!(category: categories(:coding)).then { |pick| [ pick.tool, pick.ai_model ] }
     assert_equal [ theirs, their_model ], users(:two).entries.sole.then { |pick| [ pick.tool, pick.ai_model ] }
@@ -161,9 +161,9 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
   end
 
   test "no agent tool writes picks directly any more" do
-    assert_nil ToolRegistry.find("update_loadout")
-    assert_not_includes ToolRegistry.manifest[:tools].pluck(:name), "update_loadout"
-    assert_not defined?(UpdateLoadoutTool)
+    assert_nil ToolRegistry.find("update_toolbox")
+    assert_not_includes ToolRegistry.manifest[:tools].pluck(:name), "update_toolbox"
+    assert_not defined?(UpdateToolboxTool)
   end
 
   test "a slot operation whose expected_tool no longer matches the slot is refused and writes nothing" do
@@ -175,8 +175,8 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
       { op: "move_pick", category: "coding", rank: 2, direction: "up", expected_tool: "cursor" }
     ].each do |operation|
       assert_no_difference [ "Entry.count", "EntryChange.count" ] do
-        error = assert_raises(Loadouts::Update::Error, operation[:op]) { update(operation) }
-        assert_equal Loadouts::Suggestions::CHANGED, error.message
+        error = assert_raises(Toolbox::Update::Error, operation[:op]) { update(operation) }
+        assert_equal Toolbox::Suggestions::CHANGED, error.message
       end
     end
 
@@ -198,8 +198,8 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     update(set_pick(1, "cursor", model: "claude-opus-5-5", context: "1m"))
 
     assert_no_difference -> { EntryChange.count } do
-      error = assert_raises(Loadouts::Update::Error) { update(set_pick(1, "claude-code", expected_tool: nil)) }
-      assert_equal Loadouts::Suggestions::CHANGED, error.message
+      error = assert_raises(Toolbox::Update::Error) { update(set_pick(1, "claude-code", expected_tool: nil)) }
+      assert_equal Toolbox::Suggestions::CHANGED, error.message
     end
 
     entry = @user.entries.sole
@@ -220,8 +220,8 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
 
     update(remove_cursor)
     assert_no_difference [ "Entry.count", "EntryChange.count" ] do
-      error = assert_raises(Loadouts::Update::Error) { update(remove_cursor) }
-      assert_equal Loadouts::Suggestions::CHANGED, error.message
+      error = assert_raises(Toolbox::Update::Error) { update(remove_cursor) }
+      assert_equal Toolbox::Suggestions::CHANGED, error.message
     end
 
     assert_equal [ [ 1, "claude-code" ] ], @user.entries.map { |entry| [ entry.rank, entry.tool.slug ] }
@@ -231,16 +231,16 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
   test "a direction must be up or down" do
     update(set_pick(1, "cursor"), set_pick(2, "claude-code"))
 
-    error = assert_raises(Loadouts::Update::Error) { update({ op: "move_pick", category: "coding", rank: 1, direction: "sideways" }) }
+    error = assert_raises(Toolbox::Update::Error) { update({ op: "move_pick", category: "coding", rank: 1, direction: "sideways" }) }
 
     assert_equal "Direction must be up or down.", error.message
   end
 
   test "the web-only operations raise for every other source before anything is written" do
-    Loadouts::Update::WEB_OPERATIONS.each do |op|
+    Toolbox::Update::WEB_OPERATIONS.each do |op|
       %w[mcp webmcp system].each do |source|
         assert_no_difference [ "Entry.count", "EntryChange.count", "PickSuggestion.count", "Tool.count" ] do
-          error = assert_raises(Loadouts::Update::Error, "#{op} from #{source}") do
+          error = assert_raises(Toolbox::Update::Error, "#{op} from #{source}") do
             update({ op: "suggest", category: "coding", tool: "Some New Tool" }, { op:, category: "coding", rank: 1, tool: "cursor", suggestion_id: 1 }, source:, client_name: "Claude")
           end
           assert_equal "#{op} can only be done by the member on the web.", error.message
@@ -261,28 +261,28 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
   end
 
   test "agents may only suggest and withdraw" do
-    assert_equal %w[suggest withdraw], Loadouts::Update::AGENT_OPERATIONS
-    assert_equal %w[set_pick remove_pick move_pick confirm dismiss], Loadouts::Update::WEB_OPERATIONS
+    assert_equal %w[suggest withdraw], Toolbox::Update::AGENT_OPERATIONS
+    assert_equal %w[set_pick remove_pick move_pick confirm dismiss], Toolbox::Update::WEB_OPERATIONS
   end
 
   test "errors name what went wrong" do
-    error = assert_raises(Loadouts::Update::Error) { update(set_pick(1, "cursor", category: "cooking")) }
+    error = assert_raises(Toolbox::Update::Error) { update(set_pick(1, "cursor", category: "cooking")) }
     assert_match(/Unknown category "cooking"/, error.message)
 
-    error = assert_raises(Loadouts::Update::Error) { update({ op: "remove_pick", category: "coding", rank: 1 }) }
+    error = assert_raises(Toolbox::Update::Error) { update({ op: "remove_pick", category: "coding", rank: 1 }) }
     assert_match(/Nothing is ranked 1st for coding/, error.message)
 
-    error = assert_raises(Loadouts::Update::Error) { update({ op: "explode", category: "coding" }) }
+    error = assert_raises(Toolbox::Update::Error) { update({ op: "explode", category: "coding" }) }
     assert_match(/Unknown operation "explode"\. Use one of: set_pick, remove_pick, move_pick, confirm, dismiss, suggest, withdraw\./, error.message)
 
-    assert_raises(Loadouts::Update::Error) { Loadouts::Update.call(user: @user, operations: [], source: "web") }
-    assert_raises(Loadouts::Update::Error) { update(*Array.new(51) { set_pick(1, "cursor") }) }
+    assert_raises(Toolbox::Update::Error) { Toolbox::Update.call(user: @user, operations: [], source: "web") }
+    assert_raises(Toolbox::Update::Error) { update(*Array.new(51) { set_pick(1, "cursor") }) }
     assert_raises(ArgumentError) { update(set_pick(1, "cursor"), source: "carrier pigeon") }
   end
 
   test "a failing operation rolls back the whole batch" do
     assert_no_difference [ "Entry.count", "EntryChange.count", "Tool.count" ] do
-      assert_raises(Loadouts::Update::Error) do
+      assert_raises(Toolbox::Update::Error) do
         update(set_pick(1, "cursor"), set_pick(2, "Brand New Tool"), { op: "remove_pick", category: "video", rank: 1 })
       end
     end
@@ -293,12 +293,12 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     def racing.entries = []
     def racing.place(**) = raise(ActiveRecord::RecordNotUnique, "UNIQUE constraint failed: entries.user_id, entries.category_id, entries.rank")
 
-    Loadouts::Slots.define_singleton_method(:new) { |**| racing }
+    Toolbox::Slots.define_singleton_method(:new) { |**| racing }
     begin
-      error = assert_raises(Loadouts::Update::Error) { update(set_pick(1, "cursor")) }
+      error = assert_raises(Toolbox::Update::Error) { update(set_pick(1, "cursor")) }
       assert_equal "That slot changed while you were saving. Reload and try again.", error.message
     ensure
-      Loadouts::Slots.singleton_class.remove_method(:new)
+      Toolbox::Slots.singleton_class.remove_method(:new)
     end
   end
 
@@ -311,7 +311,7 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     4.times { |index| suggest.("Agent Tool #{index + 1}") }
 
     assert_no_difference -> { Tool.count } do
-      error = assert_raises(Loadouts::Update::Error) { suggest.("Agent Tool 5") }
+      error = assert_raises(Toolbox::Update::Error) { suggest.("Agent Tool 5") }
       assert_match(/5 new tools or models a day/, error.message)
       suggest.("Agent Tool 0")
     end
@@ -338,7 +338,7 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     4.times { |index| suggest.("Agent Tool #{index}") }
     Tool.create!(name: "Kling", status: "pending", created_by: users(:two))
     assert_no_difference -> { Tool.count } do
-      error = assert_raises(Loadouts::Update::Error) { suggest.("kling") }
+      error = assert_raises(Toolbox::Update::Error) { suggest.("kling") }
       assert_match(/5 new tools or models a day/, error.message)
     end
   end
@@ -349,7 +349,7 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
 
     assert_equal [ "pending", @user ], AiModel.find_by!(name: "Agent Model 1").then { |model| [ model.status, model.created_by ] }
     assert_no_difference -> { AiModel.count } do
-      error = assert_raises(Loadouts::Update::Error) do
+      error = assert_raises(Toolbox::Update::Error) do
         update({ op: "suggest", category: "coding", tool: "cursor", model: "Agent Model 2" }, source: "webmcp")
       end
       assert_match(/5 new tools or models a day/, error.message)

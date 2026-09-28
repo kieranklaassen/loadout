@@ -19,7 +19,7 @@ export default function KindSidebar({ kinds, selected }: { kinds: EditorKind[]; 
             <li key={kind.category.slug} className="shrink-0 lg:shrink">
               <Link
                 ref={active ? current : undefined}
-                href={`/loadout/edit?kind=${kind.category.slug}`}
+                href={`/toolbox/edit?kind=${kind.category.slug}`}
                 preserveScroll
                 preserveState
                 aria-current={active ? 'page' : undefined}

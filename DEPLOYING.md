@@ -20,10 +20,10 @@ silently reusing another app's config.
    export KAMAL_BUILDER_ARCH=amd64
    export KAMAL_SSH_USER=deploy
 
-   # Loadout (required).
-   export PUBLIC_BASE_URL=https://loadout.every.to   # the https origin, no path; see "PUBLIC_BASE_URL" below
+   # Toolbox (required).
+   export PUBLIC_BASE_URL=https://toolbox.every.to   # the https origin, no path; see "PUBLIC_BASE_URL" below
    export EVERY_OAUTH_BASE_URL=https://every.to
-   export EVERY_OAUTH_CLIENT_ID=...       # Every OAuth client, redirect URI https://loadout.every.to/auth/every/callback
+   export EVERY_OAUTH_CLIENT_ID=...       # Every OAuth client, redirect URI https://toolbox.every.to/auth/every/callback
    export EVERY_OAUTH_CLIENT_SECRET=...
    export ADMIN_EMAILS=kieran@every.to    # an address is admin only once Every verified it
 
@@ -45,9 +45,9 @@ silently reusing another app's config.
 
 ## DNS and Every OAuth (one time, before `kamal setup`)
 
-- Add an `A` record: `loadout.every.to` pointing at the server's IPv4 address (plus `AAAA` for IPv6 if present). kamal-proxy gets the certificate once DNS resolves.
-- Register an Every OAuth client with redirect URI `https://loadout.every.to/auth/every/callback` and scope `basic_profile`. Sign-in reads the person's name, photo and email, and "Every team" needs the provider to send `email_verified: true` (see the first-deploy checks below).
-- MCP clients discover the authorization server at `https://loadout.every.to/.well-known/oauth-authorization-server`. Nothing to register; clients self-register.
+- Add an `A` record: `toolbox.every.to` pointing at the server's IPv4 address (plus `AAAA` for IPv6 if present). kamal-proxy gets the certificate once DNS resolves.
+- Register an Every OAuth client with redirect URI `https://toolbox.every.to/auth/every/callback` and scope `basic_profile`. Sign-in reads the person's name, photo and email, and "Every team" needs the provider to send `email_verified: true` (see the first-deploy checks below).
+- MCP clients discover the authorization server at `https://toolbox.every.to/.well-known/oauth-authorization-server`. Nothing to register; clients self-register.
 
 ## Deploy
 
@@ -66,7 +66,7 @@ committed.
 
 `PUBLIC_BASE_URL` is required in production, and it is the single host knob. The OAuth issuer
 and redirect, the MCP resource, share links and every host printed on a page derive from it, so
-moving the app is a configuration change (moving it to `every.to/loadout` is a separate deploy
+moving the app is a configuration change (moving it to `every.to/toolbox` is a separate deploy
 task). Two things depend on it at boot:
 
 - **Host authorization.** Production answers only to the host in `PUBLIC_BASE_URL`; a request with
@@ -134,7 +134,7 @@ After deploying, before you call it done:
    count as "Everyone else" and an admin loses admin.
 4. **Revoke agent grants from before this release, if there are any.** In `bin/kamal console`,
    check `OauthGrant.active.exists?`. If it is `true`, run
-   `bin/kamal app exec --reuse "bin/rails loadout:revoke_agent_grants"`: an older grant keeps
+   `bin/kamal app exec --reuse "bin/rails toolbox:revoke_agent_grants"`: an older grant keeps
    working, and its agent now reads teammates' shared picks. Members approve their agents again.
 5. **Set launch links.** Add each model's release date and Vibe Check link at
    `/admin/catalog_items`; a model is listed as a launch only with both.
@@ -161,14 +161,14 @@ it until you are sure.
 
 Two rake tasks run in the container (`bin/kamal app exec --reuse "..."`):
 
-- `EMAIL=person@every.to bin/rails loadout:remove_member` removes a member who left Every: the
+- `EMAIL=person@every.to bin/rails toolbox:remove_member` removes a member who left Every: the
   same deletion as Settings, so their picks, history, suggestions, visibility periods, sessions
   and agent connections go too. Someone who leaves Every without deleting their account stays in
   "Every team" counts and readable until you run this. Tools and models they added stay in the
   catalog.
-- `bin/rails loadout:revoke_agent_grants` revokes every agent connection and withdraws the
+- `bin/rails toolbox:revoke_agent_grants` revokes every agent connection and withdraws the
   suggestions agents left open, so members approve their agents again. Use it if agents connected
-  before this release: there is one `loadout` scope, and reads now include teammates' data.
+  before this release: there is one `toolbox` scope, and reads now include teammates' data.
 
 ## Caveat: git worktrees do not inherit your shell secrets
 

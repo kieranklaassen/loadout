@@ -31,14 +31,14 @@ const props = (overrides: Partial<Props> = {}): Props => ({
   takes,
   last_update_at: '2026-09-25T12:00:00Z',
   eras: null,
-  cta: { label: 'Rank your coding picks', href: '/loadout/edit?kind=coding' },
+  cta: { label: 'Rank your coding picks', href: '/toolbox/edit?kind=coding' },
   ...overrides,
 })
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-09-27T12:00:00Z'))
-  page.props = { current_user: null, flash: {}, public_host: 'loadout.every.to' }
+  page.props = { current_user: null, flash: {}, public_host: 'toolbox.every.to' }
 })
 
 afterEach(() => vi.useRealTimers())
@@ -48,9 +48,9 @@ describe('Kind page', () => {
     render(<KindPage {...props()} />)
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Coding')
-    expect(document.title).toBe('Coding on Loadout')
+    expect(document.title).toBe('Coding on Toolbox')
     expect(screen.getByText(/most recently/)).toHaveTextContent('Writing, reviewing, and shipping code. 4 of 6 ranked it, most recently 2 days ago.')
-    expect(screen.getByRole('link', { name: 'Rank your coding picks' })).toHaveAttribute('href', '/loadout/edit?kind=coding')
+    expect(screen.getByRole('link', { name: 'Rank your coding picks' })).toHaveAttribute('href', '/toolbox/edit?kind=coding')
   })
 
   it('links back to Home in the group being shown', () => {

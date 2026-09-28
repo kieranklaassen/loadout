@@ -73,7 +73,7 @@ class OauthGrant < ApplicationRecord
 
     transaction do
       update!(revoked_at: Time.current)
-      Loadouts::Suggestions.withdraw_for_client(user:, oauth_client:)
+      Toolbox::Suggestions.withdraw_for_client(user:, oauth_client:)
     end
   end
 

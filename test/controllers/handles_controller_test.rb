@@ -7,7 +7,7 @@ class HandlesControllerTest < ActionDispatch::IntegrationTest
     get check_handle_path, params: { handle: "Fresh" }, headers: partial_headers("onboarding/show")
 
     assert_response :success
-    assert_equal({ "handle" => "fresh", "available" => true, "message" => "loadout.every.to/fresh is yours." }, response.parsed_body["props"]["availability"])
+    assert_equal({ "handle" => "fresh", "available" => true, "message" => "toolbox.every.to/fresh is yours." }, response.parsed_body["props"]["availability"])
   end
 
   test "reports taken and reserved handles" do
@@ -15,7 +15,7 @@ class HandlesControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, response.parsed_body["props"]["availability"]["available"]
 
     get check_handle_path, params: { handle: "admin" }, headers: partial_headers("onboarding/show")
-    assert_equal "loadout.every.to/admin is reserved.", response.parsed_body["props"]["availability"]["message"]
+    assert_equal "toolbox.every.to/admin is reserved.", response.parsed_body["props"]["availability"]["message"]
   end
 
   test "a member's own handle is available to them in settings" do

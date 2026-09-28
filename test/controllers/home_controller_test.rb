@@ -34,7 +34,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal "nobody_shared", page_props[:empty_reason]
     assert_nil page_props[:hero]
     assert_empty page_props[:rows]
-    assert_equal({ label: "Join Every", href: LoadoutHost::JOIN_EVERY_URL }, page_props[:cta])
+    assert_equal({ label: "Join Every", href: ToolboxHost::JOIN_EVERY_URL }, page_props[:cta])
     refute_includes page_props.slice(:rows, :hero, :overall).to_json, '"of":0'
   end
 
@@ -152,7 +152,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal "claude-code", coding[:team_uses][:tool][:slug], "her first pick is not the team's most used tool"
     assert_nil coding[:team_uses][:model], "her model is the team's most used, so no note"
     assert_nil person[:kinds].find { |kind| kind[:category][:slug] == "knowledge-work" }[:team_uses]
-    assert_equal [ "claude-opus-5-5" ], person[:new_in_loadout].map { |launch| launch[:model][:slug] }
+    assert_equal [ "claude-opus-5-5" ], person[:new_in_toolbox].map { |launch| launch[:model][:slug] }
   end
 
   test "a person in the other SHOW class is not opened" do
@@ -173,7 +173,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "claude-opus-5-5" ], launches.map { |launch| launch[:model][:slug] }
     assert_equal "https://checks.every.to/vibe-checks/claude-opus-5-5", launches.first[:vibe_check_url]
     assert launches.first[:newest]
-    assert_equal LoadoutHost::ALL_VIBE_CHECKS_URL, page_props[:all_vibe_checks_url]
+    assert_equal ToolboxHost::ALL_VIBE_CHECKS_URL, page_props[:all_vibe_checks_url]
   end
 
   # SHOW stub
@@ -215,7 +215,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     get root_path
 
-    assert_equal({ label: "Rank your first tools", href: "/loadout/edit" }, page_props[:cta])
+    assert_equal({ label: "Rank your first tools", href: "/toolbox/edit" }, page_props[:cta])
   end
 
   test "a signed-in member with confirmed picks gets no call to action" do

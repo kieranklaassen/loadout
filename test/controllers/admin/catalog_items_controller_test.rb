@@ -169,7 +169,7 @@ class Admin::CatalogItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "merging repoints picks and history, then deletes the pending item" do
     suggested = Tool.resolve_or_suggest!("Claude-Code CLI", user: @member)
-    Loadouts::Update.call(user: @member, operations: [ { op: "set_pick", category: "coding", rank: 2, tool: suggested.slug } ], source: "web")
+    Toolbox::Update.call(user: @member, operations: [ { op: "set_pick", category: "coding", rank: 2, tool: suggested.slug } ], source: "web")
     sign_in_as @admin
 
     post merge_admin_catalog_item_path(suggested, kind: "tool"), params: { target_id: tools(:claude_code).id }
@@ -183,7 +183,7 @@ class Admin::CatalogItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "merging keeps the higher pick when a member ranked both tools" do
     suggested = Tool.resolve_or_suggest!("Claude-Code CLI", user: @member)
-    Loadouts::Update.call(user: @member, source: "web", operations: [
+    Toolbox::Update.call(user: @member, source: "web", operations: [
       { op: "set_pick", category: "coding", rank: 2, tool: suggested.slug },
       { op: "set_pick", category: "coding", rank: 3, tool: tools(:claude_code).slug }
     ])
@@ -201,7 +201,7 @@ class Admin::CatalogItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "merging a model repoints the picks that use it and keeps their ranks" do
     suggested = AiModel.resolve_or_suggest!("Opus Five", user: @member)
-    Loadouts::Update.call(user: @member, operations: [ { op: "set_pick", category: "coding", rank: 1, model: suggested.slug } ], source: "web")
+    Toolbox::Update.call(user: @member, operations: [ { op: "set_pick", category: "coding", rank: 1, model: suggested.slug } ], source: "web")
     sign_in_as @admin
 
     assert_no_difference -> { Entry.count } do

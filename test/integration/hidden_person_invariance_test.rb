@@ -71,7 +71,7 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
       themselves = read_as(person)
 
       mutate(baseline, "they change their picks") do
-        update_loadout person, [
+        update_toolbox person, [
           { op: "set_pick", category: "coding", rank: 1, tool: "claude-code", model: "claude-opus-5-5", context: "1m", effort: "high" },
           { op: "set_pick", category: "coding", rank: 2, tool: "cursor" },
           { op: "set_pick", category: "video", rank: 1, tool: "runway" },
@@ -81,7 +81,7 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
       assert_not_equal themselves, read_as(person), "their own page shows the change, so the snapshot can see it"
 
       mutate(baseline, "an agent suggests picks for them") do
-        update_loadout person, [ { op: "suggest", category: "knowledge-work", tool: "claude-code", model: "claude-opus-5-5" }, { op: "suggest", category: "video", tool: "Secret Agent Tool" } ],
+        update_toolbox person, [ { op: "suggest", category: "knowledge-work", tool: "claude-code", model: "claude-opus-5-5" }, { op: "suggest", category: "video", tool: "Secret Agent Tool" } ],
           source: "mcp", client_name: "Claude", oauth_client_id: 7
       end
 
@@ -98,11 +98,11 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
       mutate(baseline, "they add pending catalog items and rank them") do
         Tool.resolve_or_suggest!("Secret Tool", user: person)
         AiModel.resolve_or_suggest!("Secret Model", user: person)
-        update_loadout person, [ { op: "set_pick", category: "coding", rank: 3, tool: "Secret Tool", model: "Secret Model" } ]
+        update_toolbox person, [ { op: "set_pick", category: "coding", rank: 3, tool: "Secret Tool", model: "Secret Model" } ]
       end
 
       mutate(baseline, "they remove a pick") do
-        update_loadout person, [ { op: "remove_pick", category: "coding", rank: 1 } ]
+        update_toolbox person, [ { op: "remove_pick", category: "coding", rank: 1 } ]
       end
 
       mutate(baseline, "they rename themselves and change their handle and bio") do
@@ -121,7 +121,7 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
     before = read_everyone
 
     travel 1.minute
-    update_loadout users(:every_ana), [ { op: "set_pick", category: "coding", rank: 3, tool: "runway" } ]
+    update_toolbox users(:every_ana), [ { op: "set_pick", category: "coding", rank: 3, tool: "runway" } ]
     after = read_everyone
 
     @viewers.each_key { |viewer| assert_not_equal before[viewer], after[viewer], "#{viewer} sees a change by a person who shares with the link" }
@@ -131,7 +131,7 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
     before = read_everyone
 
     travel 1.minute
-    update_loadout users(:every_dee), [ { op: "set_pick", category: "coding", rank: 3, tool: "runway" } ]
+    update_toolbox users(:every_dee), [ { op: "set_pick", category: "coding", rank: 3, tool: "runway" } ]
     after = read_everyone
 
     assert_equal before["a visitor"], after["a visitor"]
@@ -156,24 +156,24 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
     otto = add_person("otto", visibility: "link")
     [ [ %w[gil hal ivy], { visibility: "team", team: true } ], [ %w[pam quinn rae], { visibility: "link", team: false } ] ].each do |handles, options|
       first, second, third = handles.map { |handle| add_person(handle, **options) }
-      update_loadout first, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
-      update_loadout second, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
-      update_loadout third, [ { op: "set_pick", category: "coding", rank: 1, tool: windsurf.slug } ]
+      update_toolbox first, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
+      update_toolbox second, [ { op: "set_pick", category: "coding", rank: 1, tool: zed.slug } ]
+      update_toolbox third, [ { op: "set_pick", category: "coding", rank: 1, tool: windsurf.slug } ]
     end
-    update_loadout dot, [ { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "claude-opus-5" } ]
-    update_loadout otto, [ { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "gpt-6-astra" } ]
+    update_toolbox dot, [ { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "claude-opus-5" } ]
+    update_toolbox otto, [ { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "gpt-6-astra" } ]
 
     travel_to @now - 50.days
     otto.update!(visibility: "only_me")
 
     travel_to @now - 25.days
-    %w[gil pam].each { |handle| update_loadout User.find_by!(handle:), [ { op: "set_pick", category: "coding", rank: 1, tool: "claude-code" } ] }
+    %w[gil pam].each { |handle| update_toolbox User.find_by!(handle:), [ { op: "set_pick", category: "coding", rank: 1, tool: "claude-code" } ] }
 
     travel_to @now
   end
 
-  def update_loadout(user, operations, source: "web", **agent)
-    Loadouts::Update.call(user:, source:, operations:, **agent)
+  def update_toolbox(user, operations, source: "web", **agent)
+    Toolbox::Update.call(user:, source:, operations:, **agent)
   end
 
   # Runs the change, then requires everyone else's view to be what it was.
@@ -227,7 +227,7 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
     calls = SHOWS.flat_map do |show|
       [ [ "get_team_rankings", { audience: show } ] ] + KINDS.map { |slug| [ "get_team_rankings", { audience: show, category: slug } ] }
     end
-    calls += [ [ "get_my_loadout", {} ], [ "get_recent_changes", {} ], [ "list_categories", {} ], [ "search_catalog", { query: "secret" } ], [ "search_catalog", { query: "cursor" } ] ]
+    calls += [ [ "get_my_toolbox", {} ], [ "get_recent_changes", {} ], [ "list_categories", {} ], [ "search_catalog", { query: "secret" } ], [ "search_catalog", { query: "cursor" } ] ]
 
     calls.to_h { |name, arguments| [ "tool #{name} #{arguments.to_json}", tool_result(viewer, name, arguments).to_json ] }
   end

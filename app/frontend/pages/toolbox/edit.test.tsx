@@ -7,7 +7,7 @@ import type { CatalogOption, EditorKind, TeamTop } from '../../lib/ranking'
 import { claudeCodeMark, cursorMark, markItem, opusMark, rankedPick, suggestion } from '../../test/picker_fixtures'
 import { installModelContext, removeModelContext } from '../../test/model_context_stub'
 import type { MarkItem, Suggestion, Visibility } from '../../types'
-import LoadoutEdit from './edit'
+import ToolboxEdit from './edit'
 
 const { patch, post, del, reload, replaceProp } = vi.hoisted(() => ({
   patch: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('@inertiajs/react', () => ({
     </a>
   ),
   router: { patch, post, delete: del, reload, replaceProp, on: () => () => {} },
-  usePage: () => ({ props: { current_user: null, flash: {} }, url: '/loadout/edit?kind=coding' }),
+  usePage: () => ({ props: { current_user: null, flash: {} }, url: '/toolbox/edit?kind=coding' }),
 }))
 
 const KIND_NAMES = [
@@ -61,7 +61,7 @@ const teamTop: TeamTop = {
   },
 }
 
-type Props = Parameters<typeof LoadoutEdit>[0]
+type Props = Parameters<typeof ToolboxEdit>[0]
 
 // Claude Code 1st with Opus, Cursor 2nd, nothing 3rd: the state most tests start from.
 const twoPicks = () => [rankedPick({ rank: 1, tool: claudeCodeMark, model: opusMark, context: '1m', effort: 'high' }), rankedPick({ rank: 2, tool: cursorMark, model: null })]
@@ -94,30 +94,30 @@ describe('Rank editor layout', () => {
   it('lists the eleven kinds with how far along each is, and opens the selected one', () => {
     const state = props({}, { suggestions: [suggestion({ id: 1, target_rank: 3 })] })
     state.kinds[2] = kindOf('Writing', { picks: [rankedPick({ rank: 1 }), rankedPick({ rank: 2, tool: cursorMark }), rankedPick({ rank: 3, tool: runway })] })
-    render(<LoadoutEdit {...state} />)
+    render(<ToolboxEdit {...state} />)
 
     const nav = screen.getByRole('navigation', { name: 'Kinds of work' })
     expect(within(nav).getAllByRole('link')).toHaveLength(11)
     expect(within(nav).getByRole('link', { name: /^Coding\s*3 of 3 · 1 to confirm$/ })).toHaveAttribute('aria-current', 'page')
-    expect(within(nav).getByRole('link', { name: /Writing\s*3 of 3$/ })).toHaveAttribute('href', '/loadout/edit?kind=writing')
+    expect(within(nav).getByRole('link', { name: /Writing\s*3 of 3$/ })).toHaveAttribute('href', '/toolbox/edit?kind=writing')
     expect(within(nav).getByRole('link', { name: /Music\s*Not started/ })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('heading', { level: 2, name: 'Coding' })).toBeInTheDocument()
     expect(screen.getByText(/of 11 kinds started/)).toBeInTheDocument()
   })
 
   it('says who can see the page, in the shared words, and links to change it', () => {
-    const { rerender } = render(<LoadoutEdit {...props({ visibility: 'only_me' })} />)
+    const { rerender } = render(<ToolboxEdit {...props({ visibility: 'only_me' })} />)
     expect(screen.getByText(/Only you can see this\./)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Change who can see it' })).toHaveAttribute('href', '/settings')
 
-    rerender(<LoadoutEdit {...props({ visibility: 'team' })} />)
+    rerender(<ToolboxEdit {...props({ visibility: 'team' })} />)
     expect(screen.getByText(/People on the Every team can see this\./)).toBeInTheDocument()
-    rerender(<LoadoutEdit {...props({ visibility: 'link' })} />)
+    rerender(<ToolboxEdit {...props({ visibility: 'link' })} />)
     expect(screen.getByText(/Anyone with the link can see this and find you in search\./)).toBeInTheDocument()
   })
 
   it('tells the member changes save as they go and that suggestions stay private, and offers the agent card with WebMCP', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     expect(screen.getByText(/Changes save as you go\. Suggested picks stay private until you confirm\./)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /set up an agent/i })).toHaveAttribute('href', '/agents')
@@ -127,7 +127,7 @@ describe('Rank editor layout', () => {
 
 describe('slots and their selects', () => {
   it('labels TOOL, MODEL, CONTEXT and EFFORT with real labels on real selects, in every slot', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     for (const name of ['1st pick', '2nd pick', 'Add your 3rd pick']) {
       for (const label of ['Tool', 'Model', 'Context', 'Effort']) {
@@ -138,14 +138,14 @@ describe('slots and their selects', () => {
   })
 
   it('offers exactly the shared context and effort values, and Not set', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     expect(options(field('1st pick', 'Context'))).toEqual(['', '200k', '1m'])
     expect(options(field('1st pick', 'Effort'))).toEqual(['', 'low', 'medium', 'high'])
   })
 
   it('groups tools as Suggested for the kind, then All tools, and models the same way', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     const tool = field('1st pick', 'Tool')
     const groups = Array.from(tool.querySelectorAll('optgroup')).map((group) => [group.label, Array.from(group.querySelectorAll('option')).map((entry) => entry.textContent)])
@@ -158,7 +158,7 @@ describe('slots and their selects', () => {
   })
 
   it('shows a saved value and offers Not set on model, context and effort', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     expect(field('1st pick', 'Tool')).toHaveValue('claude-code')
     expect(field('1st pick', 'Model')).toHaveValue('claude-opus-5-5')
@@ -168,7 +168,7 @@ describe('slots and their selects', () => {
   })
 
   it('leaves only TOOL on in an empty slot until a tool is saved', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     expect(field('Add your 3rd pick', 'Tool')).toBeEnabled()
     for (const label of ['Model', 'Context', 'Effort']) expect(field('Add your 3rd pick', label)).toBeDisabled()
@@ -176,7 +176,7 @@ describe('slots and their selects', () => {
   })
 
   it('disables a tool another slot of the kind already uses, but not the slot’s own', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     const second = field('2nd pick', 'Tool')
     expect(within(second).getByRole('option', { name: 'Claude Code' })).toBeDisabled()
@@ -187,7 +187,7 @@ describe('slots and their selects', () => {
 
   it('keeps a saved tool the catalog no longer offers', () => {
     const hidden = markItem('old-thing', 'Old Thing')
-    render(<LoadoutEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: hidden, model: null })] })} />)
+    render(<ToolboxEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: hidden, model: null })] })} />)
 
     expect(field('1st pick', 'Tool')).toHaveValue('old-thing')
   })
@@ -196,13 +196,13 @@ describe('slots and their selects', () => {
 describe('autosave', () => {
   it('choosing a tool in an empty slot sends one operation with its rank', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('Add your 3rd pick', 'Tool'), 'codex')
 
     expect(patch).toHaveBeenCalledTimes(1)
     expect(patch).toHaveBeenCalledWith(
-      '/loadout',
+      '/toolbox',
       { operations: [{ op: 'set_pick', category: 'coding', rank: 3, tool: 'codex', expected_tool: null }] },
       expect.objectContaining({ preserveScroll: true, preserveState: true }),
     )
@@ -210,7 +210,7 @@ describe('autosave', () => {
 
   it('a model change sends only that slot’s operation with only the model', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Model'), 'gpt-6-astra')
 
@@ -220,7 +220,7 @@ describe('autosave', () => {
 
   it('Not set sends null for the model, the context and the effort', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Model'), '')
     await user.selectOptions(field('1st pick', 'Context'), '')
@@ -235,7 +235,7 @@ describe('autosave', () => {
 
   it('a new tool in a filled slot sends the saved tool it replaces as the one the member was shown', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Tool'), 'codex')
 
@@ -248,7 +248,7 @@ describe('autosave', () => {
     patch.mockImplementation((_url, _data, options) => {
       landed = options.onSuccess
     })
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Effort'), 'low')
     const status = within(slot('1st pick')).getByRole('status')
@@ -262,7 +262,7 @@ describe('autosave', () => {
   it('shows an alert with Retry when the save is refused, reverts the select, and retries the same change', async () => {
     const user = userEvent.setup()
     patch.mockImplementationOnce((_url, _data, options) => options.onSuccess({ props: { flash: { alert: 'That slot changed while you were saving.' } } }))
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Effort'), 'low')
 
@@ -282,7 +282,7 @@ describe('autosave', () => {
   it('treats a request that never got an answer as a failed save', async () => {
     const user = userEvent.setup()
     patch.mockImplementationOnce((_url, _data, options) => options.onNetworkError(new Error('offline')))
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Effort'), 'low')
 
@@ -292,7 +292,7 @@ describe('autosave', () => {
 
   it('marks a pick on a pending tool or model as pending review', () => {
     const pending = { ...markItem('zed', 'Zed'), pending: true }
-    render(<LoadoutEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: pending, model: null })] })} />)
+    render(<ToolboxEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: pending, model: null })] })} />)
 
     expect(within(slot('1st pick')).getByText('Pending review')).toBeInTheDocument()
   })
@@ -300,7 +300,7 @@ describe('autosave', () => {
 
 describe('move and remove', () => {
   it('names each action for its pick and disables the ends without hiding them', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     const first = within(slot('1st pick'))
     expect(first.getByRole('button', { name: 'Move Claude Code up' })).toHaveAttribute('aria-disabled', 'true')
@@ -314,7 +314,7 @@ describe('move and remove', () => {
 
   it('does nothing when a disabled move is pressed', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.click(within(slot('1st pick')).getByRole('button', { name: 'Move Claude Code up' }))
     await user.click(within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor down' }))
@@ -324,7 +324,7 @@ describe('move and remove', () => {
 
   it('Move up is one swap operation; the live region says the new rank and focus lands on that slot', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.click(within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor up' }))
 
@@ -336,11 +336,11 @@ describe('move and remove', () => {
 
   it('reflects the new order once the page sends it back', async () => {
     const user = userEvent.setup()
-    const { rerender } = render(<LoadoutEdit {...props()} />)
+    const { rerender } = render(<ToolboxEdit {...props()} />)
     await user.click(within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor up' }))
 
     const swapped = [rankedPick({ rank: 1, tool: cursorMark, model: null }), rankedPick({ rank: 2, tool: claudeCodeMark, model: opusMark, context: '1m', effort: 'high' })]
-    rerender(<LoadoutEdit {...props({}, { picks: swapped })} />)
+    rerender(<ToolboxEdit {...props({}, { picks: swapped })} />)
 
     expect(field('1st pick', 'Tool')).toHaveValue('cursor')
     expect(field('2nd pick', 'Tool')).toHaveValue('claude-code')
@@ -349,7 +349,7 @@ describe('move and remove', () => {
 
   it('Remove sends remove_pick, announces it and moves focus to that slot', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.click(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }))
 
@@ -361,10 +361,10 @@ describe('move and remove', () => {
   it('Retry after the slot changed sends the pick the member removed, not the one now in that slot', async () => {
     const user = userEvent.setup()
     patch.mockImplementationOnce((_url, _data, options) => options.onSuccess({ props: { flash: { alert: 'This changed, review it.' } } }))
-    const { rerender } = render(<LoadoutEdit {...props()} />)
+    const { rerender } = render(<ToolboxEdit {...props()} />)
 
     await user.click(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }))
-    rerender(<LoadoutEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: cursorMark, model: null })] })} />)
+    rerender(<ToolboxEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: cursorMark, model: null })] })} />)
     await user.click(within(slot('1st pick')).getByRole('button', { name: 'Retry' }))
 
     expect(patch).toHaveBeenCalledTimes(2)
@@ -374,7 +374,7 @@ describe('move and remove', () => {
   it('shows a refused move in the slot with Retry', async () => {
     const user = userEvent.setup()
     patch.mockImplementationOnce((_url, _data, options) => options.onSuccess({ props: { flash: { alert: 'Nothing is ranked 3rd for coding.' } } }))
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.click(within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor up' }))
 
@@ -419,7 +419,7 @@ describe('one request at a time', () => {
   it('ignores an edit in another slot while a save is out, then takes it once the save has landed', async () => {
     const user = userEvent.setup()
     const held = hold(patch)
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Effort'), 'low')
     await user.selectOptions(field('2nd pick', 'Model'), 'gpt-6-astra')
@@ -439,7 +439,7 @@ describe('one request at a time', () => {
   it('removes one pick when Remove is double-clicked', async () => {
     const user = userEvent.setup()
     const held = hold(patch)
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.dblClick(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' }))
 
@@ -452,7 +452,7 @@ describe('one request at a time', () => {
   it('swaps a pair once when Move up is double-clicked', async () => {
     const user = userEvent.setup()
     hold(patch)
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.dblClick(within(slot('2nd pick')).getByRole('button', { name: 'Move Cursor up' }))
 
@@ -466,7 +466,7 @@ describe('one request at a time', () => {
     it('marks Move, Remove, Confirm and Use aria-disabled, keeps their text, and acts on none of them', async () => {
       const user = userEvent.setup()
       const held = hold(patch, post, del)
-      render(<LoadoutEdit {...state()} />)
+      render(<ToolboxEdit {...state()} />)
       const before = buttons().map((button) => button.textContent)
       buttons().forEach((button) => expect(button).not.toHaveAttribute('aria-disabled'))
 
@@ -488,7 +488,7 @@ describe('one request at a time', () => {
   it('keeps the selects focusable but ignores a change in any of them while a request is out', async () => {
     const user = userEvent.setup()
     const held = hold(patch)
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     await user.click(within(slot('1st pick')).getByRole('button', { name: 'Move Claude Code down' }))
 
     for (const [name, label, value] of [['1st pick', 'Tool', 'codex'], ['1st pick', 'Model', 'gpt-6-astra'], ['2nd pick', 'Context', '200k'], ['2nd pick', 'Effort', 'low']]) {
@@ -514,7 +514,7 @@ describe('one request at a time', () => {
       options.onNetworkError(new Error('offline'))
       options.onFinish()
     })
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     await user.selectOptions(field('1st pick', 'Effort'), 'low')
     const alert = within(slot('1st pick')).getByRole('alert')
     expect(within(slot('1st pick')).getByRole('button', { name: 'Remove Claude Code' })).not.toHaveAttribute('aria-disabled')
@@ -536,7 +536,7 @@ describe('one request at a time', () => {
   it('does not leave a slot at Saving… when another visit cancels its request', async () => {
     const user = userEvent.setup()
     const held = hold(patch)
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Effort'), 'low')
     act(() => held[0]!.onFinish())
@@ -550,7 +550,7 @@ describe('one request at a time', () => {
 describe('suggestions', () => {
   it('shows a suggestion in the empty slot it would land in, with Confirm and Remove that name it', () => {
     const state = props({}, { suggestions: [suggestion({ id: 7, tool: runway, target_rank: 3, suggested_by: 'Claude' })] })
-    render(<LoadoutEdit {...state} />)
+    render(<ToolboxEdit {...state} />)
 
     const box = within(slot('3rd pick'))
     expect(box.getByText('Suggested by Claude')).toBeInTheDocument()
@@ -561,28 +561,28 @@ describe('suggestions', () => {
 
   it('Confirm posts the endpoint with the slot it was shown in', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props({}, { suggestions: [suggestion({ id: 7, tool: runway, target_rank: 3 })] })} />)
+    render(<ToolboxEdit {...props({}, { suggestions: [suggestion({ id: 7, tool: runway, target_rank: 3 })] })} />)
 
     await user.click(screen.getByRole('button', { name: 'Confirm Runway' }))
 
-    expect(post).toHaveBeenCalledWith('/loadout/suggestions/7/confirm', { rank: 3 }, expect.objectContaining({ preserveScroll: true }))
+    expect(post).toHaveBeenCalledWith('/toolbox/suggestions/7/confirm', { rank: 3 }, expect.objectContaining({ preserveScroll: true }))
     expect(screen.getByText('Confirmed Runway as your 3rd pick')).toBeInTheDocument()
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: '3rd pick' }))
   })
 
   it('Remove dismisses it', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props({}, { suggestions: [suggestion({ id: 7, tool: runway, target_rank: 3 })] })} />)
+    render(<ToolboxEdit {...props({}, { suggestions: [suggestion({ id: 7, tool: runway, target_rank: 3 })] })} />)
 
     await user.click(screen.getByRole('button', { name: 'Remove suggested Runway' }))
 
-    expect(del).toHaveBeenCalledWith('/loadout/suggestions/7', expect.objectContaining({ preserveScroll: true }))
+    expect(del).toHaveBeenCalledWith('/toolbox/suggestions/7', expect.objectContaining({ preserveScroll: true }))
     expect(post).not.toHaveBeenCalled()
   })
 
   it('stacks two suggestions for one slot, each with its own Confirm and Remove', () => {
     const stacked = [suggestion({ id: 1, tool: runway, target_rank: 3, suggested_by: 'Claude' }), suggestion({ id: 2, tool: codex, target_rank: 3, suggested_by: 'Cursor agent' })]
-    render(<LoadoutEdit {...props({}, { suggestions: stacked })} />)
+    render(<ToolboxEdit {...props({}, { suggestions: stacked })} />)
 
     const box = within(slot('3rd pick'))
     expect(box.getAllByRole('button', { name: /^Confirm / })).toHaveLength(2)
@@ -592,7 +592,7 @@ describe('suggestions', () => {
 
   it('renders a suggestion that changes a pick inside that slot, old beside new', () => {
     const change = suggestion({ id: 4, tool: cursorMark, model: opusMark, effort: 'low', target_rank: 2, replaces: { rank: 2, tool: cursorMark, model: null } })
-    render(<LoadoutEdit {...props({}, { suggestions: [change] })} />)
+    render(<ToolboxEdit {...props({}, { suggestions: [change] })} />)
 
     const box = within(slot('2nd pick'))
     expect(box.getByText('Suggested change by Claude')).toBeInTheDocument()
@@ -604,7 +604,7 @@ describe('suggestions', () => {
 
   it('shows a change as the pick Confirm saves, keeping what the pick has where the agent named nothing', () => {
     const change = suggestion({ id: 4, tool: claudeCodeMark, effort: 'low', target_rank: 1, replaces: { rank: 1, tool: claudeCodeMark, model: opusMark } })
-    render(<LoadoutEdit {...props({}, { suggestions: [change] })} />)
+    render(<ToolboxEdit {...props({}, { suggestions: [change] })} />)
 
     const suggested = within(within(slot('1st pick')).getByText('Suggested').closest('p')!)
     expect(suggested.getByText('Claude Opus 5.5')).toBeInTheDocument()
@@ -616,17 +616,17 @@ describe('suggestions', () => {
   it('confirms a change with its slot', async () => {
     const user = userEvent.setup()
     const change = suggestion({ id: 4, tool: cursorMark, model: opusMark, target_rank: 2, replaces: { rank: 2, tool: cursorMark, model: null } })
-    render(<LoadoutEdit {...props({}, { suggestions: [change] })} />)
+    render(<ToolboxEdit {...props({}, { suggestions: [change] })} />)
 
     await user.click(screen.getByRole('button', { name: 'Confirm Cursor' }))
 
-    expect(post).toHaveBeenCalledWith('/loadout/suggestions/4/confirm', { rank: 2 }, expect.anything())
+    expect(post).toHaveBeenCalledWith('/toolbox/suggestions/4/confirm', { rank: 2 }, expect.anything())
   })
 
   it('counts progress up to 3 while to-confirm counts every open suggestion', () => {
     const three = [1, 2, 3].map((rank) => rankedPick({ rank, tool: markItem(`tool-${rank}`, `Tool ${rank}`), model: null }))
     const many: Suggestion[] = [1, 2, 3].map((id) => suggestion({ id, tool: markItem(`s-${id}`, `Suggested ${id}`), target_rank: id === 3 ? null : id, replaces: null }))
-    render(<LoadoutEdit {...props({}, { picks: three, suggestions: many })} />)
+    render(<ToolboxEdit {...props({}, { picks: three, suggestions: many })} />)
 
     expect(within(screen.getByRole('navigation', { name: 'Kinds of work' })).getByRole('link', { name: /Coding\s*3 of 3 · 3 to confirm/ })).toBeInTheDocument()
   })
@@ -637,7 +637,7 @@ describe('suggestions', () => {
 
     it('asks which pick to replace, with focus in the group, and Cancel returns focus to Confirm', async () => {
       const user = userEvent.setup()
-      render(<LoadoutEdit {...props({}, { picks: full(), suggestions: [pending] })} />)
+      render(<ToolboxEdit {...props({}, { picks: full(), suggestions: [pending] })} />)
 
       const confirm = screen.getByRole('button', { name: 'Confirm Runway' })
       await user.click(confirm)
@@ -654,7 +654,7 @@ describe('suggestions', () => {
 
     it('replaces the chosen pick, sending the pick it was shown', async () => {
       const user = userEvent.setup()
-      render(<LoadoutEdit {...props({}, { picks: full(), suggestions: [pending] })} />)
+      render(<ToolboxEdit {...props({}, { picks: full(), suggestions: [pending] })} />)
 
       await user.click(screen.getByRole('button', { name: 'Confirm Runway' }))
       const group = screen.getByRole('group', { name: 'Replace which pick?' })
@@ -663,7 +663,7 @@ describe('suggestions', () => {
       await user.click(within(group).getByRole('button', { name: 'Replace' }))
 
       expect(post).toHaveBeenCalledWith(
-        '/loadout/suggestions/9/confirm',
+        '/toolbox/suggestions/9/confirm',
         { rank: 2, expected: { tool: 'tool-2', model: 'claude-opus-5-5' } },
         expect.anything(),
       )
@@ -672,7 +672,7 @@ describe('suggestions', () => {
     it('shows a stale answer where the suggestion is, and starts the choice over', async () => {
       const user = userEvent.setup()
       post.mockImplementationOnce((_url, _data, options) => options.onSuccess({ props: { flash: { alert: 'This changed, review it.' } } }))
-      render(<LoadoutEdit {...props({}, { picks: full(), suggestions: [pending] })} />)
+      render(<ToolboxEdit {...props({}, { picks: full(), suggestions: [pending] })} />)
 
       await user.click(screen.getByRole('button', { name: 'Confirm Runway' }))
       await user.click(screen.getByRole('radio', { name: /1st/ }))
@@ -686,7 +686,7 @@ describe('suggestions', () => {
 
 describe('the team list', () => {
   it('offers a tool the first empty slot, says where owned tools sit, and lists counts as N of M', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     const team = within(screen.getByRole('region', { name: 'What the team uses for Coding' }))
     expect(team.getByText('5 of 6 use it')).toBeInTheDocument()
@@ -698,7 +698,7 @@ describe('the team list', () => {
   })
 
   it('offers a model the first pick that has no model, and knows the one the member already uses', () => {
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     const team = within(screen.getByRole('region', { name: 'What the team uses for Coding' }))
     expect(team.getByRole('button', { name: 'Use in 2nd pick: GPT-6 Astra' })).toBeInTheDocument()
@@ -707,7 +707,7 @@ describe('the team list', () => {
 
   it('fills the tool or the model through the same slot save', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     const team = within(screen.getByRole('region', { name: 'What the team uses for Coding' }))
 
     await user.click(team.getByRole('button', { name: 'Use as 3rd pick: Codex' }))
@@ -720,7 +720,7 @@ describe('the team list', () => {
 
   it('hides every button on a full kind', () => {
     const three = [1, 2, 3].map((rank, index) => rankedPick({ rank, tool: [claudeCodeMark, cursorMark, runway][index]!, model: null }))
-    render(<LoadoutEdit {...props({}, { picks: three })} />)
+    render(<ToolboxEdit {...props({}, { picks: three })} />)
 
     const team = within(screen.getByRole('region', { name: 'What the team uses for Coding' }))
     expect(team.queryByRole('button')).not.toBeInTheDocument()
@@ -729,14 +729,14 @@ describe('the team list', () => {
 
   it('shows no model button when no pick is waiting for one', () => {
     const modelled = [rankedPick({ rank: 1, model: opusMark })]
-    render(<LoadoutEdit {...props({}, { picks: modelled })} />)
+    render(<ToolboxEdit {...props({}, { picks: modelled })} />)
 
     const team = within(screen.getByRole('region', { name: 'What the team uses for Coding' }))
     expect(team.queryByRole('button', { name: /GPT-6/ })).not.toBeInTheDocument()
   })
 
   it('says nobody has ranked the kind when the list is empty', () => {
-    render(<LoadoutEdit {...props({ team_top: { coding: { tools: [], models: [] } } })} />)
+    render(<ToolboxEdit {...props({ team_top: { coding: { tools: [], models: [] } } })} />)
 
     expect(screen.getByText('Nobody has ranked coding yet')).toBeInTheDocument()
     expect(screen.queryByText(/Tools the team uses/)).not.toBeInTheDocument()
@@ -749,7 +749,7 @@ describe('Add a tool or model', () => {
 
   it('opens an inline form with a Tool/Model choice, a name, and the note that admins review', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Add a tool or model' }))
@@ -762,14 +762,14 @@ describe('Add a tool or model', () => {
 
   it('posts the kind and the squished name, then closes, returns focus to the link and confirms', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     await open(user)
 
     await user.click(screen.getByRole('radio', { name: 'Model' }))
     await user.type(nameField(), '  Beta   Model ')
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
-    expect(post).toHaveBeenCalledWith('/loadout/catalog_items', { kind: 'model', name: 'Beta Model' }, expect.objectContaining({ preserveScroll: true }))
+    expect(post).toHaveBeenCalledWith('/toolbox/catalog_items', { kind: 'model', name: 'Beta Model' }, expect.objectContaining({ preserveScroll: true }))
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add a tool or model' }))
     expect(screen.getByText(/Added Beta Model/)).toBeInTheDocument()
@@ -778,7 +778,7 @@ describe('Add a tool or model', () => {
   it('adds the new item to the lists as pending without selecting it anywhere', () => {
     const zed = { ...option({ ...markItem('zed', 'Zed'), pending: true }, []), pending: true }
     const state = props({ catalog: { ...catalog, tools: [...catalog.tools, zed] } })
-    render(<LoadoutEdit {...state} />)
+    render(<ToolboxEdit {...state} />)
 
     const third = field('Add your 3rd pick', 'Tool')
     expect(within(third).getByRole('option', { name: 'Zed (pending review)' })).toBeInTheDocument()
@@ -788,7 +788,7 @@ describe('Add a tool or model', () => {
 
   it('says Already in the list for an exact catalog match and does not post', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     await open(user)
 
     await user.type(nameField(), 'cursor')
@@ -801,7 +801,7 @@ describe('Add a tool or model', () => {
 
   it('needs 2 to 60 characters', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     await open(user)
 
     await user.type(nameField(), 'Z')
@@ -818,7 +818,7 @@ describe('Add a tool or model', () => {
   it('shows the server’s reason and keeps the form open', async () => {
     const user = userEvent.setup()
     post.mockImplementationOnce((_url, _data, options) => options.onError({ name: 'An admin took that one out of the list.' }))
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     await open(user)
 
     await user.type(nameField(), 'Old Thing')
@@ -831,7 +831,7 @@ describe('Add a tool or model', () => {
   it('sends one request however many times it is submitted while the first is out, and takes another after', async () => {
     const user = userEvent.setup()
     const held = hold(post)
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
     await open(user)
     await user.type(nameField(), 'Windsurf')
 
@@ -854,7 +854,7 @@ describe('Add a tool or model', () => {
 describe('keyboard', () => {
   it('reaches every control of a slot in reading order', async () => {
     const user = userEvent.setup()
-    render(<LoadoutEdit {...props()} />)
+    render(<ToolboxEdit {...props()} />)
 
     field('1st pick', 'Tool').focus()
     const order: string[] = []
@@ -876,13 +876,13 @@ describe('an agent writing through WebMCP', () => {
     const manifest = {
       endpoint: '/webmcp/tools',
       tools: [
-        { name: 'get_my_loadout', description: 'Reads', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
+        { name: 'get_my_toolbox', description: 'Reads', inputSchema: { type: 'object' }, annotations: { readOnlyHint: true } },
         { name: 'suggest_picks', description: 'Suggests', inputSchema: { type: 'object' }, annotations: { readOnlyHint: false } },
       ],
     }
     const page = (state: Props) => (
       <WebmcpProvider initialManifest={manifest}>
-        <LoadoutEdit {...state} />
+        <ToolboxEdit {...state} />
       </WebmcpProvider>
     )
     const { rerender } = render(page(props()))
@@ -890,7 +890,7 @@ describe('an agent writing through WebMCP', () => {
     reload.mockImplementation(() => rerender(page(props({}, { suggestions: [suggestion({ id: 3, tool: runway, target_rank: 3, suggested_by: 'WebMCP' })] }))))
 
     await act(async () => {
-      await stub.invoke('get_my_loadout')
+      await stub.invoke('get_my_toolbox')
     })
     expect(reload).not.toHaveBeenCalled()
 

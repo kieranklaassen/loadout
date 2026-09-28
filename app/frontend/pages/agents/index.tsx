@@ -102,9 +102,9 @@ function ProductCard({
 
 function ProductCards({ agents, mcpUrl, cursorInstallUrl }: { agents: Agent[]; mcpUrl: string; cursorInstallUrl: string }) {
   const connected = new Set(agents.map((agent) => agent.known_key))
-  const claudeCode = `claude mcp add --transport http loadout ${mcpUrl}`
-  const cursorJson = JSON.stringify({ mcpServers: { loadout: { url: mcpUrl } } })
-  const codex = `codex mcp add loadout --url ${mcpUrl}`
+  const claudeCode = `claude mcp add --transport http toolbox ${mcpUrl}`
+  const cursorJson = JSON.stringify({ mcpServers: { toolbox: { url: mcpUrl } } })
+  const codex = `codex mcp add toolbox --url ${mcpUrl}`
 
   const card = (key: (typeof PRODUCTS)[number]['key'], copy: string, body: ReactNode) => {
     const product = PRODUCTS.find((entry) => entry.key === key)!
@@ -123,7 +123,7 @@ function ProductCards({ agents, mcpUrl, cursorInstallUrl }: { agents: Agent[]; m
         <>
           <div className={monoWell}>{claudeCode}</div>
           <p className={caption}>
-            Then run <code className={code}>/mcp</code> in Claude Code, pick loadout, and sign in with Every.
+            Then run <code className={code}>/mcp</code> in Claude Code, pick toolbox, and sign in with Every.
           </p>
         </>,
       )}
@@ -135,7 +135,7 @@ function ProductCards({ agents, mcpUrl, cursorInstallUrl }: { agents: Agent[]; m
             <p className="font-sans text-fg-soft">Settings → Connectors → Add custom connector</p>
             <p className="mt-1.5">{mcpUrl}</p>
           </div>
-          <p className={caption}>Name it Loadout, paste the URL, then select Connect and approve.</p>
+          <p className={caption}>Name it Toolbox, paste the URL, then select Connect and approve.</p>
         </>,
       )}
       {card(
@@ -147,7 +147,7 @@ function ProductCards({ agents, mcpUrl, cursorInstallUrl }: { agents: Agent[]; m
           </a>
           <div className={monoWell}>{cursorJson}</div>
           <p className={caption}>
-            Or add that to <code className={code}>~/.cursor/mcp.json</code>, then select Connect next to loadout in Cursor Settings → MCP.
+            Or add that to <code className={code}>~/.cursor/mcp.json</code>, then select Connect next to toolbox in Cursor Settings → MCP.
           </p>
         </>,
       )}
@@ -157,7 +157,7 @@ function ProductCards({ agents, mcpUrl, cursorInstallUrl }: { agents: Agent[]; m
         <>
           <div className={monoWell}>{codex}</div>
           <p className={caption}>
-            Then run <code className={code}>codex mcp login loadout</code> and approve in the browser.
+            Then run <code className={code}>codex mcp login toolbox</code> and approve in the browser.
           </p>
         </>,
       )}
@@ -181,12 +181,12 @@ function WebmcpCard({ note }: { note: string }) {
         <SectionLabel className="text-fg!">WebMCP</SectionLabel>
       </div>
       <p className="mt-3 max-w-[640px] text-[15px] leading-normal text-fg-soft">
-        Loadout supports WebMCP. While you are signed in, a browser agent that supports it can use the same tools on this site. There is
+        Toolbox supports WebMCP. While you are signed in, a browser agent that supports it can use the same tools on this site. There is
         nothing to install or connect, and its picks stay suggestions until you confirm them.
       </p>
       <p className="mt-3 max-w-[640px] text-[15px] leading-normal text-fg">{note}</p>
       <p className={`${caption} max-w-[640px]`}>
-        To try it, open Loadout in a browser with WebMCP turned on. In Chrome, that is <code className={code}>{WEBMCP_FLAG}</code>.{' '}
+        To try it, open Toolbox in a browser with WebMCP turned on. In Chrome, that is <code className={code}>{WEBMCP_FLAG}</code>.{' '}
         <a href={WEBMCP_SPEC_URL} target="_blank" rel="noopener noreferrer" className="text-link">
           About WebMCP
         </a>
@@ -264,7 +264,7 @@ function ConnectedAgents({ agents }: { agents: Agent[] }) {
       <h2 id="connected-heading" ref={headingRef} tabIndex={-1} className={heading}>
         Connected agents
       </h2>
-      <p className="mt-2 text-caption leading-normal text-fg-muted">Revoking stops it reading or changing your loadout.</p>
+      <p className="mt-2 text-caption leading-normal text-fg-muted">Revoking stops it reading or changing your toolbox.</p>
       {agents.length === 0 ? (
         <p className="mt-3 border-t border-line-strong pt-4 text-[15px] text-fg-soft">No agent is connected. Set one up and it will show here.</p>
       ) : (

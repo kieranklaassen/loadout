@@ -4,7 +4,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
   test "the first sign-in redirects any page to /welcome" do
     sign_in_as users(:one)
 
-    get edit_loadout_path
+    get edit_toolbox_path
     assert_redirected_to welcome_path
 
     get settings_path
@@ -14,7 +14,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
   test "an onboarded member is not gated" do
     sign_in_as users(:every_ana)
 
-    get edit_loadout_path
+    get edit_toolbox_path
 
     assert_response :success
   end
@@ -27,7 +27,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "controllers can opt out of the gate" do
-    assert_includes LoadoutsController.__callbacks[:process_action].map(&:filter), :require_onboarding
+    assert_includes ToolboxController.__callbacks[:process_action].map(&:filter), :require_onboarding
     assert_not OnboardingController.__callbacks[:process_action].map(&:filter).include?(:require_onboarding)
     assert_not SessionsController.__callbacks[:process_action].map(&:filter).include?(:require_onboarding)
     assert_not HandlesController.__callbacks[:process_action].map(&:filter).include?(:require_onboarding)
@@ -69,7 +69,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
 
     patch welcome_path, params: { handle: "Olive", visibility: "team" }
 
-    assert_redirected_to edit_loadout_path
+    assert_redirected_to edit_toolbox_path
     assert_response :see_other
     user = users(:one).reload
     assert_equal [ "olive", "team" ], [ user.handle, user.visibility ]
@@ -93,7 +93,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
 
     patch welcome_path, params: { handle: "olive" }
 
-    assert_redirected_to edit_loadout_path
+    assert_redirected_to edit_toolbox_path
     user = users(:one).reload
     assert user.onboarded?
     assert_equal "only_me", user.visibility
@@ -124,7 +124,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to welcome_path
     follow_redirect!
-    assert_equal "#{LoadoutHost::DEFAULT_HOST}/map is reserved.", inertia.props[:errors][:handle]
+    assert_equal "#{ToolboxHost::DEFAULT_HOST}/map is reserved.", inertia.props[:errors][:handle]
     user = users(:one).reload
     assert_nil user.handle
     assert_equal "only_me", user.visibility
@@ -138,7 +138,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
 
     assert_nil users(:one).reload.handle
     follow_redirect!
-    assert_equal "#{LoadoutHost::DEFAULT_HOST}/ana is taken.", inertia.props[:errors][:handle]
+    assert_equal "#{ToolboxHost::DEFAULT_HOST}/ana is taken.", inertia.props[:errors][:handle]
   end
 
   test "a blank handle is rejected" do
@@ -155,10 +155,10 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:every_ana)
 
     get welcome_path
-    assert_redirected_to edit_loadout_path
+    assert_redirected_to edit_toolbox_path
 
     patch welcome_path, params: { handle: "ana-two", visibility: "only_me" }
-    assert_redirected_to edit_loadout_path
+    assert_redirected_to edit_toolbox_path
     assert_equal [ "ana", "link" ], users(:every_ana).reload.slice(:handle, :visibility).values
   end
 end

@@ -12,7 +12,7 @@ export default function OauthError({ message }: { message: string }) {
         <SectionLabel as="p">Connect an agent</SectionLabel>
         <h1 className="font-serif leading-[1.02] tracking-[-0.02em] mt-3 text-[36px] text-balance md:text-[48px]">That connection didn’t check out</h1>
         <p className="mt-5 text-lg leading-normal text-fg-soft">{message}</p>
-        <p className="mt-3 text-sm text-fg-muted">Nothing was shared. Remove Loadout from your agent and add it again.</p>
+        <p className="mt-3 text-sm text-fg-muted">Nothing was shared. Remove Toolbox from your agent and add it again.</p>
         <div className="mt-8 flex justify-center">
           <ButtonLink href="/agents" variant="secondary">
             How to connect an agent

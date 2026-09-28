@@ -51,7 +51,7 @@ at most one write in flight per hook instance:
   focus).
 
 Tests: `app/frontend/components/rank/use_editor_actions.test.tsx` and the
-overlap cases in `app/frontend/pages/loadout/edit.test.tsx`.
+overlap cases in `app/frontend/pages/toolbox/edit.test.tsx`.
 
 ## Prevention
 
@@ -67,7 +67,7 @@ overlap cases in `app/frontend/pages/loadout/edit.test.tsx`.
 - Closed: position-only addressing. A retry after an applied-but-lost response,
   or a stale second tab, could act on the wrong pick. Slot writes (`set_pick`,
   `remove_pick`, `move_pick`) now send `expected_tool`: the slug of the tool
-  shown at that rank, or null for an empty slot. `Loadouts::Update#check_slot`
+  shown at that rank, or null for an empty slot. `Toolbox::Update#check_slot`
   refuses a mismatch with `Suggestions::CHANGED` inside the write transaction,
-  the same way confirm checks its `expected` snapshot. `Loadouts::Slots` stays
+  the same way confirm checks its `expected` snapshot. `Toolbox::Slots` stays
   rank arithmetic; do not add a second check there.

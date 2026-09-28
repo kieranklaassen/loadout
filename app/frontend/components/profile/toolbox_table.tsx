@@ -98,7 +98,7 @@ function YouCell({ mine }: { mine?: RankedPick }) {
  * (null otherwise): it adds a You column, and a kind the viewer did not rank reads "Not
  * ranked". A kind only the viewer ranked has no row.
  */
-export default function LoadoutTable({ kinds, you }: { kinds: ProfileKind[]; you: Record<string, RankedPick[]> | null }) {
+export default function ToolboxTable({ kinds, you }: { kinds: ProfileKind[]; you: Record<string, RankedPick[]> | null }) {
   const heading = `${sectionLabelClasses} py-3 text-left`
 
   return (

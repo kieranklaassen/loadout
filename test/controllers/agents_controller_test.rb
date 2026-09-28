@@ -33,7 +33,7 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
     install = URI.parse(inertia.props[:cursor_install_url])
     assert_equal [ "cursor", "anysphere.cursor-deeplink", "/mcp/install" ], [ install.scheme, install.host, install.path ]
     query = Rack::Utils.parse_query(install.query)
-    assert_equal "loadout", query["name"]
+    assert_equal "toolbox", query["name"]
     assert_equal({ "url" => "http://www.example.com/mcp" }, JSON.parse(Base64.strict_decode64(query["config"])))
   end
 
@@ -63,11 +63,11 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
   test "each agent carries the count of open suggestions that revoking it would withdraw" do
     client_id, = connect_agent(user: @user, client_name: "Claude")
     client = OauthClient.find_by!(client_id:)
-    Loadouts::Update.call(
+    Toolbox::Update.call(
       user: @user, operations: [ { op: "suggest", category: "video", tool: "runway" }, { op: "suggest", category: "video", tool: "Hedra" } ],
       source: "mcp", client_name: "Claude", oauth_client_id: client.id
     )
-    Loadouts::Update.call(user: @user, operations: [ { op: "suggest", category: "coding", tool: "claude-code" } ], source: "webmcp")
+    Toolbox::Update.call(user: @user, operations: [ { op: "suggest", category: "coding", tool: "claude-code" } ], source: "webmcp")
     assert_equal 3, @user.pick_suggestions.open.count, "the WebMCP suggestion exists but is no client's"
 
     sign_in_as(@user)
@@ -138,7 +138,7 @@ class AgentsControllerTest < ActionDispatch::IntegrationTest
     ids = 2.times.map { connect_agent(user: @user, client_name: "Claude").first }
     ours, theirs = ids.map { |client_id| OauthClient.find_by!(client_id:) }
     suggest = lambda do |tool, client|
-      Loadouts::Update.call(
+      Toolbox::Update.call(
         user: @user, operations: [ { op: "suggest", category: "video", tool: } ], source: client ? "mcp" : "webmcp",
         client_name: client&.client_name, oauth_client_id: client&.id
       ).suggestions.sole

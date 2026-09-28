@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-# The one write path for loadouts: the web editor, MCP agents and WebMCP all call
+# The one write path for toolboxes: the web editor, MCP agents and WebMCP all call
 # this. It changes `entries` (confirmed picks) or `pick_suggestions` (an agent's
 # proposals) and appends `entry_changes` (the dated history) in one transaction, so
-# the history always replays to the loadout (KTD7).
+# the history always replays to the toolbox (KTD7).
 #
 # The boundary is the `source`, which the server sets per transport and no caller
 # can argue with (KTD2): only "web" runs WEB_OPERATIONS, the member's own decisions;
@@ -23,9 +23,9 @@
 # holds anything else the call fails with Suggestions::CHANGED and writes nothing.
 # Leave it out (seeds, the console) to skip that check. Unknown tools and models, and
 # another member's pending ones, become this member's pending catalog items; agents
-# may add a few a day. Raises Loadouts::Update::Error
+# may add a few a day. Raises Toolbox::Update::Error
 # with a message a person or an agent can act on.
-module Loadouts
+module Toolbox
   class Update
     class Error < StandardError; end
 

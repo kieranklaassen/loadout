@@ -321,7 +321,7 @@ class EveryLoadoutRedesignMigrationTest < ActiveSupport::TestCase
     end
     [ [ 1, 1 ], [ 2, 2 ] ].each { |id, user_id| insert(:sessions, id:, user_id:, created_at: at.(1), updated_at: at.(1)) }
     insert(:oauth_clients, id: 1, client_id: "client-1", client_name: "Claude", redirect_uris: [ "https://claude.ai/cb" ].to_json, created_at: at.(1), updated_at: at.(1))
-    insert(:oauth_grants, id: 1, user_id: 1, oauth_client_id: 1, resource: "https://example.test/mcp", scope: "loadout", access_digest: "a", access_expires_at: at.(2),
+    insert(:oauth_grants, id: 1, user_id: 1, oauth_client_id: 1, resource: "https://example.test/mcp", scope: "toolbox", access_digest: "a", access_expires_at: at.(2),
       refresh_digest: "r", refresh_expires_at: at.(30), created_at: at.(1), updated_at: at.(1))
 
     CATEGORY_SLUGS.each.with_index(1) { |slug, id| insert(:categories, id:, slug:, name: slug.humanize, position: id, created_at: at.(1), updated_at: at.(1)) }

@@ -12,7 +12,7 @@ vi.mock('@inertiajs/react', () => ({
       {children}
     </a>
   ),
-  usePage: () => ({ props: { flash, public_host: 'loadout.example.test', current_user: null }, url: '/session/new' }),
+  usePage: () => ({ props: { flash, public_host: 'toolbox.example.test', current_user: null }, url: '/session/new' }),
   router: { post: (...args: unknown[]) => post(...args) },
 }))
 

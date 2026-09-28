@@ -16,7 +16,7 @@ agent driving a signed-in user's tab can call them.
   `ApplicationTool::Error` returns an `isError` result the agent can read.
 - **`ToolRegistry`** is the one list (`ToolRegistry::TOOLS`). Both surfaces read it:
   - `ToolRegistry.mcp_server(user:, source:, client_name:, oauth_client_id:)` → an `MCP::Server`
-    for whatever MCP transport the app mounts (Loadout mounts it at `/mcp`).
+    for whatever MCP transport the app mounts (Toolbox mounts it at `/mcp`).
     `source` (`"mcp"` or `"webmcp"`), `client_name` and the numeric
     `oauth_client_id` (WebMCP has neither) reach every tool and are recorded on
     the suggestions it writes. Agents are told apart by the client id, never by
@@ -24,7 +24,7 @@ agent driving a signed-in user's tab can call them.
   - `ToolRegistry.manifest` → the `webmcp` shared Inertia prop
     (`{ endpoint, tools: [{ name, description, inputSchema, annotations }] }`),
     present only when signed in, `nil` otherwise. `endpoint` is a same-origin
-    path (`ToolRegistry.endpoint`), built with `LoadoutHost.path_to`, so it
+    path (`ToolRegistry.endpoint`), built with `ToolboxHost.path_to`, so it
     follows the path the app is served under.
   - `ToolRegistry.call(name, arguments:, user:, source:)` → runs a tool through that same
     `MCP::Server` (`tools/call`), so a browser call and an MCP call return the
@@ -66,7 +66,7 @@ signed-in user, so they use the session and a CSRF token.
 
 - `Gemfile`: `gem "mcp", "~> 1.6"`
 - `app/tools/application_tool.rb`, `app/tools/tool_registry.rb`,
-  and Loadout's tools (`list_categories`, `search_catalog`, `get_my_loadout`,
+  and Toolbox's tools (`list_categories`, `search_catalog`, `get_my_toolbox`,
   `get_team_rankings`, `get_recent_changes`, `suggest_picks`)
 - `app/services/agents/capabilities.rb` and `known_clients.rb`: the "can / can't"
   copy for the consent screen and the Agents page (tied to the registry by test),
@@ -154,9 +154,9 @@ end
 - `bin/rails test test/tools test/services/agents test/controllers/webmcp_tools_controller_test.rb test/integration/webmcp_test.rb test/generators/tool_generator_test.rb`
   and `npm run check` are green.
 - In Chrome with `chrome://flags/#enable-webmcp-testing` (or on an origin with
-  a trial token), sign in: DevTools → Application → WebMCP lists `get_my_loadout`, and
-  running it returns your loadout. Sign out and the list is empty.
-- Signed out, `curl -X POST localhost:<port>/webmcp/tools/get_my_loadout` answers
+  a trial token), sign in: DevTools → Application → WebMCP lists `get_my_toolbox`, and
+  running it returns your toolbox. Sign out and the list is empty.
+- Signed out, `curl -X POST localhost:<port>/webmcp/tools/get_my_toolbox` answers
   `401` JSON.
 
 ## Gotchas
@@ -166,8 +166,8 @@ end
   Keep destructive actions out of the registry, or require an argument that
   names the target explicitly, until the product decides how agent actions
   are confirmed.
-- **Loadout's answer: agents only suggest.** The one write tool, `suggest_picks`,
-  can run only `Loadouts::Update::AGENT_OPERATIONS` (`suggest`, `withdraw`), and
+- **Toolbox's answer: agents only suggest.** The one write tool, `suggest_picks`,
+  can run only `Toolbox::Update::AGENT_OPERATIONS` (`suggest`, `withdraw`), and
   the write path refuses every other operation for a source other than `web`.
   Confirming, dismissing, removing, moving and reordering picks, visibility,
   handle, bio, the history export, account deletion and revoking agents are web
@@ -196,9 +196,9 @@ end
   tool.
 - **Keep names stable.** Agents and MCP clients cache tool names. Rename a tool
   by adding the new one and removing the old one in a later release.
-  `update_loadout` became `suggest_picks` outright because no agent was connected
+  `update_toolbox` became `suggest_picks` outright because no agent was connected
   yet; with connected agents, keep an old name that only suggests, or revoke the
-  grants (`loadout:revoke_agent_grants`) so clients reconnect.
+  grants (`toolbox:revoke_agent_grants`) so clients reconnect.
 - **The spec is still moving.** The draft moved the model context from `navigator` to
   `document` and dropped `provideContext`/`unregisterTool`. `lib/webmcp.ts` and
   `types/webmcp.d.ts` are the only files that know the browser surface.

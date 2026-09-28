@@ -282,7 +282,7 @@ reads the session cookie) and **frontend** (layout and Vite entrypoint).
 
 ## Decisions & gotchas
 
-- **Loadout has no flags today.** `config/flipper_flag_defaults.yml` is empty, so
+- **Toolbox has no flags today.** `config/flipper_flag_defaults.yml` is empty, so
   `FlipperFlagName` in `app/frontend/lib/flipper_flags.ts` has no members, and
   `bin/rails runner 'puts Flipper.features.map(&:name)'` prints nothing on a fresh
   database. The one flag it had, `public_map` (open the Every map to people outside Every),

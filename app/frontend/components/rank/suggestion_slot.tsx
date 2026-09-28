@@ -105,7 +105,7 @@ export default function SuggestionSlot({ suggestion, mode, pick, picks, actions 
       {mode === 'change' && pick ? (
         <div className="mt-3 space-y-2">
           <SetupLine label="Now" setup={pick} />
-          {/* What Confirm saves: a field the agent left blank keeps the pick's value (Loadouts::Suggestions#confirm). */}
+          {/* What Confirm saves: a field the agent left blank keeps the pick's value (Toolbox::Suggestions#confirm). */}
           <SetupLine
             label="Suggested"
             setup={{ tool: suggestion.tool, model: suggestion.model ?? pick.model, context: suggestion.context ?? pick.context, effort: suggestion.effort ?? pick.effort }}

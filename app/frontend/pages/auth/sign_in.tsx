@@ -36,7 +36,7 @@ export default function SignIn({ join_every_url, dev_login_people }: SignInProps
             Sign in with Every
           </a>
           <p className="mt-5 max-w-[460px] text-sm leading-normal text-fg-soft">
-            We read your name, photo and email from your Every account. Your loadout stays private until you choose who can see it.
+            We read your name, photo and email from your Every account. Your toolbox stays private until you choose who can see it.
           </p>
           <p className="mt-7 text-sm text-fg-soft">
             Not on Every yet?{' '}

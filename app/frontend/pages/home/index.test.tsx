@@ -34,7 +34,7 @@ const member: CurrentUser = {
 }
 
 const signIn = (user: CurrentUser | null) => {
-  page.props = { current_user: user, flash: {}, public_host: 'loadout.every.to' }
+  page.props = { current_user: user, flash: {}, public_host: 'toolbox.every.to' }
 }
 
 const props = (overrides: Partial<Props> = {}): Props => ({
@@ -145,7 +145,7 @@ describe('Home empty population', () => {
   it('says nobody has shared and offers Join Every, with no hero data and no zero-of-zero', () => {
     const { container } = render(<Home {...empty()} />)
 
-    expect(screen.getByRole('heading', { name: 'Nobody has shared a loadout yet' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Nobody has shared a toolbox yet' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'Join Every' })).toHaveLength(1)
     expect(container.querySelector('.hero')).toBeNull()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
@@ -155,10 +155,10 @@ describe('Home empty population', () => {
 
   it('offers a signed-in member to rank their first tools', () => {
     signIn(member)
-    render(<Home {...empty({ cta: { label: 'Rank your first tools', href: '/loadout/edit' } })} />)
+    render(<Home {...empty({ cta: { label: 'Rank your first tools', href: '/toolbox/edit' } })} />)
 
-    expect(screen.getByRole('heading', { name: 'Nobody has shared a loadout yet' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Rank your first tools' })).toHaveAttribute('href', '/loadout/edit')
+    expect(screen.getByRole('heading', { name: 'Nobody has shared a toolbox yet' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Rank your first tools' })).toHaveAttribute('href', '/toolbox/edit')
     expect(screen.queryByRole('link', { name: 'Join Every' })).not.toBeInTheDocument()
   })
 })
@@ -173,9 +173,9 @@ describe('Home call to action by viewer', () => {
 
   it('asks a member with no picks to rank their first tools', () => {
     signIn(member)
-    render(<Home {...props({ cta: { label: 'Rank your first tools', href: '/loadout/edit' } })} />)
+    render(<Home {...props({ cta: { label: 'Rank your first tools', href: '/toolbox/edit' } })} />)
 
-    expect(screen.getByRole('link', { name: 'Rank your first tools' })).toHaveAttribute('href', '/loadout/edit')
+    expect(screen.getByRole('link', { name: 'Rank your first tools' })).toHaveAttribute('href', '/toolbox/edit')
     expect(screen.queryByRole('link', { name: 'Join Every' })).not.toBeInTheDocument()
   })
 
@@ -183,7 +183,7 @@ describe('Home call to action by viewer', () => {
     signIn(member)
     render(<Home {...props({ cta: null })} />)
 
-    expect(screen.queryByRole('region', { name: /Join Every|Add your loadout/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Join Every|Add your toolbox/ })).not.toBeInTheDocument()
   })
 })
 
@@ -226,13 +226,13 @@ describe('Home person view', () => {
     expect(screen.queryByRole('navigation', { name: 'Ranking view' })).not.toBeInTheDocument()
   })
 
-  it('shows "New in Dan\'s loadout" only when a launched model is in it', () => {
+  it('shows "New in Dan\'s toolbox" only when a launched model is in it', () => {
     const { unmount } = render(<Home {...view()} />)
-    expect(screen.getByText("New in Dan's loadout")).toBeInTheDocument()
+    expect(screen.getByText("New in Dan's toolbox")).toBeInTheDocument()
     unmount()
 
-    render(<Home {...view({ person: personData({ new_in_loadout: [] }) })} />)
-    expect(screen.queryByText("New in Dan's loadout")).not.toBeInTheDocument()
+    render(<Home {...view({ person: personData({ new_in_toolbox: [] }) })} />)
+    expect(screen.queryByText("New in Dan's toolbox")).not.toBeInTheDocument()
   })
 
   it('selects the person in the filter', () => {

@@ -11,7 +11,7 @@ class ToolRegistryTest < ActiveSupport::TestCase
   # these words.
   HUMAN_ONLY = %w[confirm dismiss remove move reorder visibility handle bio history export delete revoke disconnect account].freeze
 
-  READ_TOOLS = %w[list_categories search_catalog get_my_loadout get_team_rankings get_recent_changes].freeze
+  READ_TOOLS = %w[list_categories search_catalog get_my_toolbox get_team_rankings get_recent_changes].freeze
 
   setup { @user = users(:one) }
 
@@ -56,7 +56,7 @@ class ToolRegistryTest < ActiveSupport::TestCase
 
     human = ToolRegistry.tools.select { |tool| (tool.tool_name.split(/[_.\-]/) & HUMAN_ONLY).any? }
     assert_empty human.map(&:tool_name)
-    assert_nil ToolRegistry.find("update_loadout")
+    assert_nil ToolRegistry.find("update_toolbox")
   end
 
   test "only the tools that never write are marked read-only" do
@@ -80,8 +80,8 @@ class ToolRegistryTest < ActiveSupport::TestCase
   end
 
   test "the endpoint follows the path of the configured host" do
-    Rails.configuration.x.public_base_url = "https://every.to/loadout"
-    assert_equal "/loadout/webmcp/tools", ToolRegistry.endpoint
+    Rails.configuration.x.public_base_url = "https://every.to/toolbox"
+    assert_equal "/toolbox/webmcp/tools", ToolRegistry.endpoint
   ensure
     Rails.configuration.x.public_base_url = nil
   end
@@ -114,7 +114,7 @@ class ToolRegistryTest < ActiveSupport::TestCase
 
   test "no read tool returns an email address, a bio, an avatar or an Every user id" do
     calls = [
-      [ "list_categories", {} ], [ "search_catalog", { query: "cursor" } ], [ "get_my_loadout", {} ], [ "get_recent_changes", {} ],
+      [ "list_categories", {} ], [ "search_catalog", { query: "cursor" } ], [ "get_my_toolbox", {} ], [ "get_recent_changes", {} ],
       [ "get_team_rankings", {} ], [ "get_team_rankings", { category: "coding" } ], [ "get_team_rankings", { audience: "others" } ]
     ]
 
@@ -135,7 +135,7 @@ class ToolRegistryTest < ActiveSupport::TestCase
 
     assert_equal 11, kinds.size
     assert_operator kinds.count { |kind| text.include?(kind) }, :<=, 2, "descriptions should point to list_categories, not list kinds"
-    assert_no_match(/update_loadout|go-to|\bnotes?\b/i, text)
+    assert_no_match(/update_toolbox|go-to|\bnotes?\b/i, text)
   end
 
   test "the instructions cover picks, suggestions and asking first" do
