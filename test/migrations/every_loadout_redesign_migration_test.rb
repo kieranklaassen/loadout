@@ -69,6 +69,28 @@ class EveryLoadoutRedesignMigrationTest < ActiveSupport::TestCase
     assert_equal [ [ 26, 1 ] ], @connection.select_rows("SELECT id, rank FROM entries WHERE user_id = 2 AND category_id = 4"), "the go-to beats the one with a model"
   end
 
+  test "repeated tools collapse before the three-pick cap, so a repeat never costs a distinct tool its place" do
+    migrate_through(LAST_V1_VERSION)
+    at = ->(day) { Time.utc(2026, 9, day, 12) }
+    insert(:users, id: 1, email_address: "ana@every.to", public: 0, admin: 0, created_at: at.(1), updated_at: at.(1))
+    insert(:categories, id: 1, slug: "coding", name: "Coding", created_at: at.(1), updated_at: at.(1))
+    (1..4).each { |id| insert(:tools, id:, slug: "tool-#{id}", name: "Tool #{id}", monogram: "Xx", created_at: at.(1), updated_at: at.(1)) }
+    insert(:ai_models, id: 1, slug: "claude-opus-5-5", name: "Claude Opus 5.5", monogram: "Xx", created_at: at.(1), updated_at: at.(1))
+    # id, tool, model, created day: four distinct tools, the first and the fourth twice
+    [ [ 41, 1, 1, 1 ], [ 42, 1, nil, 2 ], [ 43, 2, nil, 3 ], [ 44, 3, nil, 4 ], [ 45, 4, 1, 5 ], [ 46, 4, nil, 6 ] ].each do |id, tool_id, ai_model_id, day|
+      insert(:entries, id:, user_id: 1, category_id: 1, tool_id:, ai_model_id:, primary: 0, created_at: at.(day), updated_at: at.(day))
+    end
+
+    migrate_through(REDESIGN_VERSIONS.last)
+
+    assert_equal [ [ 41, 1 ], [ 43, 2 ], [ 44, 3 ] ], @connection.select_rows("SELECT id, rank FROM entries ORDER BY rank"), "the third distinct tool keeps its place over the repeat"
+    assert_ranks_contiguous
+    archive = JSON.parse(File.read(File.join(@dir, "migration_archive", "#{ENTRIES_REBUILD_VERSION}_rework_entries_for_ranked_picks.json")))
+    assert_equal({ "other_entries" => 0, "duplicate_tool_entries" => 2, "entries_beyond_three" => 1, "notes" => 0, "other_entry_changes" => 0 }, archive["counts"])
+    assert_equal [ 42, 46 ], archive["duplicate_tool_entries"].map { |row| row["id"] }
+    assert_equal [ 45 ], archive["entries_beyond_three"].map { |row| row["id"] }, "the fourth tool's repeat is archived once, under duplicates only"
+  end
+
   test "dropped picks, notes and the other kind are archived with counts, privately" do
     migrate_through(LAST_V1_VERSION)
     populate_v1_database
