@@ -602,6 +602,17 @@ describe('suggestions', () => {
     expect(box.getByLabelText('Tool')).toHaveValue('cursor')
   })
 
+  it('shows a change as the pick Confirm saves, keeping what the pick has where the agent named nothing', () => {
+    const change = suggestion({ id: 4, tool: claudeCodeMark, effort: 'low', target_rank: 1, replaces: { rank: 1, tool: claudeCodeMark, model: opusMark } })
+    render(<LoadoutEdit {...props({}, { suggestions: [change] })} />)
+
+    const suggested = within(within(slot('1st pick')).getByText('Suggested').closest('p')!)
+    expect(suggested.getByText('Claude Opus 5.5')).toBeInTheDocument()
+    expect(suggested.getByText('1M context')).toBeInTheDocument()
+    expect(suggested.getByText('low effort')).toBeInTheDocument()
+    expect(suggested.queryByText('high effort')).not.toBeInTheDocument()
+  })
+
   it('confirms a change with its slot', async () => {
     const user = userEvent.setup()
     const change = suggestion({ id: 4, tool: cursorMark, model: opusMark, target_rank: 2, replaces: { rank: 2, tool: cursorMark, model: null } })
