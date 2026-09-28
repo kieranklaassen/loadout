@@ -118,6 +118,68 @@ class Loadouts::UpdateTest < ActiveSupport::TestCase
     assert_not defined?(UpdateLoadoutTool)
   end
 
+  test "a slot operation whose expected_tool no longer matches the slot is refused and writes nothing" do
+    update(set_pick(1, "cursor"), set_pick(2, "claude-code"))
+
+    [
+      set_pick(1, "runway", expected_tool: "claude-code"),
+      { op: "remove_pick", category: "coding", rank: 1, expected_tool: "claude-code" },
+      { op: "move_pick", category: "coding", rank: 2, direction: "up", expected_tool: "cursor" }
+    ].each do |operation|
+      assert_no_difference [ "Entry.count", "EntryChange.count" ] do
+        error = assert_raises(Loadouts::Update::Error, operation[:op]) { update(operation) }
+        assert_equal Loadouts::Suggestions::CHANGED, error.message
+      end
+    end
+
+    assert_equal [ [ 1, "cursor" ], [ 2, "claude-code" ] ], @user.entries.order(:rank).map { |entry| [ entry.rank, entry.tool.slug ] }
+  end
+
+  test "a slot operation whose expected_tool matches the slot goes through" do
+    update(set_pick(1, "cursor", expected_tool: nil), set_pick(2, "claude-code", expected_tool: nil))
+
+    update(set_pick(1, "cursor", effort: "high", expected_tool: "cursor"))
+    update({ op: "move_pick", category: "coding", rank: 2, direction: "up", expected_tool: "claude-code" })
+    update({ op: "remove_pick", category: "coding", rank: 2, expected_tool: "cursor" })
+
+    assert_equal [ [ 1, "claude-code" ] ], @user.entries.map { |entry| [ entry.rank, entry.tool.slug ] }
+    assert_replays_to_entries @user
+  end
+
+  test "a null expected_tool expects an empty slot, so a set_pick into a slot another tab filled is refused" do
+    update(set_pick(1, "cursor", model: "claude-opus-5-5", context: "1m"))
+
+    assert_no_difference -> { EntryChange.count } do
+      error = assert_raises(Loadouts::Update::Error) { update(set_pick(1, "claude-code", expected_tool: nil)) }
+      assert_equal Loadouts::Suggestions::CHANGED, error.message
+    end
+
+    entry = @user.entries.sole
+    assert_equal [ tools(:cursor), ai_models(:opus_5_5), "1m" ], [ entry.tool, entry.ai_model, entry.context ]
+  end
+
+  test "without expected_tool, as from seeds or the console, the slot is not checked" do
+    update(set_pick(1, "cursor"))
+
+    update(set_pick(1, "claude-code"))
+
+    assert_equal tools(:claude_code), @user.entries.sole.tool
+  end
+
+  test "a remove_pick for rank 1 sent twice with the first pick's tool removes only that pick" do
+    update(set_pick(1, "cursor"), set_pick(2, "claude-code"))
+    remove_cursor = { op: "remove_pick", category: "coding", rank: 1, expected_tool: "cursor" }
+
+    update(remove_cursor)
+    assert_no_difference [ "Entry.count", "EntryChange.count" ] do
+      error = assert_raises(Loadouts::Update::Error) { update(remove_cursor) }
+      assert_equal Loadouts::Suggestions::CHANGED, error.message
+    end
+
+    assert_equal [ [ 1, "claude-code" ] ], @user.entries.map { |entry| [ entry.rank, entry.tool.slug ] }
+    assert_replays_to_entries @user
+  end
+
   test "a direction must be up or down" do
     update(set_pick(1, "cursor"), set_pick(2, "claude-code"))
 

@@ -9,16 +9,19 @@
 # can argue with (KTD2): only "web" runs WEB_OPERATIONS, the member's own decisions;
 # every source may run AGENT_OPERATIONS, which never touch a confirmed pick.
 #
-#   { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "claude-opus-5-5", context: "1m", effort: "high" }
-#   { op: "remove_pick", category: "coding", rank: 2 }
-#   { op: "move_pick", category: "coding", rank: 2, direction: "up" }
+#   { op: "set_pick", category: "coding", rank: 1, tool: "cursor", model: "claude-opus-5-5", context: "1m", effort: "high", expected_tool: nil }
+#   { op: "remove_pick", category: "coding", rank: 2, expected_tool: "cursor" }
+#   { op: "move_pick", category: "coding", rank: 2, direction: "up", expected_tool: "cursor" }
 #   { op: "confirm", suggestion_id: 12, rank: 2, expected: { tool: "cursor", model: nil } }
 #   { op: "dismiss", suggestion_id: 12 }
 #   { op: "suggest", category: "coding", tool: "cursor", model: "claude-opus-5-5", context: "1m", effort: "high", rank: 1 }
 #   { op: "withdraw", suggestion_id: 12 }
 #
 # Tools, models and kinds go by slug or name. On set_pick, a key left out keeps what
-# the slot holds and a key sent as null clears it. Unknown tools and models become
+# the slot holds and a key sent as null clears it. expected_tool is the slug of the
+# tool the member was shown at that rank, or null for an empty slot; if the slot now
+# holds anything else the call fails with Suggestions::CHANGED and writes nothing.
+# Leave it out (seeds, the console) to skip that check. Unknown tools and models become
 # pending catalog items; agents may add a few a day. Raises Loadouts::Update::Error
 # with a message a person or an agent can act on.
 module Loadouts
@@ -94,7 +97,7 @@ module Loadouts
     def set_pick(operation)
       slots = slots_for(operation)
       rank = rank_from(operation)
-      existing = slots.entries.find { |entry| entry.rank == rank }
+      existing = check_slot(slots, rank, operation)
       tool = operation.key?(:tool) ? resolve(Tool, operation[:tool], required: true) : existing&.tool || raise(Error, "Name a tool.")
       ai_model = operation.key?(:model) ? resolve(AiModel, operation[:model]) : existing&.ai_model
       context = operation.key?(:context) ? choice(:context, operation[:context]) : existing&.context
@@ -105,14 +108,30 @@ module Loadouts
     end
 
     def remove_pick(operation)
-      @changes.concat(slots_for(operation).remove(rank: rank_from(operation)))
+      slots = slots_for(operation)
+      rank = rank_from(operation)
+      check_slot(slots, rank, operation)
+      @changes.concat(slots.remove(rank:))
     end
 
     def move_pick(operation)
       direction = operation[:direction].to_s
       raise Error, "Direction must be up or down." unless %w[up down].include?(direction)
 
-      @changes.concat(slots_for(operation).move(rank: rank_from(operation), direction:))
+      slots = slots_for(operation)
+      rank = rank_from(operation)
+      check_slot(slots, rank, operation)
+      @changes.concat(slots.move(rank:, direction:))
+    end
+
+    # Returns the pick in the slot at `rank`. When the operation sends expected_tool, the
+    # tool the member was shown there (nil for an empty slot), the slot must still hold
+    # it: a retry or a second tab must not act on whatever has moved into that rank since.
+    def check_slot(slots, rank, operation)
+      entry = slots.entries.find { |candidate| candidate.rank == rank }
+      raise Error, Suggestions::CHANGED if operation.key?(:expected_tool) && entry&.tool&.slug.to_s != operation[:expected_tool].to_s
+
+      entry
     end
 
     def suggest(operation)

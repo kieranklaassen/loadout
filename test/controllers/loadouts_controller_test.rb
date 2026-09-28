@@ -105,6 +105,18 @@ class LoadoutsControllerTest < ActionDispatch::IntegrationTest
     assert_replays_to_entries @ana
   end
 
+  test "a slot operation carries the tool the member was shown there, and a stale one comes back as This changed, review it" do
+    assert_no_difference -> { EntryChange.count } do
+      patch_operations({ op: "remove_pick", category: "coding", rank: 1, expected_tool: "claude-code" })
+      assert_equal "This changed, review it.", flash[:alert]
+      patch_operations({ op: "set_pick", category: "coding", rank: 1, tool: "runway", expected_tool: nil })
+      assert_equal "This changed, review it.", flash[:alert]
+    end
+
+    patch_operations({ op: "remove_pick", category: "coding", rank: 1, expected_tool: "cursor" })
+    assert_equal [ [ 1, "claude-code" ] ], @ana.entries.where(category: categories(:coding)).map { |entry| [ entry.rank, entry.tool.slug ] }
+  end
+
   test "an invalid operation comes back as an alert and writes nothing" do
     assert_no_difference -> { EntryChange.count } do
       patch_operations({ op: "remove_pick", category: "video", rank: 1 })

@@ -8,7 +8,7 @@
 # only a no-op ("Nothing changed.") and a refusal (the alert) do.
 class LoadoutsController < InertiaController
   SLOT_OPERATIONS = %w[set_pick remove_pick move_pick].freeze
-  OPERATION_FIELDS = %i[op category rank tool model context effort direction].freeze
+  OPERATION_FIELDS = %i[op category rank tool model context effort direction expected_tool].freeze
   ITEM_KINDS = { "tool" => Tool, "model" => AiModel }.freeze
   ITEM_NAME_LENGTH = 2..60
 
