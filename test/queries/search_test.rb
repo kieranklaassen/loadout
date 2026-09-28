@@ -83,7 +83,7 @@ class SearchTest < ActiveSupport::TestCase
 
     zed.update!(status: "approved")
     hit = search("zedcode")[:items].first
-    assert_equal "zedcode", hit[:item][:slug]
+    assert_equal zed.slug, hit[:item][:slug]
     assert_equal [ { n: 1, of: 2 } ], hit[:kinds].pluck(:count)
   end
 

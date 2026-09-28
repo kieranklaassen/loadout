@@ -16,15 +16,13 @@ class AiModelTest < ActiveSupport::TestCase
     [ theirs, ours ].each { |item| assert_match(/\Amystery-3-[a-z0-9]{4}\z/, item.slug) }
   end
 
-  test "an approved suggestion takes the plain slug when it is free, else keeps its own" do
-    first = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:one))
-    second = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:two))
-    kept = second.slug
+  test "an approved suggestion keeps the slug picks and props already hold" do
+    item = AiModel.create!(name: "Mystery 3", status: "pending", created_by: users(:one))
+    kept = item.slug
 
-    first.update!(status: "approved")
-    second.update!(status: "approved")
+    item.update!(status: "approved")
 
-    assert_equal [ "mystery-3", kept ], [ first.reload.slug, second.reload.slug ]
+    assert_equal kept, item.reload.slug
   end
 
   test "the Vibe Check link must be https on an allowed host with no credentials or port" do

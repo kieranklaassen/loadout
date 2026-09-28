@@ -284,8 +284,8 @@ class TeamRankingsTest < ActiveSupport::TestCase
     zed.update!(status: "approved")
     beta.update!(status: "approved")
     coding = TeamRankings.new(viewer: @dee).kind(categories(:coding))
-    assert_equal count(1, 2), coding[:tools].find { |entry| entry[:item][:slug] == "zed" }[:count]
-    assert_equal count(1, 2), coding[:models].find { |entry| entry[:item][:slug] == "beta-model" }[:count]
+    assert_equal count(1, 2), coding[:tools].find { |entry| entry[:item][:slug] == zed.slug }[:count]
+    assert_equal count(1, 2), coding[:models].find { |entry| entry[:item][:slug] == beta.slug }[:count]
   end
 
   test "a hidden catalog item is not counted either" do

@@ -85,8 +85,6 @@ module CatalogItem
     return if name.blank?
 
     self.slug = unique_slug if slug.blank?
-    # Approved, a member's item is public and takes the plain slug when that is free.
-    self.slug = plain_slug if will_save_change_to_status?(from: "pending", to: "approved") && !self.class.exists?(slug: plain_slug)
     self.monogram = self.class.monogram_for(name) if monogram.blank?
     self.hue = self.class.hue_for(name) if new_record? && hue == 220 && created_by_id.present?
   end
@@ -109,7 +107,9 @@ module CatalogItem
   end
 
   # A member's pending item always gets a random suffix, so its slug has the same shape
-  # whether or not another member has an item of that name waiting for review.
+  # whether or not another member has an item of that name waiting for review. It keeps
+  # that slug once approved: the slug is the identity picker props hold and a slot write
+  # sends back as expected_tool, so changing it would refuse writes to a pick that never moved.
   def random_slug
     loop do
       candidate = "#{plain_slug}-#{SecureRandom.base36(4)}"
