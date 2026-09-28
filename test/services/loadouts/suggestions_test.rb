@@ -287,6 +287,17 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
     assert_equal 4, @user.entry_changes.count
   end
 
+  test "a newer suggestion that matches the pick still replaces the same client's older one" do
+    as_member(pick(1, "cursor", model: "claude-opus-5-5", context: "1m", effort: "high"))
+    wrong = suggest("cursor", effort: "low", oauth_client_id: 1).suggestions.sole
+    other_client = suggest("cursor", effort: "low", client_name: "Codex", oauth_client_id: 2).suggestions.sole
+
+    result = suggest("cursor", effort: "high", oauth_client_id: 1)
+
+    assert_equal [ "Cursor is already your 1st pick for coding with those details." ], result.messages
+    assert_equal [ "superseded", "open" ], [ wrong, other_client ].map { |suggestion| suggestion.reload.status }
+  end
+
   test "WebMCP is one bucket, separate from every OAuth client" do
     first = suggest("cursor", source: "webmcp", client_name: nil, oauth_client_id: nil).suggestions.sole
     from_client = suggest("cursor", oauth_client_id: 9).suggestions.sole

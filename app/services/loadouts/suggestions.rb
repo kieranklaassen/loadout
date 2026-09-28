@@ -61,12 +61,13 @@ module Loadouts
       expire_lapsed
       slots = slots_for(category, client_name: label)
       current = slots.entries.find { |entry| entry.tool_id == tool.id }
+      # Even a suggestion that changes nothing replaces this client's older one for the tool.
+      close(open_in(category).where(tool:, oauth_client_id: @oauth_client_id), "superseded")
       if current && self.class.same_pick?(current, ai_model_id: ai_model&.id, context:, effort:)
         return Outcome.new(message: "#{tool.name} is already your #{current.rank.ordinalize} pick for #{category.name.downcase} with those details.")
       end
 
       refuse_if_dismissed(category, tool, ai_model, context, effort)
-      close(open_in(category).where(tool:, oauth_client_id: @oauth_client_id), "superseded")
       make_room(category)
       suggestion = @user.pick_suggestions.create!(
         category:, tool:, ai_model:, context:, effort:, slot_hint:, client_name: label, oauth_client_id: @oauth_client_id,
