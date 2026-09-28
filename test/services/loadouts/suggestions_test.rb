@@ -339,6 +339,17 @@ class Loadouts::SuggestionsTest < ActiveSupport::TestCase
     end
   end
 
+  test "a dismissed change is refused again however the agent spells it, filling blanks from the pick" do
+    as_member(pick(1, "cursor", model: "claude-opus-5-5", context: "1m"))
+    bare = suggest("cursor", effort: "high").suggestions.sole
+    spelled_out = suggest("cursor", model: "claude-opus-5-5", context: "1m", effort: "low", client_name: "Codex", oauth_client_id: 2).suggestions.sole
+    as_member({ op: "dismiss", suggestion_id: bare.id }, { op: "dismiss", suggestion_id: spelled_out.id })
+
+    assert_match(/dismissed on/, error_from { suggest("cursor", model: "claude-opus-5-5", context: "1m", effort: "high", oauth_client_id: 3) })
+    assert_match(/dismissed on/, error_from { suggest("cursor", effort: "low", oauth_client_id: 3) })
+    assert_equal "open", suggest("cursor", context: "200k", effort: "high", oauth_client_id: 3).suggestions.sole.status
+  end
+
   test "an unconfirmed suggestion lapses after 30 days but its row is kept" do
     suggestion = suggest("cursor").suggestions.sole
 

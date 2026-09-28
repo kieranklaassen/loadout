@@ -8,8 +8,8 @@
 #
 # Rules: at most MAX_OPEN_PER_KIND open per kind (the oldest gives way); a newer
 # suggestion from the same OAuth client id for the same kind and tool replaces that
-# client's older one (WebMCP has no client id and is one bucket of its own); an
-# identical suggestion the member dismissed is refused for DISMISSAL_MEMORY; an
+# client's older one (WebMCP has no client id and is one bucket of its own); one
+# that would show the member what they dismissed is refused for DISMISSAL_MEMORY; an
 # unconfirmed one lapses after PickSuggestion::TTL. Placement is decided at confirm:
 # the hint if that slot is empty, else the first empty one, else the member says which
 # pick to replace. Superseded, withdrawn and expired suggestions write no change row.
@@ -67,7 +67,7 @@ module Loadouts
         return Outcome.new(message: "#{tool.name} is already your #{current.rank.ordinalize} pick for #{category.name.downcase} with those details.")
       end
 
-      refuse_if_dismissed(category, tool, ai_model, context, effort)
+      refuse_if_dismissed(category, tool, current, ai_model_id: ai_model&.id, context:, effort:)
       make_room(category)
       suggestion = @user.pick_suggestions.create!(
         category:, tool:, ai_model:, context:, effort:, slot_hint:, client_name: label, oauth_client_id: @oauth_client_id,
@@ -154,12 +154,21 @@ module Loadouts
       close(PickSuggestion.where(id: open.first(excess)), "superseded") if excess.positive?
     end
 
-    def refuse_if_dismissed(category, tool, ai_model, context, effort)
-      dismissed = @user.pick_suggestions.where(status: "dismissed", category:, tool:, ai_model:, context:, effort:, resolved_at: DISMISSAL_MEMORY.ago..).order(:resolved_at).last
+    # Compared as the member sees them, a blank field showing the pick's value, so an
+    # agent cannot show a dismissed change again by naming or dropping a field.
+    def refuse_if_dismissed(category, tool, current, fields)
+      proposal = as_shown(fields, current)
+      dismissed = @user.pick_suggestions.where(status: "dismissed", category:, tool:, resolved_at: DISMISSAL_MEMORY.ago..).order(:resolved_at)
+        .select { |row| as_shown(row.slice(:ai_model_id, :context, :effort), current) == proposal }.last
       return unless dismissed
 
       raise Update::Error, "#{tool.name} for #{category.name.downcase} was dismissed on #{dismissed.resolved_at.to_date.to_fs(:long)}. " \
         "The member turned this exact suggestion down; do not suggest it again before #{(dismissed.resolved_at + DISMISSAL_MEMORY).to_date.to_fs(:long)}."
+    end
+
+    # What confirming would save: a field the suggestion leaves blank keeps the pick's.
+    def as_shown(fields, current)
+      { ai_model_id: fields[:ai_model_id] || current&.ai_model_id, context: fields[:context] || current&.context, effort: fields[:effort] || current&.effort }
     end
 
     # What the suggestion was written against (nothing, or the pick it changes) is
