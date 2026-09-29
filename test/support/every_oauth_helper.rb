@@ -7,10 +7,11 @@ module EveryOauthHelper
 
   def configure_every_oauth
     every = Rails.application.config.x.every_oauth
-    @every_oauth_originals = { client_id: every.client_id, client_secret: every.client_secret, base_url: every.base_url }
+    @every_oauth_originals = { client_id: every.client_id, client_secret: every.client_secret, base_url: every.base_url, scope: every.scope }
     every.client_id = "client-id"
     every.client_secret = "client-secret"
     every.base_url = EVERY_BASE
+    every.scope = OmniAuth::Strategies::Every::DEFAULT_SCOPE
   end
 
   def restore_every_oauth

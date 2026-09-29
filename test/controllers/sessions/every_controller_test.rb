@@ -64,47 +64,141 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "an @every.to address the provider did not verify signs in but is not the Every team" do
+  test "Every's UserInfo without an email_verified claim makes an @every.to address the Every team" do
     stub_every_token
-    stub_every_userinfo(every_payload("userinfo", user_id: 4243, email: "unverified@every.to", email_verified: "true"))
+    stub_every_userinfo(every_payload("userinfo").except("email_verified"))
 
     assert_difference -> { Session.count } => 1 do
       complete_every_sign_in
     end
 
-    person = User.find_by!(every_user_id: "4243")
-    assert_not person.email_verified?, "only a claim of exactly true verifies"
-    assert_not person.every_member?
-    assert_not User.every_members.exists?(id: person.id)
+    person = User.find_by!(every_user_id: "4242")
+    assert person.email_verified?
+    assert person.every_member?
+    assert User.every_members.exists?(id: person.id)
   end
 
-  test "an absent claim signs in as not verified, and a later sign-in without it clears earlier team status" do
+  test "any claim but an explicit false counts as verified" do
     stub_every_token
-    stub_every_userinfo(every_payload("userinfo", email_verified: true))
+    stub_every_userinfo(every_payload("userinfo", user_id: 4243, email: "claimed@every.to", email_verified: "true"))
+
     complete_every_sign_in
-    assert User.find_by!(every_user_id: "4242").every_member?
+
+    assert User.find_by!(every_user_id: "4243").every_member?
+  end
+
+  test "a sign-in after an explicit false restores team status" do
+    stub_every_token
+    stub_every_userinfo(every_payload("userinfo", email_verified: false))
+    complete_every_sign_in
+    assert_nil User.find_by(every_user_id: "4242")
 
     stub_every_userinfo(every_payload("userinfo"))
-    assert_difference -> { Session.count } => 0 do
-      complete_every_sign_in
-    end
-
-    assert_not User.find_by!(every_user_id: "4242").every_member?
-    assert_not User.find_by!(every_user_id: "4242").email_verified?
+    complete_every_sign_in
+    assert User.find_by!(every_user_id: "4242").every_member?
   end
 
-  test "an ADMIN_EMAILS address is admin only once the provider verified it" do
+  test "an ADMIN_EMAILS address is admin with no email_verified claim" do
     ENV["ADMIN_EMAILS"] = "bo@every.to"
     stub_every_token
     stub_every_userinfo(every_payload("userinfo"))
     complete_every_sign_in
-    assert_not User.find_by!(every_user_id: "4242").admin?
 
-    stub_every_userinfo(every_payload("userinfo", email_verified: true))
-    complete_every_sign_in
     assert User.find_by!(every_user_id: "4242").admin?
   ensure
     ENV.delete("ADMIN_EMAILS")
+  end
+
+  # Silent sign-in and sign-out
+
+  test "the sign-in page first asks Every silently for openid basic_profile" do
+    get new_session_path
+
+    assert_redirected_to "/auth/every?prompt=none"
+    follow_redirect!
+    params = Rack::Utils.parse_query(URI(response.location).query)
+    assert_equal [ "none", "openid basic_profile" ], params.values_at("prompt", "scope")
+  end
+
+  test "a browser signed in to every.to as a trusted app lands signed in without seeing a page" do
+    stub_every_token
+    stub_every_userinfo
+
+    get new_session_path
+    follow_redirect!
+    state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+
+    assert_difference -> { Session.count } => 1 do
+      get "/auth/every/callback", params: { code: "authorization-code", state: }
+    end
+    assert_redirected_to "https://www.example.com/welcome"
+  end
+
+  %w[login_required consent_required].each do |answer|
+    test "Every's #{answer} falls back to the sign-in page once, with no error and no loop" do
+      get new_session_path
+      follow_redirect!
+      state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+
+      get "/auth/every/callback", params: { error: answer, state: }
+      assert_redirected_to new_session_url
+      assert_nil flash[:alert]
+
+      follow_redirect!
+      assert_response :success
+      assert_inertia_component "auth/sign_in"
+    end
+  end
+
+  test "the sign-in page tries silently again once the last attempt is old" do
+    get new_session_path
+    follow_redirect!
+    state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+    get "/auth/every/callback", params: { error: "login_required", state: }
+
+    travel EverySilentSignIn::ATTEMPT_TTL + 1.second do
+      get new_session_path
+      assert_redirected_to "/auth/every?prompt=none"
+    end
+  end
+
+  test "a sign-in error is shown on the page instead of starting a silent attempt" do
+    get "/auth/every"
+    get "/auth/every/callback", params: { code: "authorization-code", state: "forged" }
+    follow_redirect!
+
+    assert_response :success
+    assert_equal "Sign in with Every did not complete. Try again.", flash[:alert]
+  end
+
+  test "signing out sticks: no silent sign-in until the person signs in with Every again" do
+    stub_every_token
+    stub_every_userinfo(every_payload("userinfo", user_id: users(:every_ana).every_user_id, email: users(:every_ana).email_address))
+    complete_every_sign_in
+
+    delete session_path
+    assert cookies[EverySilentSignIn::SIGNED_OUT_COOKIE].present?
+
+    get new_session_path
+    assert_response :success
+    assert_inertia_component "auth/sign_in"
+
+    complete_every_sign_in
+    assert_empty cookies[EverySilentSignIn::SIGNED_OUT_COOKIE].to_s
+    delete session_path
+    travel EverySilentSignIn::ATTEMPT_TTL + 1.second do
+      get new_session_path
+      assert_response :success, "signing out again sticks again"
+    end
+  end
+
+  test "with basic_profile alone the sign-in page renders without a silent attempt" do
+    Rails.application.config.x.every_oauth.scope = "basic_profile"
+
+    get new_session_path
+
+    assert_response :success
+    assert_inertia_component "auth/sign_in"
   end
 
   test "an explicit email_verified false is refused" do

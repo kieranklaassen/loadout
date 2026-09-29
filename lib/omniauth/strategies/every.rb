@@ -5,8 +5,13 @@ require "omniauth-oauth2"
 module OmniAuth
   module Strategies
     # Sign in with Every (every.to), ported from Baby Agent's legacy mode: a
-    # plain authorization-code flow with scope basic_profile, identity read from
-    # the UserInfo endpoint.
+    # plain authorization-code flow, identity read from the UserInfo endpoint.
+    #
+    # Silent sign-in: /auth/every?prompt=none asks Every to answer without any
+    # screen. Every honors prompt only for an openid request, so the parameter
+    # is sent only when the scope includes openid. Every answers login_required
+    # or consent_required unless the client is a trusted first-party app, and
+    # the app falls back to its sign-in page on those.
     #
     # The state is bound to this browser twice: OmniAuth keeps it in the
     # encrypted Rails session, and the request phase also sets it in a
@@ -18,10 +23,11 @@ module OmniAuth
       TRANSACTION_TTL = 10 * 60
       MAX_FUTURE_ISSUED_AT = 60
       STATE_COOKIE = "__Host-every_state"
-      SCOPE = "basic_profile"
+      DEFAULT_SCOPE = "openid basic_profile"
 
       option :name, "every"
       option :site, nil
+      option :requested_scope, DEFAULT_SCOPE
       option :client_options, {
         authorize_url: "/oauth/authorize",
         token_url: "/oauth/token",
@@ -58,7 +64,17 @@ module OmniAuth
       end
 
       def authorize_params
-        super.merge(scope: SCOPE)
+        params = super.merge(scope: requested_scope)
+        params[:prompt] = "none" if silent_request?
+        params
+      end
+
+      def self.silent_capable?(scope)
+        scope.to_s.split.include?("openid")
+      end
+
+      def requested_scope
+        setting(:requested_scope).presence || DEFAULT_SCOPE
       end
 
       def callback_phase
@@ -106,6 +122,10 @@ module OmniAuth
 
       def configured?
         setting(:client_id).present? && setting(:client_secret).present? && setting(:site).present?
+      end
+
+      def silent_request?
+        request.params["prompt"] == "none" && self.class.silent_capable?(requested_scope)
       end
 
       def state_matches?
