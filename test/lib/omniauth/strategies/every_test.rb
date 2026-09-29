@@ -19,7 +19,7 @@ class OmniAuth::Strategies::EveryTest < ActiveSupport::TestCase
     OmniAuth.config.on_failure = @original_on_failure
   end
 
-  test "the request phase redirects to Every's authorize URL with basic_profile and binds the state to a __Host- cookie" do
+  test "the request phase redirects to Every's authorize URL with openid basic_profile and binds the state to a __Host- cookie" do
     session = {}
     status, headers, = start(session)
 
@@ -27,7 +27,8 @@ class OmniAuth::Strategies::EveryTest < ActiveSupport::TestCase
     location = URI(headers["location"])
     params = Rack::Utils.parse_query(location.query)
     assert_equal "#{BASE}/oauth/authorize", "#{location.scheme}://#{location.host}#{location.path}"
-    assert_equal "basic_profile", params["scope"]
+    assert_equal "openid basic_profile", params["scope"]
+    assert_nil params["prompt"], "an ordinary sign-in lets Every show its screens"
     assert_equal "client-id", params["client_id"]
     assert_equal "code", params["response_type"]
     assert_equal CALLBACK, params["redirect_uri"]
@@ -41,6 +42,41 @@ class OmniAuth::Strategies::EveryTest < ActiveSupport::TestCase
     assert_match(/secure/i, cookie)
     assert_match(/httponly/i, cookie)
     assert_match(/samesite=lax/i, cookie)
+  end
+
+  test "prompt=none on the sign-in start asks Every for a silent answer" do
+    _, headers, = start({}, query: "prompt=none")
+
+    assert_equal "none", authorize_params(headers)["prompt"]
+  end
+
+  test "any other prompt value is not passed on" do
+    _, headers, = start({}, query: "prompt=login")
+
+    assert_nil authorize_params(headers)["prompt"]
+  end
+
+  test "without openid in the scope there is no silent sign-in, since Every ignores prompt then" do
+    strategy = OmniAuth::Strategies::Every.new(@app, client_id: "client-id", client_secret: "client-secret", site: -> { BASE }, requested_scope: -> { "basic_profile" })
+
+    _, headers, = strategy.call(Rack::MockRequest.env_for("/auth/every?prompt=none", "rack.session" => {}))
+
+    params = authorize_params(headers)
+    assert_equal "basic_profile", params["scope"]
+    assert_nil params["prompt"]
+    assert_not OmniAuth::Strategies::Every.silent_capable?("basic_profile")
+    assert OmniAuth::Strategies::Every.silent_capable?("basic_profile openid")
+  end
+
+  test "a silent answer from Every on a bound callback fails with that error" do
+    session = {}
+    start(session, query: "prompt=none")
+    state = session["omniauth.state"]
+
+    status, _, body = callback(session, "error=login_required&state=#{state}", cookie: "__Host-every_state=#{state}")
+
+    assert_equal [ 401, "login_required" ], [ status, body.join ]
+    assert_nil session["omniauth.every"]
   end
 
   test "a missing client configuration fails as every_oauth_unconfigured without redirecting" do
@@ -163,8 +199,12 @@ class OmniAuth::Strategies::EveryTest < ActiveSupport::TestCase
 
   private
 
-  def start(session)
-    @strategy.call(Rack::MockRequest.env_for("/auth/every", "rack.session" => session))
+  def start(session, query: nil)
+    @strategy.call(Rack::MockRequest.env_for([ "/auth/every", query ].compact.join("?"), "rack.session" => session))
+  end
+
+  def authorize_params(headers)
+    Rack::Utils.parse_query(URI(headers["location"]).query)
   end
 
   def callback(session, query, cookie: nil)

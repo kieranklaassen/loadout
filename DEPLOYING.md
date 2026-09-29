@@ -25,10 +25,11 @@ silently reusing another app's config.
    export EVERY_OAUTH_BASE_URL=https://every.to
    export EVERY_OAUTH_CLIENT_ID=...       # Every OAuth client, redirect URI https://toolbox.every.to/auth/every/callback
    export EVERY_OAUTH_CLIENT_SECRET=...
-   export ADMIN_EMAILS=kieran@every.to    # an address is admin only once Every verified it
+   export ADMIN_EMAILS=kieran@every.to    # admin once that address signs in with Every
 
    # Optional — sensible defaults.
    # export KAMAL_REGISTRY_SERVER=ghcr.io
+   # export EVERY_OAUTH_SCOPE=basic_profile   # default "openid basic_profile"; basic_profile alone turns silent sign-in off
    # export RIFFREC_ENDPOINT=https://riffrec.example.com   # blank → capture off
    ```
 
@@ -46,7 +47,22 @@ silently reusing another app's config.
 ## DNS and Every OAuth (one time, before `kamal setup`)
 
 - Add an `A` record: `toolbox.every.to` pointing at the server's IPv4 address (plus `AAAA` for IPv6 if present). kamal-proxy gets the certificate once DNS resolves.
-- Register an Every OAuth client with redirect URI `https://toolbox.every.to/auth/every/callback` and scope `basic_profile`. Sign-in reads the person's name, photo and email, and "Every team" needs the provider to send `email_verified: true` (see the first-deploy checks below).
+- Register an Every OAuth client for Toolbox alone (every.to admin → OAuth Clients → New):
+  - name `Toolbox`;
+  - redirect URI `https://toolbox.every.to/auth/every/callback`, exactly;
+  - scopes `basic_profile openid`.
+
+  Toolbox asks for `openid basic_profile`. A client without `openid` makes every.to show an
+  invalid-scope error instead of signing in; if `openid` cannot be added, set
+  `EVERY_OAUTH_SCOPE=basic_profile`. Sign-in reads the person's name, photo and email. Any
+  `@every.to` address is the Every team and `ADMIN_EMAILS` grants admin; every.to sends no
+  `email_verified` claim, and only an explicit `false` is refused.
+- **Silent sign-in (later, no Toolbox change).** The sign-in page first asks every.to with
+  `prompt=none`. Until every.to marks the client a trusted first-party app, every.to answers
+  `consent_required` or `login_required` and Toolbox shows its sign-in page, whose button goes
+  through every.to's normal consent screen. Once an every.to admin ticks "Trusted first-party app"
+  on the client, a browser signed in to every.to lands on Toolbox signed in with no screen. Signing
+  out of Toolbox sticks: no silent sign-in until that person clicks "Sign in with Every" again.
 - MCP clients discover the authorization server at `https://toolbox.every.to/.well-known/oauth-authorization-server`. Nothing to register; clients self-register.
 
 ## Deploy
@@ -124,22 +140,18 @@ Before deploying:
 - `config/deploy.yml` sets Kamal's `deploy_timeout` to 120 seconds (default 30), because the
   backup, the migrations and the catalog sync all run before the server can answer `/up`. Raise it
   there first if the database is large enough to need longer.
-- Check that Every's UserInfo sends `email_verified: true` for staff. "Every team" and admin
-  rights need it and both fail closed: without the claim, staff sign in but count as "Everyone
-  else", and `ADMIN_EMAILS` grants nothing. If the claim is missing, choose the fallback (key the
-  team on the Every user id) before shipping.
-
 After deploying, before you call it done:
 
 1. **`/up` answers 200 with a container-IP `Host`.** In `bin/kamal shell`, run
    `curl -si -H "Host: 172.18.0.2" http://localhost/up` (any IP address will do) and expect
    `200`. The same request to any other path is refused.
-2. **A real `@every.to` sign-in sets `email_verified`.** Sign in once with a real staff account,
-   then check in `bin/kamal console` that
-   `User.find_by(email_address: "you@every.to").email_verified` is `true`.
-3. **Existing sessions must sign out and in once.** `email_verified` is assigned from the
-   provider's claim at each sign-in and defaults to false, so until someone signs in again they
-   count as "Everyone else" and an admin loses admin.
+2. **A real `@every.to` sign-in is the Every team.** Sign in once with a real staff account
+   (you pass every.to's consent screen once), then check in `bin/kamal console` that
+   `User.find_by(email_address: "you@every.to").every_member?` is `true`, and `admin?` too for an
+   `ADMIN_EMAILS` address.
+3. **Existing sessions must sign out and in once.** `email_verified` is set at each Every sign-in
+   and defaults to false, so a row from before this release counts as "Everyone else", and an
+   admin lacks admin, until that person signs in again.
 4. **Revoke agent grants from before this release, if there are any.** In `bin/kamal console`,
    check `OauthGrant.active.exists?`. If it is `true`, run
    `bin/kamal app exec --reuse "bin/rails toolbox:revoke_agent_grants"`: an older grant keeps

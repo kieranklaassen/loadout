@@ -57,6 +57,7 @@ env:
     # URI, the MCP OAuth issuer and resource, and share links are built from it.
     PUBLIC_BASE_URL: "<%= ENV.fetch("PUBLIC_BASE_URL") %>"
     EVERY_OAUTH_BASE_URL: "<%= ENV.fetch("EVERY_OAUTH_BASE_URL") %>"
+    EVERY_OAUTH_SCOPE: "<%= ENV.fetch("EVERY_OAUTH_SCOPE", "") %>"
     # Comma-separated emails that may review the catalog and flip flags.
     ADMIN_EMAILS: "<%= ENV.fetch("ADMIN_EMAILS", "") %>"
     # Run Solid Queue inside Puma (single web role default). Split to a job role

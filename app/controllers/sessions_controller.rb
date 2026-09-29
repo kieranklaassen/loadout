@@ -1,15 +1,19 @@
 class SessionsController < InertiaController
+  include EverySilentSignIn
+
   allow_unauthenticated_access only: :new
   skip_onboarding_gate
 
   def new
     return redirect_to root_path if authenticated?
+    return start_silent_sign_in if attempt_silent_sign_in?
 
     render inertia: "auth/sign_in", props: { join_every_url: ToolboxHost::JOIN_EVERY_URL, dev_login_people: (dev_login_people if Rails.env.development?) }.compact
   end
 
   def destroy
     terminate_session
+    remember_sign_out
     redirect_to root_path, status: :see_other
   end
 

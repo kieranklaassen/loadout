@@ -1,6 +1,8 @@
 # The app side of the OmniAuth `every` strategy: `create` receives a verified
 # callback, `failure` every other outcome (OmniAuth.config.on_failure).
 class Sessions::EveryController < InertiaController
+  include EverySilentSignIn
+
   allow_unauthenticated_access
   skip_onboarding_gate
 
@@ -14,16 +16,16 @@ class Sessions::EveryController < InertiaController
     auth = request.env["omniauth.auth"]
     return failure if auth.nil?
 
-    # Only a claim of exactly true makes the address verified, and so a team member.
-    # An absent claim signs in as not verified; an explicit false is refused, and
-    # clears any earlier team status of that account.
-    email_verified = auth.extra.raw_info["email_verified"]
-    if email_verified == false
+    # Every's UserInfo carries no email_verified claim today: an Every account's
+    # address is the one it signs in with, so it counts as verified. An explicit
+    # false is refused, and clears any earlier team status of that account.
+    if auth.extra.raw_info["email_verified"] == false
       User.where(every_user_id: auth.uid).update_all(email_verified: false)
       return failure
     end
 
-    user = User.from_every_auth!(uid: auth.uid, email: auth.info.email, name: auth.info.name, image: auth.info.image, email_verified: email_verified == true)
+    user = User.from_every_auth!(uid: auth.uid, email: auth.info.email, name: auth.info.name, image: auth.info.image, email_verified: true)
+    forget_sign_out
     start_new_session_for user
     redirect_to((user.onboarded? || agent_consent_pending?) ? after_authentication_url : "/welcome")
   rescue ActiveRecord::RecordInvalid => e
@@ -34,6 +36,8 @@ class Sessions::EveryController < InertiaController
   def failure
     clear_state_cookie
     error_type = request.env["omniauth.error.type"].to_s
+    return redirect_to new_session_path if silent_sign_in_declined?(error_type)
+
     Rails.logger.info("every sign-in failed: #{error_type}")
     redirect_to new_session_path, alert: FAILURE_MESSAGES.fetch(error_type, DEFAULT_FAILURE_MESSAGE)
   end

@@ -35,7 +35,8 @@ class User < ApplicationRecord
 
   private
 
-  # An address in ADMIN_EMAILS grants admin only once the provider verified it.
+  # An address in ADMIN_EMAILS grants admin once an Every sign-in verified it
+  # (any sign-in without an explicit email_verified false).
   def admin_email?
     email_verified? && ENV.fetch("ADMIN_EMAILS", "").split(",").map { |email| email.strip.downcase }.include?(email_address)
   end

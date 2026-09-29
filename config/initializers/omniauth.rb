@@ -7,6 +7,10 @@ require "omniauth/strategies/every"
 Rails.application.config.x.every_oauth.client_id = ENV["EVERY_OAUTH_CLIENT_ID"].presence
 Rails.application.config.x.every_oauth.client_secret = ENV["EVERY_OAUTH_CLIENT_SECRET"].presence
 Rails.application.config.x.every_oauth.base_url = ENV["EVERY_OAUTH_BASE_URL"].presence
+# openid lets sign-in go silent once Every marks this client a trusted first-party
+# app; the client must be registered with it. "basic_profile" alone turns silent
+# sign-in off.
+Rails.application.config.x.every_oauth.scope = ENV["EVERY_OAUTH_SCOPE"].presence || OmniAuth::Strategies::Every::DEFAULT_SCOPE
 Rails.application.config.x.public_base_url = ENV["PUBLIC_BASE_URL"].presence&.chomp("/")
 
 # GET is allowed on /auth/every because the "Sign in with Every" link is a
@@ -29,5 +33,6 @@ Rails.application.config.middleware.use OmniAuth::Builder do
   provider :every,
     client_id: -> { Rails.application.config.x.every_oauth.client_id },
     client_secret: -> { Rails.application.config.x.every_oauth.client_secret },
-    site: -> { Rails.application.config.x.every_oauth.base_url }
+    site: -> { Rails.application.config.x.every_oauth.base_url },
+    requested_scope: -> { Rails.application.config.x.every_oauth.scope }
 end
