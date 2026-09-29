@@ -324,7 +324,7 @@ async function main() {
 
   try {
     log('building frontend the way the Dockerfile does')
-    for (const dir of ['public/vite', 'public/vite-ssr', 'public/vite-dev', 'public/assets']) rmSync(path.join(ROOT, dir), { recursive: true, force: true })
+    for (const dir of ['public/vite', 'public/vite-ssr', 'public/vite-dev', 'public/assets', 'tmp/cache/vite']) rmSync(path.join(ROOT, dir), { recursive: true, force: true })
     run('bin/rails', ['assets:precompile'], { env: { ...env, SECRET_KEY_BASE_DUMMY: '1' } })
 
     log('preparing a throwaway production database with demo members')
