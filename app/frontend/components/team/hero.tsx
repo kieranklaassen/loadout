@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { rankLabel } from '../../lib/rank_label'
 import { shortDate } from '../../lib/relative_date'
 import type { Category, MarkItem } from '../../types'
@@ -25,7 +25,12 @@ const index = (name: string, value: number) => ({ [name]: value }) as CSSPropert
 export default function Hero({ hero }: { hero: HeroData }) {
   const { boards, people, picks, last_update_at } = hero
   const animated = boards.length > 1
-  const [playing, setPlaying] = useState(() => !reducedMotion())
+  // Starts playing on the server and the client alike so hydration matches; a
+  // reduced-motion browser stills it right after mount.
+  const [playing, setPlaying] = useState(true)
+  useEffect(() => {
+    if (reducedMotion()) setPlaying(false)
+  }, [])
 
   if (boards.length === 0) return null
 

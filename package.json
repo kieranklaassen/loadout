@@ -15,7 +15,7 @@
     "vitest": "^5.0.1"
   },
   "scripts": {
-    "build:ssr": "vite build --ssr app/frontend/ssr/ssr.tsx --outDir public/vite-ssr",
+    "build:ssr": "vite build --ssr",
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && vitest run"

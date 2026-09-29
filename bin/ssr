@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Runs the Inertia render server (public/vite-ssr/ssr.js, built by assets:precompile)
+# on port 13714 and starts it again if it exits. Rails falls back to client
+# rendering while it is down, so a crash costs speed, never a page.
+# bin/docker-entrypoint starts this beside Rails; run it by hand after
+# `bin/rails assets:precompile` to try server rendering locally.
+
+cd "$(dirname "$0")/.."
+
+child=
+trap '[ -n "$child" ] && kill "$child" 2>/dev/null; exit 0' TERM INT
+
+while true; do
+  node public/vite-ssr/ssr.js &
+  child=$!
+  wait "$child"
+  echo "SSR server exited with status $?; restarting in 1s" >&2
+  sleep 1
+done

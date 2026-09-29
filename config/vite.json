@@ -9,6 +9,9 @@
     "publicOutputDir": "vite-dev",
     "port": 3036
   },
+  "production": {
+    "ssrBuildEnabled": true
+  },
   "test": {
     "autoBuild": true,
     "publicOutputDir": "vite-test",

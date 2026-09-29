@@ -25,9 +25,8 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag :app %>
-    <%= vite_stylesheet_tag "application" %>
+    <%# app/assets/stylesheets is an empty Propshaft stub, so only the Vite CSS ships (inline in builds). %>
+    <%= app_stylesheet_tag((local_assigns[:page] || @_inertia_page)&.dig(:component)) %>
     <%= vite_react_refresh_tag %>
     <%= vite_client_tag %>
     <%= vite_typescript_tag "inertia.tsx" %>

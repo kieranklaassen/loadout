@@ -1,5 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react'
-import { StrictMode } from 'react'
+import { type ComponentType, StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import RiffrecProvider, { type RiffrecConfig } from '../lib/riffrec_provider'
 import type { WebmcpManifest } from '../lib/webmcp'
@@ -7,8 +7,15 @@ import WebmcpProvider from '../lib/webmcp_provider'
 
 void createInertiaApp({
   // Resolve page components from app/frontend/pages using the snake_case
-  // "controller/action" identifier Rails passes to `render inertia:`.
-  pages: '../pages',
+  // "controller/action" identifier Rails passes to `render inertia:`. Spelled out
+  // rather than `pages: '../pages'` so the glob can leave *.test.tsx files (and the
+  // vitest they import) out of the production bundle.
+  resolve: async (name) => {
+    const pages = import.meta.glob<{ default: ComponentType }>(['../pages/**/*.tsx', '!../pages/**/*.test.tsx'])
+    const module = await pages[`../pages/${name}.tsx`]?.()
+    if (!module) throw new Error(`Page not found: ${name}`)
+    return module.default
+  },
 
   defaults: {
     form: {

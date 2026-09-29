@@ -10,8 +10,8 @@
 # Net::HTTP.start reads it, so ordinary application HTTP is untouched.
 #
 # Carried verbatim from the two fleet apps that independently arrived at this same
-# patch (thinkroom, kieranklaassen-com), so SSR is safe to enable later without
-# rediscovering the footgun. Loads harmlessly whether or not SSR is enabled.
+# patch (thinkroom, kieranklaassen-com). SSR is on by default in production, so this
+# bounds a live render call there; it loads harmlessly wherever SSR is off.
 
 return unless defined?(InertiaRails::SSRRenderer)
 
