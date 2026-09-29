@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loadout share card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&amp;family=Hanken+Grotesk:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#020202;font-family:'Hanken Grotesk',system-ui,sans-serif}
+.root{box-sizing:border-box;background-color:#020202;background-image:radial-gradient(circle at center,rgba(255,255,255,.07) 0 1.5px,transparent 2px);background-size:28px 28px;color:#fdfaf7;-webkit-font-smoothing:antialiased}
+.d{font-family:'Newsreader',Georgia,serif;font-weight:400;line-height:1.02;letter-spacing:-.02em;margin:0}
+.st{font-family:'Newsreader',Georgia,serif;font-weight:400;letter-spacing:-.005em}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.slot{border:1.5px dashed #9ce5f5;border-radius:2px;color:#9ce5f5;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:14px}
+.tile{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;font-family:'Geist Mono',monospace;font-weight:500;flex:none}
+.card{background:#111111;border:1px solid #2a2a2a;border-radius:4px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -16px rgba(0,0,0,.7)}
+.btn{display:inline-flex;align-items:center;background:#9ce5f5;color:#121212;font-weight:600;border-radius:2px;padding:14px 24px;font-size:16px;text-decoration:none}
+.btn2{display:inline-flex;align-items:center;background:#111111;color:#fdfaf7;border:1px solid #2a2a2a;font-weight:600;border-radius:2px;padding:10px 16px;font-size:14px;text-decoration:none}
+.row{display:flex;align-items:center;gap:16px;border-bottom:1px solid #2a2a2a;padding:10px 0}
+a:focus-visible,button:focus-visible{outline:2px solid #9ce5f5;outline-offset:3px}
+th{font-weight:400}
+table{border-collapse:collapse;width:100%}
+td,th{vertical-align:middle;text-align:left}
+.chip{display:inline-flex;align-items:center;gap:8px}
+.lnk{color:#fdfaf7;text-decoration:underline;text-underline-offset:4px;text-decoration-color:#5a5a5a}
+</style>
+</helmet>
+<div class="root" style="width:1200px;height:630px;overflow:hidden;position:relative">
+<div style="display:flex;height:630px"><div style="flex:1;padding:48px 56px;display:flex;flex-direction:column;justify-content:space-between"><div style="display:flex;align-items:center;gap:14px"><img src="/_blob/b51cc330fea9bd9a543797ce5842b565" alt="Every" style="height:30px;filter:invert(1)"><span class="d" style="font-size:36px;font-style:italic;color:#9ce5f5">Loadout</span></div>
+<h1 class="d" style="font-size:84px;white-space:nowrap">Kieran <span style="color:#9ce5f5;font-style:italic">Klaassen</span></h1>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px"><div><div class="mono" style="font-size:16px;letter-spacing:.1em;color:#8c8d91;margin-bottom:8px">TOP TOOLS</div><div style="display:flex;align-items:center;gap:16px;height:60px"><span class="tile" style="width:52px;height:52px;background:#fdfaf7"><img src="/_blob/e76e58ff9a8a510a04deaea715691dbf" alt="" style="width:29px;height:29px"></span><span style="font-size:26px;font-weight:500;color:#fdfaf7;white-space:nowrap">Claude Code</span></div><div style="display:flex;align-items:center;gap:16px;height:60px"><span class="tile" style="width:52px;height:52px;background:#fdfaf7"><img src="/_blob/0b99088ed880bba7a3e913c6cea78187" alt="" style="width:29px;height:29px"></span><span style="font-size:26px;font-weight:500;color:#fdfaf7;white-space:nowrap">Claude</span></div><div style="display:flex;align-items:center;gap:16px;height:60px"><span class="tile" style="width:52px;height:52px;background:#fdfaf7;color:#121212;font-weight:500;font-size:22px;font-family:'Newsreader',Georgia,serif">M</span><span style="font-size:26px;font-weight:500;color:#fdfaf7;white-space:nowrap">Monologue</span></div></div><div><div class="mono" style="font-size:16px;letter-spacing:.1em;color:#8c8d91;margin-bottom:8px">TOP MODELS</div><div style="display:flex;align-items:center;gap:16px;height:60px"><span class="tile" style="width:52px;height:52px;background:#fdfaf7;border-radius:50%"><img src="/_blob/0b99088ed880bba7a3e913c6cea78187" alt="" style="width:27px;height:27px"></span><span style="font-size:26px;font-weight:500;color:#fdfaf7;white-space:nowrap">Claude Opus 5.5</span></div><div style="display:flex;align-items:center;gap:16px;height:60px"><span class="tile" style="width:52px;height:52px;background:#fdfaf7;border-radius:50%"><img src="/_blob/0b99088ed880bba7a3e913c6cea78187" alt="" style="width:27px;height:27px"></span><span style="font-size:26px;font-weight:500;color:#fdfaf7;white-space:nowrap">Claude Fable 5.1</span></div><div style="display:flex;align-items:center;gap:16px;height:60px"><span class="tile" style="width:52px;height:52px;background:#fdfaf7;border-radius:50%"><img src="/_blob/ddc97a28216488da53bb486b2ad5148e" alt="" style="width:27px;height:27px"></span><span style="font-size:26px;font-weight:500;color:#fdfaf7;white-space:nowrap">Whisper large-v3</span></div></div></div></div><div style="width:300px;height:630px;overflow:hidden;position:relative;background:#f6b90f;flex:none"><img src="/_blob/ee299250ee4102d0491b22a9278aedfa" alt="" style="position:absolute;width:1100px;left:-330px;top:-110px;max-width:none"></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":630}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

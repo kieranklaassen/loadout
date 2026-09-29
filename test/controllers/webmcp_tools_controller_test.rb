@@ -17,8 +17,8 @@ class WebmcpToolsControllerTest < ActionDispatch::IntegrationTest
     response.parsed_body.dig("result", "content", 0, "text")
   end
 
-  test "the route path matches ToolRegistry::ENDPOINT" do
-    assert_equal "#{ToolRegistry::ENDPOINT}/list_categories", webmcp_tool_path("list_categories")
+  test "the route path matches ToolRegistry.endpoint" do
+    assert_equal "#{ToolRegistry.endpoint}/list_categories", webmcp_tool_path("list_categories")
   end
 
   test "without a session it answers 401 JSON, not a sign-in redirect" do
@@ -38,13 +38,36 @@ class WebmcpToolsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Category.count, JSON.parse(tool_text)["categories"].size
   end
 
-  test "writes through the browser record source webmcp and no client name" do
+  test "a write through the browser is a suggestion from WebMCP with no OAuth client (AE3)" do
     sign_in_as(@user)
-    call_tool("update_loadout", { arguments: { operations: [ { op: "add", category: "video", tool: "runway" } ] } })
+    call_tool("suggest_picks", { arguments: { operations: [ { op: "suggest", category: "video", tool: "runway" } ] } })
 
     assert_response :success
     assert_equal false, response.parsed_body.dig("result", "isError"), tool_text
-    assert_equal [ "webmcp", nil ], @user.entry_changes.sole.values_at(:source, :client_name)
+    suggestion = @user.pick_suggestions.open.sole
+    assert_equal [ nil, "WebMCP" ], [ suggestion.oauth_client_id, suggestion.client_name ]
+    assert_equal [ "webmcp", "WebMCP" ], @user.entry_changes.sole.values_at(:source, :client_name)
+    assert_equal 0, @user.entries.count
+    assert_match(/until the member confirms it/, JSON.parse(tool_text)["message"])
+  end
+
+  test "the member's decisions are not tools, and offering them to suggest_picks is an isError result (AE7)" do
+    sign_in_as(@user)
+
+    %w[confirm_pick dismiss_suggestion remove_pick move_pick reorder_picks set_visibility update_handle update_bio export_history delete_account revoke_agent].each do |name|
+      call_tool(name)
+      assert_response :not_found, name
+    end
+
+    [ { op: "confirm", suggestion_id: 1 }, { op: "dismiss", suggestion_id: 1 }, { op: "remove_pick", category: "coding", rank: 1 },
+      { op: "suggest", category: "video", tool: "runway", visibility: "link" } ].each do |operation|
+      call_tool("suggest_picks", { arguments: { operations: [ operation ] } })
+      assert_response :success
+      assert_equal true, response.parsed_body.dig("result", "isError"), operation.inspect
+    end
+    call_tool("suggest_picks", { arguments: { operations: [ { op: "suggest", category: "video", tool: "runway" } ], confirmed: true } })
+    assert_equal true, response.parsed_body.dig("result", "isError")
+    assert_equal 0, @user.pick_suggestions.count
   end
 
   test "returns exactly what the MCP server returns for the same call" do
@@ -99,7 +122,7 @@ class WebmcpToolsControllerTest < ActionDispatch::IntegrationTest
       @forgery_protection = ActionController::Base.allow_forgery_protection
       ActionController::Base.allow_forgery_protection = true
       WebmcpToolsController::RATE_LIMIT_STORE.clear
-      sign_in_as(users(:one))
+      sign_in_as(users(:every_ana))
     end
 
     teardown do
@@ -132,7 +155,7 @@ class WebmcpToolsControllerTest < ActionDispatch::IntegrationTest
     end
 
     test "accepts the token Inertia hands the page in the XSRF-TOKEN cookie" do
-      get welcome_path
+      get agents_path
       token = cookies["XSRF-TOKEN"]
       assert token.present?, "Inertia should set the XSRF-TOKEN cookie"
 

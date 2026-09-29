@@ -9,7 +9,7 @@
 // changes. Only caches under CACHE_PREFIX belong to this worker — activation
 // prunes stale ones and leaves any other CacheStorage user on the origin alone.
 const CACHE_PREFIX = "pwa-"
-const CACHE_VERSION = "v1"
+const CACHE_VERSION = "v2"
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`
 const OFFLINE_URL = "/offline.html"
 const ICON_URL = "/icon.png"

@@ -1,0 +1,1 @@
+EveryKind: reconciled counts (CC 5, Cursor 2, Codex 1; Opus 4, Sol 2, Sonnet 1; setup rows add up), sentence-case setup label with labeled chips, removed Model/Tool prefixes, TOOL tag, dots, yellow Now card, real logos in history, 12px initials, #8c8d91 arrows, 16/600 names, kept sample-copy note. Height 2140.

@@ -1,41 +1,50 @@
 import { Head, router } from '@inertiajs/react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import AppShell from '../../components/app_shell'
 import Button, { buttonClasses } from '../../components/button'
-import ToolMark from '../../components/tool_mark'
-import type { ConnectedAgent } from '../../types'
+import CapabilityLists, { type Capabilities } from '../../components/capabilities'
+import Mark from '../../components/mark'
+import SectionLabel from '../../components/section_label'
+import { getModelContext } from '../../lib/webmcp'
+import { relativeDate, shortDate } from '../../lib/relative_date'
 
-type AgentsProps = {
-  agents: ConnectedAgent[]
+/** One connected client, as `AgentsController#index` sends it. `known_key` is set only for an https redirect on an allowlisted host. */
+type Agent = {
+  id: string
+  name: string
+  redirect_host: string
+  known_key: string | null
+  open_suggestions: number
+  connected_at: string
+  last_used_at: string | null
+}
+
+type Props = {
+  agents: Agent[]
+  capabilities: Capabilities
   mcp_url: string
   cursor_install_url: string
   suggested_prompt: string
 }
 
-type ClientKey = 'claude' | 'claude_code' | 'cursor' | 'codex'
+/** The product cards. `key` is what the server's `known_key` names; `mark` is the file in assets/marks. */
+const PRODUCTS = [
+  { key: 'claude_code', name: 'Claude Code', mark: 'claudecode' },
+  { key: 'claude', name: 'Claude', mark: 'claude' },
+  { key: 'cursor', name: 'Cursor', mark: 'cursor' },
+  { key: 'codex', name: 'Codex', mark: 'openai' },
+] as const
 
-const CLIENTS: { key: ClientKey; label: string }[] = [
-  { key: 'claude', label: 'Claude' },
-  { key: 'claude_code', label: 'Claude Code' },
-  { key: 'cursor', label: 'Cursor' },
-  { key: 'codex', label: 'Codex' },
-]
+const WEBMCP_SPEC_URL = 'https://webmachinelearning.github.io/webmcp/'
+const WEBMCP_FLAG = 'chrome://flags/#enable-webmcp-testing'
 
-const DATE = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const heading = 'font-serif leading-[1.02] tracking-[-0.02em] text-[28px] md:text-[30px]'
+const panelPadding = 'px-5 py-5 md:px-[22px]'
+const monoWell = 'mt-3.5 rounded-sharp bg-page px-3.5 py-3 font-mono text-caption leading-relaxed text-fg [overflow-wrap:anywhere]'
+const caption = 'mt-3 text-caption leading-normal text-fg-soft'
+const code = 'font-mono text-fg'
 
-export function timeAgo(iso: string, now: Date = new Date()) {
-  const seconds = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 1000))
-  if (seconds < 60) return 'just now'
-  const minutes = Math.round(seconds / 60)
-  if (minutes < 60) return `${minutes} min ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours} hr ago`
-  const days = Math.round(hours / 24)
-  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`
-  return DATE.format(new Date(iso))
-}
-
-function CopyButton({ text, label = 'Copy', tone = 'light' }: { text: string; label?: string; tone?: 'light' | 'dark' }) {
+function CopyButton({ text, what }: { text: string; what: string }) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -52,199 +61,259 @@ function CopyButton({ text, label = 'Copy', tone = 'light' }: { text: string; la
     <button
       type="button"
       onClick={copy}
-      aria-label={`${label}: ${text}`}
-      className={`shrink-0 rounded-full px-3 py-1.5 font-sans text-xs font-medium ring-1 transition ${
-        tone === 'dark' ? 'text-paper/80 ring-paper/25 hover:text-paper hover:ring-paper/60' : 'text-ink-soft ring-rule hover:text-ink hover:ring-ink/30'
-      }`}
+      aria-label={`${copied ? 'Copied' : 'Copy'} ${what}`}
+      className="text-link flex min-h-11 shrink-0 items-center text-caption text-fg-soft md:min-h-0"
     >
-      {copied ? 'Copied' : label}
+      {copied ? 'Copied' : 'Copy'}
     </button>
   )
 }
 
-function Snippet({ code, label }: { code: string; label?: string }) {
-  return (
-    <div className="mt-3 flex items-start gap-3 rounded-xl bg-ink px-4 py-3 text-paper">
-      <pre className="min-w-0 flex-1 overflow-x-auto whitespace-pre font-mono text-[0.8rem] leading-relaxed">{code}</pre>
-      <CopyButton text={code} label={label} tone="dark" />
-    </div>
-  )
-}
-
-function Step({ n, children }: { n: number; children: ReactNode }) {
-  return (
-    <li className="flex gap-4">
-      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-rule font-mono text-[0.7rem] text-ink-muted">
-        {n}
-      </span>
-      <div className="min-w-0 flex-1 text-[0.95rem] text-ink-soft">{children}</div>
-    </li>
-  )
-}
-
-function Instructions({ client, mcpUrl, cursorInstallUrl }: { client: ClientKey; mcpUrl: string; cursorInstallUrl: string }) {
-  switch (client) {
-    case 'claude':
-      return (
-        <ol className="space-y-4">
-          <Step n={1}>
-            In Claude (claude.ai or the desktop app), open <b className="font-medium text-ink">Settings → Connectors</b>.
-          </Step>
-          <Step n={2}>
-            Choose <b className="font-medium text-ink">Add custom connector</b>, name it Loadout, and paste the URL above.
-          </Step>
-          <Step n={3}>Select Connect, sign in with Every, and approve.</Step>
-        </ol>
-      )
-    case 'claude_code':
-      return (
-        <ol className="space-y-4">
-          <Step n={1}>
-            Add the server from your terminal:
-            <Snippet code={`claude mcp add --transport http loadout ${mcpUrl}`} />
-          </Step>
-          <Step n={2}>
-            In Claude Code, run <code className="font-mono text-[0.85rem] text-ink">/mcp</code>, pick loadout, and sign in with Every.
-          </Step>
-        </ol>
-      )
-    case 'cursor':
-      return (
-        <ol className="space-y-4">
-          <Step n={1}>
-            <a href={cursorInstallUrl} className={`${buttonClasses('primary')} mt-[-2px]`}>
-              Add to Cursor
-            </a>
-            <p className="mt-3">Or add it to <code className="font-mono text-[0.85rem] text-ink">~/.cursor/mcp.json</code> yourself:</p>
-            <Snippet code={JSON.stringify({ mcpServers: { loadout: { url: mcpUrl } } }, null, 2)} />
-          </Step>
-          <Step n={2}>In Cursor Settings → MCP, select Connect next to loadout and approve in the browser.</Step>
-        </ol>
-      )
-    case 'codex':
-      return (
-        <ol className="space-y-4">
-          <Step n={1}>
-            Add the server:
-            <Snippet code={`codex mcp add loadout --url ${mcpUrl}`} />
-            <p className="mt-3">
-              Or put it in <code className="font-mono text-[0.85rem] text-ink">~/.codex/config.toml</code>:
-            </p>
-            <Snippet code={`[mcp_servers.loadout]\nurl = "${mcpUrl}"`} />
-          </Step>
-          <Step n={2}>
-            Run <code className="font-mono text-[0.85rem] text-ink">codex mcp login loadout</code> and approve in the browser.
-          </Step>
-        </ol>
-      )
-    default: {
-      const unreachable: never = client
-      return unreachable
-    }
-  }
-}
-
-function AgentRow({ agent }: { agent: ConnectedAgent }) {
-  const revoke = () => {
-    if (window.confirm(`Disconnect ${agent.name}? Its next request will be refused until you approve it again.`)) {
-      router.delete(`/agents/${encodeURIComponent(agent.id)}`, { preserveScroll: true })
-    }
-  }
+function ProductCard({
+  name,
+  mark,
+  connected,
+  copy,
+  children,
+}: {
+  name: string
+  mark: string
+  connected: boolean
+  copy?: { text: string; what: string }
+  children: ReactNode
+}) {
+  const headingId = useId()
 
   return (
-    <li className="flex items-center gap-4 py-4">
-      <ToolMark item={agent} size="md" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-ink">{agent.name}</p>
-        <p className="mt-0.5 text-sm text-ink-muted">
-          Connected {DATE.format(new Date(agent.connected_at))}
-          <span aria-hidden="true"> · </span>
-          {agent.last_used_at ? `Last used ${timeAgo(agent.last_used_at)}` : 'Not used yet'}
-        </p>
+    <section aria-labelledby={headingId} className={`panel ${panelPadding}`}>
+      <div className="flex items-center gap-3">
+        <Mark item={{ name, kind: 'tool', mark }} />
+        <h3 id={headingId} className="text-[17px] font-semibold">
+          {name}
+        </h3>
+        <span className="flex-1" />
+        {connected && <span className="font-mono text-xs uppercase tracking-[0.08em] text-fg">Connected</span>}
+        {copy && <CopyButton text={copy.text} what={copy.what} />}
       </div>
-      <Button variant="secondary" onClick={revoke}>
-        Revoke
-      </Button>
+      {children}
+    </section>
+  )
+}
+
+function ProductCards({ agents, mcpUrl, cursorInstallUrl }: { agents: Agent[]; mcpUrl: string; cursorInstallUrl: string }) {
+  const connected = new Set(agents.map((agent) => agent.known_key))
+  const claudeCode = `claude mcp add --transport http toolbox ${mcpUrl}`
+  const cursorJson = JSON.stringify({ mcpServers: { toolbox: { url: mcpUrl } } })
+  const codex = `codex mcp add toolbox --url ${mcpUrl}`
+
+  const card = (key: (typeof PRODUCTS)[number]['key'], copy: string, body: ReactNode) => {
+    const product = PRODUCTS.find((entry) => entry.key === key)!
+    return (
+      <ProductCard name={product.name} mark={product.mark} connected={connected.has(key)} copy={{ text: copy, what: `the ${product.name} setup` }}>
+        {body}
+      </ProductCard>
+    )
+  }
+
+  return (
+    <>
+      {card(
+        'claude_code',
+        claudeCode,
+        <>
+          <div className={monoWell}>{claudeCode}</div>
+          <p className={caption}>
+            Then run <code className={code}>/mcp</code> in Claude Code, pick toolbox, and sign in with Every.
+          </p>
+        </>,
+      )}
+      {card(
+        'claude',
+        mcpUrl,
+        <>
+          <div className={monoWell}>
+            <p className="font-sans text-fg-soft">Settings → Connectors → Add custom connector</p>
+            <p className="mt-1.5">{mcpUrl}</p>
+          </div>
+          <p className={caption}>Name it Toolbox, paste the URL, then select Connect and approve.</p>
+        </>,
+      )}
+      {card(
+        'cursor',
+        cursorJson,
+        <>
+          <a href={cursorInstallUrl} className={`${buttonClasses('secondary')} mt-3.5`}>
+            Add to Cursor
+          </a>
+          <div className={monoWell}>{cursorJson}</div>
+          <p className={caption}>
+            Or add that to <code className={code}>~/.cursor/mcp.json</code>, then select Connect next to toolbox in Cursor Settings → MCP.
+          </p>
+        </>,
+      )}
+      {card(
+        'codex',
+        codex,
+        <>
+          <div className={monoWell}>{codex}</div>
+          <p className={caption}>
+            Then run <code className={code}>codex mcp login toolbox</code> and approve in the browser.
+          </p>
+        </>,
+      )}
+    </>
+  )
+}
+
+function WebmcpCard({ note }: { note: string }) {
+  const headingId = useId()
+  // Read after mount: the browser's model context does not exist on the server.
+  const [supported, setSupported] = useState<boolean | null>(null)
+  useEffect(() => setSupported(getModelContext() !== null), [])
+
+  return (
+    <section aria-labelledby={headingId} className={`panel md:col-span-2 ${panelPadding}`}>
+      <div className="flex items-center gap-3">
+        <Mark item={{ name: 'WebMCP', kind: 'tool', mark: null }} />
+        <h3 id={headingId} className="text-[17px] font-semibold">
+          Agent in your browser
+        </h3>
+        <SectionLabel className="text-fg!">WebMCP</SectionLabel>
+      </div>
+      <p className="mt-3 max-w-[640px] text-[15px] leading-normal text-fg-soft">
+        Toolbox supports WebMCP. While you are signed in, a browser agent that supports it can use the same tools on this site. There is
+        nothing to install or connect, and its picks stay suggestions until you confirm them.
+      </p>
+      <p className="mt-3 max-w-[640px] text-[15px] leading-normal text-fg">{note}</p>
+      <p className={`${caption} max-w-[640px]`}>
+        To try it, open Toolbox in a browser with WebMCP turned on. In Chrome, that is <code className={code}>{WEBMCP_FLAG}</code>.{' '}
+        <a href={WEBMCP_SPEC_URL} target="_blank" rel="noopener noreferrer" className="text-link">
+          About WebMCP
+        </a>
+      </p>
+      {supported !== null && (
+        <p className="mt-3 font-mono text-caption text-fg">{supported ? 'This browser supports WebMCP.' : 'This browser does not support WebMCP.'}</p>
+      )}
+    </section>
+  )
+}
+
+function AgentRow({ agent, onRevoked }: { agent: Agent; onRevoked: () => void }) {
+  const [confirming, setConfirming] = useState(false)
+  const revokeRef = useRef<HTMLButtonElement>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const wasConfirming = useRef(false)
+  const product = PRODUCTS.find((entry) => entry.key === agent.known_key)
+  const suggestions = agent.open_suggestions
+
+  // Moving into the question lands on the safe choice; leaving it lands back on the row's Revoke.
+  useEffect(() => {
+    if (confirming === wasConfirming.current) return
+    wasConfirming.current = confirming
+    ;(confirming ? cancelRef : revokeRef).current?.focus()
+  }, [confirming])
+
+  const revoke = () => router.delete(`/agents/${encodeURIComponent(agent.id)}`, { preserveScroll: true, onFinish: onRevoked })
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') setConfirming(false)
+  }
+
+  return (
+    <li className="border-b border-line py-3.5" onKeyDown={onKeyDown}>
+      <div className="flex items-center gap-3.5">
+        <Mark item={{ name: agent.name, kind: 'tool', mark: product?.mark ?? null }} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold">{agent.name}</p>
+          <p className="font-mono text-caption text-fg-muted [overflow-wrap:anywhere]">{agent.redirect_host}</p>
+          <p className="font-mono text-caption text-fg-muted">
+            {shortDate(agent.connected_at)} · {agent.last_used_at ? `used ${relativeDate(agent.last_used_at)}` : 'never used'}
+          </p>
+        </div>
+        {!confirming && (
+          <Button ref={revokeRef} variant="secondary" className="text-coral!" aria-label={`Revoke ${agent.name}`} onClick={() => setConfirming(true)}>
+            Revoke
+          </Button>
+        )}
+      </div>
+      {confirming && (
+        <div className="mt-3">
+          <p className="text-[15px] leading-normal text-fg [overflow-wrap:anywhere]">
+            {suggestions > 0
+              ? `Revoke ${agent.name}? Its ${suggestions} open ${suggestions === 1 ? 'suggestion is' : 'suggestions are'} withdrawn.`
+              : `Revoke ${agent.name}? It has no open suggestions.`}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button variant="danger" onClick={revoke}>
+              Revoke
+            </Button>
+            <Button ref={cancelRef} variant="secondary" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
     </li>
   )
 }
 
-export default function AgentsIndex({ agents, mcp_url, cursor_install_url, suggested_prompt }: AgentsProps) {
-  const [client, setClient] = useState<ClientKey>('claude')
+function ConnectedAgents({ agents }: { agents: Agent[] }) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
 
+  return (
+    <section aria-labelledby="connected-heading" className="mt-9">
+      <h2 id="connected-heading" ref={headingRef} tabIndex={-1} className={heading}>
+        Connected agents
+      </h2>
+      <p className="mt-2 text-caption leading-normal text-fg-muted">Revoking stops it reading or changing your toolbox.</p>
+      {agents.length === 0 ? (
+        <p className="mt-3 border-t border-line-strong pt-4 text-[15px] text-fg-soft">No agent is connected. Set one up and it will show here.</p>
+      ) : (
+        <ul className="mt-3 border-t border-line-strong">
+          {agents.map((agent) => (
+            <AgentRow key={agent.id} agent={agent} onRevoked={() => headingRef.current?.focus()} />
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+export default function AgentsIndex({ agents, capabilities, mcp_url, cursor_install_url, suggested_prompt }: Props) {
   return (
     <AppShell>
       <Head title="Agents" />
-      <header className="max-w-2xl animate-rise">
-        <p className="eyebrow">Agents</p>
-        <h1 className="display mt-3 text-5xl text-balance">Let your agent keep your Loadout current.</h1>
-        <p className="mt-4 text-lg text-ink-soft">
-          Connect Claude, Claude Code, Cursor, or Codex once. It signs in with Every, asks you before it guesses, and every change it
-          makes shows up with its name.
-        </p>
-      </header>
+      <div className="flex flex-col gap-12 pt-4 xl:flex-row xl:gap-[72px]">
+        <div className="min-w-0 max-w-[760px] flex-1">
+          <h1 className="font-serif leading-[1.02] tracking-[-0.02em] text-[40px] md:text-[56px]">Let your agent fill it in</h1>
+          <p className="mt-4 max-w-[760px] text-lg leading-normal text-fg-soft">
+            Connect Claude, Claude Code, Cursor or Codex with your normal Every sign-in, or use an agent in your browser through WebMCP.
+            There are no keys to paste. Your agent proposes picks from what it knows about how you work.
+          </p>
 
-      <section aria-labelledby="connected-heading" className="mt-14">
-        <div className="flex items-baseline justify-between border-b border-rule pb-3">
-          <h2 id="connected-heading" className="display text-2xl">
-            Connected agents
-          </h2>
-          <span className="font-mono text-xs text-ink-muted">{agents.length}</span>
-        </div>
-        {agents.length === 0 ? (
-          <p className="py-6 text-ink-muted">No agents yet. Connect one below and it will show up here.</p>
-        ) : (
-          <ul className="divide-y divide-rule">
-            {agents.map((agent) => (
-              <AgentRow key={agent.id} agent={agent} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section aria-labelledby="connect-heading" className="mt-14">
-        <h2 id="connect-heading" className="display border-b border-rule pb-3 text-2xl">
-          Connect your agent
-        </h2>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="card p-6 sm:p-8">
-            <p className="eyebrow">MCP server URL</p>
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-rule bg-paper px-4 py-3">
-              <code className="min-w-0 flex-1 truncate font-mono text-[0.95rem] text-ink">{mcp_url}</code>
-              <CopyButton text={mcp_url} />
+          <div className={`panel mt-7 ${panelPadding}`}>
+            <div className="flex items-center justify-between gap-3">
+              <SectionLabel className="text-fg-soft!">Then ask it</SectionLabel>
+              <CopyButton text={suggested_prompt} what="the prompt" />
             </div>
-
-            <div role="tablist" aria-label="Choose your agent" className="mt-8 flex flex-wrap gap-1.5">
-              {CLIENTS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={client === key}
-                  onClick={() => setClient(key)}
-                  className={`rounded-full px-4 py-2 text-sm transition ${
-                    client === key ? 'bg-ink text-paper' : 'text-ink-soft ring-1 ring-rule hover:text-ink hover:ring-ink/30'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div role="tabpanel" className="mt-6">
-              <Instructions client={client} mcpUrl={mcp_url} cursorInstallUrl={cursor_install_url} />
-            </div>
+            <p className="mt-2 font-serif text-2xl leading-snug">{suggested_prompt}</p>
           </div>
 
-          <aside className="self-start rounded-2xl bg-every-sky/45 p-6">
-            <p className="eyebrow text-ink-soft">Then ask it</p>
-            <blockquote className="display mt-3 text-2xl leading-snug">“{suggested_prompt}”</blockquote>
-            <div className="mt-5">
-              <CopyButton text={suggested_prompt} label="Copy prompt" />
-            </div>
-          </aside>
+          <div className="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <ProductCards agents={agents} mcpUrl={mcp_url} cursorInstallUrl={cursor_install_url} />
+            <WebmcpCard note={capabilities.webmcp_note} />
+          </div>
         </div>
-      </section>
+
+        <aside className="w-full max-w-[760px] xl:w-[400px] xl:flex-none">
+          <section aria-labelledby="capabilities-heading" className="panel p-6">
+            <h2 id="capabilities-heading" className={heading}>
+              What it can and can’t do
+            </h2>
+            <CapabilityLists capabilities={capabilities} />
+          </section>
+          <ConnectedAgents agents={agents} />
+        </aside>
+      </div>
     </AppShell>
   )
 }

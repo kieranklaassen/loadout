@@ -1,0 +1,1 @@
+EverySettings: applied fixes 1-6 (Only me default, outline delete, 'Type kieran' + placeholder, delete card spacing/border/32px h2, save state text + tighter spacing, readonly name + hints). Height stays 1180.

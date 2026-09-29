@@ -1,0 +1,9 @@
+# One open suggestion, from a WebMCP tab (no OAuth client), for a kind and a tool
+# every_ana has not confirmed. It is invisible to everyone but her.
+ana_runway:
+  user: every_ana
+  category: video
+  tool: runway
+  slot_hint: 1
+  client_name: WebMCP
+  status: open

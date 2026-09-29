@@ -6,7 +6,7 @@ require "rails/all"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-module Loadout
+module Toolbox
   class Application < Rails::Application
     # Flipper memoizes per request but skips the preload join (docs/modules/feature_flags.md).
     config.flipper.preload = false

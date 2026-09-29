@@ -1,0 +1,187 @@
+<%
+  # Rows in one batch share one instant, so each batch reads its time once.
+  ago = ->(days) { days.days.ago.beginning_of_hour.to_fs(:db) }
+  ana_swap = ago.(40)
+  dee_swap = ago.(40)
+%>
+# Each person's slot history, ending at exactly their rows in entries.yml. A row
+# stores the slot after the change; the swaps are two rows in one batch.
+ana_1:
+  user: every_ana
+  category: coding
+  tool: claude_code
+  action: set
+  source: web
+  rank: 1
+  details: { batch: ana-1 }
+  created_at: <%= ago.(110) %>
+
+ana_2:
+  user: every_ana
+  category: coding
+  tool: cursor
+  ai_model: opus_5_5
+  action: set
+  source: web
+  rank: 2
+  details: { batch: ana-2 }
+  created_at: <%= ago.(80) %>
+
+ana_3_cursor_up:
+  user: every_ana
+  category: coding
+  tool: cursor
+  ai_model: opus_5_5
+  action: moved
+  source: web
+  rank: 1
+  from_rank: 2
+  details: { batch: ana-3 }
+  created_at: <%= ana_swap %>
+
+ana_3_claude_code_down:
+  user: every_ana
+  category: coding
+  tool: claude_code
+  action: moved
+  source: web
+  rank: 2
+  from_rank: 1
+  details: { batch: ana-3 }
+  created_at: <%= ana_swap %>
+
+ana_4:
+  user: every_ana
+  category: coding
+  tool: cursor
+  ai_model: opus_5_5
+  action: set
+  source: web
+  rank: 1
+  context: 1m
+  effort: high
+  details: { batch: ana-4 }
+  created_at: <%= ago.(30) %>
+
+ana_5:
+  user: every_ana
+  category: knowledge_work
+  tool: claude
+  ai_model: opus_5_5
+  action: set
+  source: web
+  rank: 1
+  details: { batch: ana-5 }
+  created_at: <%= ago.(20) %>
+
+ana_suggested_runway:
+  user: every_ana
+  category: video
+  tool: runway
+  action: suggested
+  source: webmcp
+  client_name: WebMCP
+  rank: 1
+  details: { batch: ana-6 }
+  created_at: <%= ago.(2) %>
+
+dee_1:
+  user: every_dee
+  category: coding
+  tool: cursor
+  ai_model: gpt_6
+  action: set
+  source: web
+  rank: 1
+  details: { batch: dee-1 }
+  created_at: <%= ago.(55) %>
+
+dee_2_cursor_down:
+  user: every_dee
+  category: coding
+  tool: cursor
+  ai_model: gpt_6
+  action: moved
+  source: web
+  rank: 2
+  from_rank: 1
+  details: { batch: dee-2 }
+  created_at: <%= dee_swap %>
+
+dee_2_claude_code_first:
+  user: every_dee
+  category: coding
+  tool: claude_code
+  ai_model: opus_5_5
+  action: set
+  source: web
+  rank: 1
+  effort: medium
+  details: { batch: dee-2 }
+  created_at: <%= dee_swap %>
+
+dee_3:
+  user: every_dee
+  category: knowledge_work
+  tool: claude
+  action: set
+  source: web
+  rank: 1
+  details: { batch: dee-3 }
+  created_at: <%= ago.(35) %>
+
+cy_1:
+  user: every_cy
+  category: coding
+  tool: cursor
+  ai_model: opus_5
+  action: set
+  source: web
+  rank: 1
+  context: 200k
+  details: { batch: cy-1 }
+  created_at: <%= ago.(95) %>
+
+eli_1:
+  user: outside_eli
+  category: coding
+  tool: cursor
+  ai_model: gpt_6
+  action: set
+  source: web
+  rank: 1
+  context: 200k
+  details: { batch: eli-1 }
+  created_at: <%= ago.(40) %>
+
+eli_2:
+  user: outside_eli
+  category: coding
+  tool: claude_code
+  action: set
+  source: web
+  rank: 2
+  details: { batch: eli-2 }
+  created_at: <%= ago.(30) %>
+
+eli_3:
+  user: outside_eli
+  category: video
+  tool: runway
+  action: set
+  source: web
+  rank: 1
+  details: { batch: eli-3 }
+  created_at: <%= ago.(25) %>
+
+fay_1:
+  user: every_fay
+  category: coding
+  tool: claude_code
+  ai_model: opus_5_5
+  action: set
+  source: web
+  rank: 1
+  effort: low
+  details: { batch: fay-1 }
+  created_at: <%= ago.(20) %>

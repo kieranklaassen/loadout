@@ -10,7 +10,8 @@ import { getModelContext, registerTools, type WebmcpManifest } from './webmcp'
  * The effect keys on the serialized manifest, so a partial reload that re-sends
  * an equal manifest does not re-register (duplicate names reject), and
  * StrictMode's mount→cleanup→mount aborts the first registration before the
- * second runs.
+ * second runs. After a tool that is not read-only succeeds the page reloads its
+ * props, so what an agent wrote (a suggestion, say) shows without a refresh.
  */
 export function useWebmcpTools(manifest: WebmcpManifest | null): void {
   const key = manifest ? JSON.stringify(manifest) : null
@@ -21,7 +22,7 @@ export function useWebmcpTools(manifest: WebmcpManifest | null): void {
     if (!context) return
 
     const controller = new AbortController()
-    registerTools(context, JSON.parse(key) as WebmcpManifest, controller.signal)
+    registerTools(context, JSON.parse(key) as WebmcpManifest, controller.signal, () => router.reload())
     return () => controller.abort()
   }, [key])
 }

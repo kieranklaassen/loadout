@@ -20,14 +20,13 @@ class Oauth::AuthorizationsController < InertiaController
   after_action :forbid_framing
 
   def new
+    known = Agents::KnownClients.key_for(@redirect_uri)
     render inertia: "oauth/consent", props: {
-      client: {
-        name: @client.client_name, uri: @client.client_uri,
-        hue: Tool.hue_for(@client.client_name), monogram: Tool.monogram_for(@client.client_name)
-      },
-      redirect_host: redirect_host,
+      client: { name: @client.client_name, redirect_host:, mark: Agents::KnownClients.mark_for(known), known: known.present? },
+      redirect_host:,
       authorization: authorization_params,
-      authenticity_token: form_authenticity_token
+      authenticity_token: form_authenticity_token,
+      capabilities: Agents::Capabilities.to_prop
     }
   end
 
@@ -44,10 +43,10 @@ class Oauth::AuthorizationsController < InertiaController
   private
     def load_client
       @client = OauthClient.find_by(client_id: string_param(:client_id)) if string_param(:client_id)
-      return render_invalid("This app isn't registered with Loadout. Ask it to connect again.") unless @client
+      return render_invalid("This app isn't registered with Toolbox. Ask it to connect again.") unless @client
 
       @redirect_uri = string_param(:redirect_uri)
-      render_invalid("This app asked to send you somewhere it never registered, so Loadout stopped here.") unless @client.redirect_uri_registered?(@redirect_uri)
+      render_invalid("This app asked to send you somewhere it never registered, so Toolbox stopped here.") unless @client.redirect_uri_registered?(@redirect_uri)
     end
 
     def validate_request
@@ -74,8 +73,7 @@ class Oauth::AuthorizationsController < InertiaController
     end
 
     def redirect_host
-      uri = URI.parse(@redirect_uri)
-      uri.host.presence || "#{uri.scheme}://"
+      OauthClient.redirect_host(@redirect_uri)
     end
 
     def redirect_to_client(**query)

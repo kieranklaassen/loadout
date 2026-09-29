@@ -45,6 +45,18 @@ class PwaTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the manifest and the layout carry the Every dark page colour" do
+    get "/manifest.json"
+
+    manifest = JSON.parse(response.body)
+    assert_equal "#020202", manifest["theme_color"]
+    assert_equal "#020202", manifest["background_color"]
+
+    get root_path
+    assert_select "meta[name=theme-color][content='#020202']"
+    assert_select "body.dot-grid"
+  end
+
   test "GET /service-worker is public JavaScript regardless of Accept header" do
     get "/service-worker"
 

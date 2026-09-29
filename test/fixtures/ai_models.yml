@@ -1,3 +1,5 @@
+# opus_5_5 is the one launched model (release date and Vibe Check link); opus_5 has
+# a release date but no link, gpt_6 has neither, so neither of them lists as a launch.
 opus_5_5:
   slug: claude-opus-5-5
   name: Claude Opus 5.5
@@ -8,6 +10,8 @@ opus_5_5:
   status: approved
   category_slugs: ["coding", "knowledge-work"]
   position: 0
+  released_on: <%= 20.days.ago.to_date %>
+  vibe_check_url: https://checks.every.to/vibe-checks/claude-opus-5-5
 
 opus_5:
   slug: claude-opus-5
@@ -19,6 +23,7 @@ opus_5:
   status: approved
   category_slugs: ["coding"]
   position: 1
+  released_on: <%= 90.days.ago.to_date %>
 
 gpt_6:
   slug: gpt-6-astra

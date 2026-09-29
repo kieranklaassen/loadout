@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_110000) do
   create_table "ai_models", force: :cascade do |t|
     t.string "slug", null: false
     t.string "name", null: false
@@ -26,6 +26,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "admin_edited_at"
+    t.string "mark"
+    t.string "vibe_check_url"
     t.index ["created_by_id"], name: "index_ai_models_on_created_by_id"
     t.index ["slug"], name: "index_ai_models_on_slug", unique: true
     t.index ["status"], name: "index_ai_models_on_status"
@@ -46,16 +48,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
     t.integer "category_id", null: false
     t.integer "tool_id", null: false
     t.integer "ai_model_id"
-    t.string "note"
-    t.boolean "primary", default: false, null: false
+    t.integer "rank", null: false
+    t.string "context"
+    t.string "effort"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["ai_model_id"], name: "index_entries_on_ai_model_id"
     t.index ["category_id"], name: "index_entries_on_category_id"
     t.index ["tool_id"], name: "index_entries_on_tool_id"
-    t.index ["user_id", "category_id", "tool_id", "ai_model_id"], name: "index_entries_uniqueness", unique: true
-    t.index ["user_id", "category_id", "tool_id"], name: "index_entries_uniqueness_without_model", unique: true, where: "ai_model_id IS NULL"
-    t.index ["user_id"], name: "index_entries_on_user_id"
+    t.index ["user_id", "category_id", "rank"], name: "index_entries_on_user_id_and_category_id_and_rank", unique: true
+    t.index ["user_id", "category_id", "tool_id"], name: "index_entries_on_user_id_and_category_id_and_tool_id", unique: true
   end
 
   create_table "entry_changes", force: :cascade do |t|
@@ -68,7 +70,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
     t.string "client_name"
     t.json "details", default: {}, null: false
     t.datetime "created_at", null: false
+    t.integer "rank"
+    t.integer "from_rank"
+    t.string "context"
+    t.string "effort"
     t.index ["ai_model_id"], name: "index_entry_changes_on_ai_model_id"
+    t.index ["category_id", "user_id", "created_at"], name: "index_entry_changes_for_replay"
     t.index ["category_id"], name: "index_entry_changes_on_category_id"
     t.index ["tool_id"], name: "index_entry_changes_on_tool_id"
     t.index ["user_id", "created_at"], name: "index_entry_changes_on_user_id_and_created_at"
@@ -196,6 +203,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
     t.index ["user_id"], name: "index_oauth_grants_on_user_id"
   end
 
+  create_table "pick_suggestions", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "category_id", null: false
+    t.integer "tool_id", null: false
+    t.integer "ai_model_id"
+    t.string "context"
+    t.string "effort"
+    t.integer "slot_hint"
+    t.integer "replaces_rank"
+    t.integer "replaces_tool_id"
+    t.integer "replaces_ai_model_id"
+    t.integer "oauth_client_id"
+    t.string "client_name"
+    t.string "status", default: "open", null: false
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_pick_suggestions_on_ai_model_id"
+    t.index ["tool_id"], name: "index_pick_suggestions_on_tool_id"
+    t.index ["user_id", "category_id", "status"], name: "index_pick_suggestions_on_user_id_and_category_id_and_status"
+    t.index ["user_id", "oauth_client_id", "status"], name: "index_pick_suggestions_on_client"
+    t.check_constraint "context IS NULL OR context IN ('200k', '1m')", name: "pick_suggestions_context_check"
+    t.check_constraint "effort IS NULL OR effort IN ('low', 'medium', 'high')", name: "pick_suggestions_effort_check"
+    t.check_constraint "status IN ('open', 'confirmed', 'dismissed', 'withdrawn', 'superseded', 'expired')", name: "pick_suggestions_status_check"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
@@ -218,6 +251,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "admin_edited_at"
+    t.string "mark"
     t.index ["created_by_id"], name: "index_tools_on_created_by_id"
     t.index ["slug"], name: "index_tools_on_slug", unique: true
     t.index ["status"], name: "index_tools_on_status"
@@ -236,9 +270,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
     t.boolean "admin", default: false, null: false
     t.datetime "loadout_updated_at"
     t.datetime "onboarded_at"
+    t.string "visibility", default: "only_me", null: false
+    t.boolean "email_verified", default: false, null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.index ["every_user_id"], name: "index_users_on_every_user_id", unique: true
     t.index ["handle"], name: "index_users_on_handle", unique: true
+  end
+
+  create_table "visibility_periods", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "level", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at"
+    t.index ["user_id", "starts_at"], name: "index_visibility_periods_on_user_id_and_starts_at"
+    t.index ["user_id"], name: "index_visibility_periods_one_open_per_user", unique: true, where: "ends_at IS NULL"
+    t.check_constraint "level IN ('team', 'link')", name: "visibility_periods_level_check"
   end
 
   add_foreign_key "ai_models", "users", column: "created_by_id", on_delete: :nullify
@@ -256,6 +302,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_26_230200) do
   add_foreign_key "oauth_authorization_codes", "users"
   add_foreign_key "oauth_grants", "oauth_clients"
   add_foreign_key "oauth_grants", "users"
+  add_foreign_key "pick_suggestions", "ai_models", on_delete: :cascade
+  add_foreign_key "pick_suggestions", "categories", on_delete: :cascade
+  add_foreign_key "pick_suggestions", "tools", on_delete: :cascade
+  add_foreign_key "pick_suggestions", "users", on_delete: :cascade
   add_foreign_key "sessions", "users"
   add_foreign_key "tools", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "visibility_periods", "users", on_delete: :cascade
 end

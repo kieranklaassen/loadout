@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&amp;family=Hanken+Grotesk:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#020202;font-family:'Hanken Grotesk',system-ui,sans-serif}
+.root{box-sizing:border-box;background-color:#020202;background-image:radial-gradient(circle at center,rgba(255,255,255,.07) 0 1.5px,transparent 2px);background-size:28px 28px;color:#fdfaf7;-webkit-font-smoothing:antialiased}
+.d{font-family:'Newsreader',Georgia,serif;font-weight:400;line-height:1.02;letter-spacing:-.02em;margin:0}
+.st{font-family:'Newsreader',Georgia,serif;font-weight:400;letter-spacing:-.005em}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.slot{border:1.5px dashed #9ce5f5;border-radius:2px;color:#9ce5f5;display:flex;align-items:center;padding:0 12px;font-weight:600;font-size:14px}
+.tile{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;font-family:'Geist Mono',monospace;font-weight:500;flex:none}
+.card{background:#111111;border:1px solid #2a2a2a;border-radius:4px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -16px rgba(0,0,0,.7)}
+.btn{display:inline-flex;align-items:center;background:#9ce5f5;color:#121212;font-weight:600;border-radius:2px;padding:14px 24px;font-size:16px;text-decoration:none}
+.btn2{display:inline-flex;align-items:center;background:#111111;color:#fdfaf7;border:1px solid #2a2a2a;font-weight:600;border-radius:2px;padding:10px 16px;font-size:14px;text-decoration:none}
+.row{display:flex;align-items:center;gap:16px;border-bottom:1px solid #2a2a2a;padding:10px 0}
+a:focus-visible,button:focus-visible{outline:2px solid #9ce5f5;outline-offset:3px}
+th{font-weight:400}
+table{border-collapse:collapse;width:100%}
+td,th{vertical-align:middle;text-align:left}
+.chip{display:inline-flex;align-items:center;gap:8px}
+.lnk{color:#fdfaf7;text-decoration:underline;text-underline-offset:4px;text-decoration-color:#5a5a5a}
+</style>
+</helmet>
+<div class="root" style="width:1440px;height:1180px;overflow:hidden;position:relative">
+<header style="display:flex;align-items:center;justify-content:space-between;padding:24px 88px"><a href="EveryHome.dc.html" style="display:flex;align-items:center;gap:8px;text-decoration:none"><img src="/_blob/b51cc330fea9bd9a543797ce5842b565" alt="Every" style="height:22px;filter:invert(1);opacity:.95"><span style="width:1px;height:22px;background:#3a3a3a;margin:0 8px"></span><span class="d" style="font-size:28px;font-style:italic;color:#9ce5f5">Loadout</span></a><nav style="display:flex;align-items:center;gap:32px" aria-label="Main"><a href="EveryHome.dc.html" style="font-size:15px;text-decoration:none;color:#8c8d91;padding-bottom:6px">Home</a><a href="EveryEdit.dc.html" style="font-size:15px;text-decoration:none;color:#8c8d91;padding-bottom:6px">Your loadout</a><a href="EveryAgents.dc.html" style="font-size:15px;text-decoration:none;color:#8c8d91;padding-bottom:6px">Agents</a><a href="EverySettings.dc.html" aria-current="page" style="font-size:15px;text-decoration:none;color:#fdfaf7;border-bottom:2px solid #9ce5f5;padding-bottom:4px">Settings</a></nav><a href="EveryProfile2.dc.html" aria-label="Your profile" class="mono" style="width:36px;height:36px;border-radius:3px;background:#1a1a1a;box-shadow:0 0 0 1px #2a2a2a;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#d0d0d0;text-decoration:none">KK</a></header>
+<main style="padding:32px 88px 0;max-width:1440px"><h1 class="d" style="font-size:56px">Settings</h1>
+<div style="display:grid;grid-template-columns:minmax(0,600px) minmax(0,1fr);gap:72px;margin-top:32px">
+<div><section aria-labelledby="pr"><h2 id="pr" class="d" style="font-size:32px">Your page</h2>
+<div style="margin-top:20px;display:flex;flex-direction:column;gap:20px"><label style="display:block"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px">Name</span><input value="Kieran Klaassen" readonly style="width:460px;box-sizing:border-box;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:2px;color:#d0d0d0;font-size:16px;padding:12px 14px;font-family:inherit"><span style="display:block;font-size:13px;color:#8c8d91;margin-top:6px">Shown on your page. Change it in your Every account.</span></label>
+<label style="display:block"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px">Your link</span><span style="display:flex;align-items:center;background:#0a0a0a;border:1px solid #3a3a3a;border-radius:2px;width:460px;box-sizing:border-box"><span class="mono" style="padding:12px 0 12px 14px;color:#8c8d91;font-size:15px">every.to/loadout/</span><input value="kieran" style="flex:1;background:transparent;border:0;color:#fdfaf7;font-size:15px;padding:12px 14px 12px 0;font-family:'Geist Mono',monospace;outline:none"></span><span style="display:block;font-size:13px;color:#8c8d91;margin-top:6px">Changing it breaks old links to your page.</span></label>
+<label style="display:block"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px">One line about how you work</span><textarea style="width:460px;box-sizing:border-box;height:72px;background:#0a0a0a;border:1px solid #3a3a3a;border-radius:2px;color:#fdfaf7;font-size:16px;padding:12px 14px;font-family:inherit;resize:none">Claude Code for everything that ships. Still looking for a music tool that isn't a toy.</textarea></label></div></section>
+<section aria-labelledby="vs" style="margin-top:32px"><h2 id="vs" class="d" style="font-size:32px">Who can see it</h2><div style="margin-top:16px;max-width:520px"><label style="display:flex;gap:12px;padding:14px 16px;background:#111111;box-shadow:0 0 0 2px #9ce5f5;border-radius:4px;margin-bottom:10px"><span style="width:18px;height:18px;border-radius:50%;box-sizing:border-box;flex:none;margin-top:2px;border:5px solid #9ce5f5;background:#020202"></span><span><span style="display:block;font-weight:600;font-size:16px">Only me</span><span style="display:block;font-size:14px;color:#8c8d91;margin-top:3px;line-height:1.45">Nobody else sees your picks.</span></span></label><label style="display:flex;gap:12px;padding:14px 16px;background:#111111;box-shadow:0 0 0 1px #2a2a2a;border-radius:4px;margin-bottom:10px"><span style="width:18px;height:18px;border-radius:50%;box-sizing:border-box;flex:none;margin-top:2px;border:1.5px solid #5a5a5a"></span><span><span style="display:block;font-weight:600;font-size:16px">Every team</span><span style="display:block;font-size:14px;color:#8c8d91;margin-top:3px;line-height:1.45">People with an Every team account can see it.</span></span></label><label style="display:flex;gap:12px;padding:14px 16px;background:#111111;box-shadow:0 0 0 1px #2a2a2a;border-radius:4px;margin-bottom:10px"><span style="width:18px;height:18px;border-radius:50%;box-sizing:border-box;flex:none;margin-top:2px;border:1.5px solid #5a5a5a"></span><span><span style="display:block;font-weight:600;font-size:16px">Anyone with the link</span><span style="display:block;font-size:14px;color:#8c8d91;margin-top:3px;line-height:1.45">Public. We make a share card for it.</span></span></label></div></section>
+<div style="margin-top:24px;display:flex;align-items:center"><a class="btn" href="EverySettings.dc.html" style="padding:14px 24px">Save changes</a><span style="margin-left:16px;font-size:13px;color:#8c8d91">No changes yet</span></div></div>
+<div><section aria-labelledby="ex"><h2 id="ex" class="d" style="font-size:32px">Your data</h2><p style="font-size:15px;line-height:1.5;color:#d0d0d0;margin:12px 0 0;max-width:460px">Every change to your loadout is kept with its date, so the team page can show what switched when. You can download all of it.</p><a class="btn2" href="EverySettings.dc.html" style="margin-top:16px;font-size:14px">Download my history</a></section>
+<section aria-labelledby="dl" style="margin-top:48px;padding:24px;border:1px solid rgba(255,119,101,.5);border-radius:4px;max-width:520px"><h2 id="dl" class="d" style="font-size:32px;color:#ff7765">Delete my loadout</h2><p style="font-size:15px;line-height:1.5;color:#d0d0d0;margin:10px 0 0">This removes your picks, your history and your link. The team page counts update. It can't be undone.</p><label style="display:block;margin-top:20px"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px">Type kieran to confirm</span><input value="" placeholder="kieran" style="width:300px;box-sizing:border-box;background:#0a0a0a;border:1px solid #3a3a3a;border-radius:2px;color:#fdfaf7;font-size:16px;padding:12px 14px;font-family:inherit"><span style="display:none"></span></label><a href="EverySettings.dc.html" style="display:inline-flex;margin-top:16px;padding:11px 19px;background:transparent;border:1px solid #ff7765;color:#ff7765;font-weight:600;font-size:15px;border-radius:2px;text-decoration:none">Delete my loadout</a></section></div></div></main>
+<footer style="position:absolute;left:88px;right:88px;bottom:0;padding:24px 0;border-top:1px solid #2a2a2a;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#8c8d91"><img src="/_blob/b51cc330fea9bd9a543797ce5842b565" alt="Every" style="height:18px;filter:invert(1);opacity:.9"><span style="font-style:italic;color:#9ce5f5;font-family:'Newsreader',Georgia,serif;font-size:18px">Loadout</span><span class="mono" style="font-size:13px;margin-left:8px">every.to/loadout</span></div><span class="mono" style="font-size:13px;color:#8c8d91">Private by default. Public when you want.</span></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

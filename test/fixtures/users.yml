@@ -1,3 +1,12 @@
+# The viewer classes every read is tested against. Fixtures skip callbacks, so
+# each person's visibility_periods.yml rows are written by hand to match.
+#
+#   one, two     signed in with a non-Every address, not onboarded, only me
+#   every_ana    verified @every.to, anyone with the link (shared with the team before that)
+#   every_dee    verified @every.to, Every team
+#   every_cy     verified @every.to, only me (shared with the team in the past)
+#   outside_eli  signed in with a non-Every address, anyone with the link
+#   every_fay    @every.to address whose provider claim was not verified, anyone with the link
 one:
   email_address: one@example.com
 
@@ -6,19 +15,49 @@ two:
 
 every_ana:
   email_address: ana@every.to
+  email_verified: true
   every_user_id: every-user-ana
   name: Ana Every
   avatar_url: https://every.to/avatars/ana.png
   handle: ana
-  public: true
+  visibility: link
   loadout_updated_at: <%= 1.day.ago.to_fs(:db) %>
   onboarded_at: <%= 2.days.ago.to_fs(:db) %>
 
+every_dee:
+  email_address: dee@every.to
+  email_verified: true
+  every_user_id: every-user-dee
+  name: Dee Every
+  handle: dee
+  visibility: team
+  loadout_updated_at: <%= 3.days.ago.to_fs(:db) %>
+  onboarded_at: <%= 4.days.ago.to_fs(:db) %>
+
 every_cy:
   email_address: cy@every.to
+  email_verified: true
   every_user_id: every-user-cy
   name: Cy Every
   handle: cy
-  public: false
+  visibility: only_me
   loadout_updated_at: <%= 1.day.ago.to_fs(:db) %>
   onboarded_at: <%= 2.days.ago.to_fs(:db) %>
+
+outside_eli:
+  email_address: eli@gmail.com
+  every_user_id: every-user-eli
+  name: Eli Outside
+  handle: eli
+  visibility: link
+  loadout_updated_at: <%= 5.days.ago.to_fs(:db) %>
+  onboarded_at: <%= 6.days.ago.to_fs(:db) %>
+
+every_fay:
+  email_address: fay@every.to
+  every_user_id: every-user-fay
+  name: Fay Every
+  handle: fay
+  visibility: link
+  loadout_updated_at: <%= 7.days.ago.to_fs(:db) %>
+  onboarded_at: <%= 8.days.ago.to_fs(:db) %>

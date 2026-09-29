@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/hanken-grotesk';
 @import '@fontsource-variable/newsreader/opsz.css';
 @import '@fontsource-variable/newsreader/opsz-italic.css';
 @import '@fontsource/geist-mono/400.css';
@@ -9,119 +9,276 @@
 @plugin '@tailwindcss/forms';
 
 /*
- * Loadout's visual language follows every.to: warm paper, near-black ink, an
- * editorial serif for display type, a clean grotesk for UI, mono for data.
- * Signifier and Switzer are Every's licensed faces; Newsreader and Inter are
- * the open stand-ins.
+ * Toolbox is "Every dark" (docs/design/every-loadout/DESIGN-BRIEF.md): a near-black
+ * page with a faint dot grid, #111111 cards, Newsreader serif headings, Hanken
+ * Grotesk UI and Geist Mono captions. The design-rules test fails on any old
+ * paper-and-ink class or token name.
  */
 @theme {
   --font-serif: 'Newsreader Variable', 'Signifier', Georgia, 'Times New Roman', serif;
-  --font-sans: 'Inter Variable', 'Switzer', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Hanken Grotesk Variable', 'Switzer', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
 
-  --color-paper: #fdfaf7;
-  --color-paper-deep: #f6f0e8;
-  --color-ink: #121212;
-  --color-ink-soft: #3c3c3c;
-  --color-ink-muted: #6b6b6b;
-  --color-rule: #e7e0d6;
-  --color-every-blue: #1652ea;
-  --color-every-sky: #c0f0fb;
-  --color-every-lime: #8cff8a;
-  --color-every-coral: #ff7765;
+  /* Every dark. Sky is only the primary CTA, the active filter and the italic brand word;
+     yellow only NEWEST and rank 1; coral only stale and danger. */
+  --color-page: #020202;
+  --color-panel: #111111;
+  --color-field: #0a0a0a;
+  --color-raised: #1a1a1a;
+  --color-line: #2a2a2a;
+  --color-line-strong: #3a3a3a;
+  --color-line-quiet: #5a5a5a;
+  --color-fg: #fdfaf7;
+  --color-fg-soft: #d0d0d0;
+  --color-fg-muted: #8c8d91;
+  --color-on-light: #121212;
+  --color-sky: #9ce5f5;
+  --color-yellow: #f6b90f;
+  --color-coral: #ff7765;
 
-  --radius-card: 1.25rem;
-  --shadow-card: 0 1px 0 rgb(18 18 18 / 0.04), 0 12px 32px -18px rgb(18 18 18 / 0.25);
-  --shadow-lift: 0 1px 0 rgb(18 18 18 / 0.05), 0 24px 48px -24px rgb(18 18 18 / 0.35);
+  /* 2px for buttons and fields, 4px for cards and tiles. */
+  --radius-sharp: 2px;
+  --radius-soft: 4px;
 
-  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  --animate-slot: slot 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
-
-  @keyframes slot {
-    from {
-      opacity: 0;
-      transform: translateX(-24px) scaleX(0.4);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0) scaleX(1);
-    }
-  }
-
-  --animate-burst: burst 1.1s cubic-bezier(0.15, 0.7, 0.3, 1) both;
-
-  @keyframes burst {
-    0% {
-      opacity: 0;
-      transform: translate(0, 0) rotate(0deg) scale(0.4);
-    }
-    15% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-      transform: translate(var(--burst-x), var(--burst-y)) rotate(var(--burst-r)) scale(1);
-    }
-  }
+  /* 13px: the smallest text that is not an uppercase mono label (12px, Tailwind's text-xs). */
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.45;
 }
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   html {
     font-family: var(--font-sans);
-    background-color: var(--color-paper);
-    color: var(--color-ink);
+    background-color: var(--color-page);
+    color: var(--color-fg);
     font-feature-settings: 'ss01', 'cv11';
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Tailwind only scans app/frontend, so the layout's body is styled here, not with utilities. */
+  body {
+    min-height: 100vh;
+    background-color: var(--color-page);
+    color: var(--color-fg);
+  }
+
   ::selection {
-    background: var(--color-every-sky);
-    color: var(--color-ink);
+    background: var(--color-sky);
+    color: var(--color-on-light);
+  }
+
+  /* Native pickers ignore the field's own colours unless the options set theirs. */
+  option,
+  optgroup {
+    background-color: var(--color-field);
+    color: var(--color-fg);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-every-blue);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-sky);
+    outline-offset: 3px;
   }
 }
 
 @layer components {
-  .display {
-    font-family: var(--font-serif);
-    font-optical-sizing: auto;
-    letter-spacing: -0.02em;
-    line-height: 1.02;
+  /* The page's faint dots. Pair with a background colour: bg-page for the page, bg-field for a framed box. */
+  .dot-grid {
+    background-image: radial-gradient(circle at center, rgb(255 255 255 / 0.07) 0 1.5px, transparent 2px);
+    background-size: 28px 28px;
   }
 
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
+  /* Cards and framed lists. */
+  .panel {
+    background: var(--color-panel);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-soft);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.04) inset,
+      0 10px 24px -16px rgb(0 0 0 / 0.7);
   }
 
-  .card {
-    background: white;
-    border: 1px solid var(--color-rule);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
+  .text-link {
+    color: var(--color-fg);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--color-line-quiet);
   }
 
-  .hairline {
-    border-color: var(--color-rule);
+  .text-link:hover {
+    text-decoration-color: var(--color-fg);
+  }
+
+  /*
+   * Form controls. A .field-box wraps a select or input with an optional mark
+   * beside it; the wrapper shows the focus ring, so the bare control inside stays
+   * quiet. Bare inputs and selects get the same ring below.
+   */
+  .field-box {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--color-field);
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-sharp);
+  }
+
+  .field-box select,
+  .field-box input {
+    flex: 1;
+    min-width: 0;
+    appearance: none;
+    background: transparent none;
+    border: 0;
+    padding: 0;
+    color: var(--color-fg);
+    font: inherit;
+  }
+
+  .field-box:has(:focus-visible) {
+    outline: 2px solid var(--color-sky);
+    outline-offset: 3px;
+  }
+
+  .field-box :focus-visible {
+    outline: none;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-sky);
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+
+  /* Tailwind Forms adds a blue ring on :focus; the sky outline above replaces it. */
+  input:focus,
+  select:focus,
+  textarea:focus {
+    box-shadow: none;
+  }
+
+  /*
+   * A radio choice drawn as a card: <label class="radio-card"><input type="radio">
+   * <span class="radio-dot"></span>...</label>. The input is visually hidden, so the
+   * card itself shows the checked state and the focus ring.
+   */
+  .radio-card {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: var(--color-panel);
+    box-shadow: 0 0 0 1px var(--color-line);
+    border-radius: var(--radius-soft);
+    cursor: pointer;
+  }
+
+  .radio-card input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+  }
+
+  .radio-card:has(input:checked) {
+    box-shadow: 0 0 0 2px var(--color-sky);
+  }
+
+  .radio-card:has(input:focus-visible) {
+    outline: 2px solid var(--color-sky);
+    outline-offset: 3px;
+  }
+
+  .radio-dot {
+    flex: none;
+    box-sizing: border-box;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.125rem;
+    border: 1.5px solid var(--color-line-quiet);
+    border-radius: 50%;
+  }
+
+  .radio-card input:checked + .radio-dot {
+    border: 5px solid var(--color-sky);
+    background: var(--color-page);
+  }
+
+  /*
+   * Responsive rules for every surface. There is one breakpoint, 768px (Tailwind's md:).
+   * Below it:
+   *   .stack-table  turns a table into stacked cards; give each td a data-label and it
+   *                 shows above its value (the header row stays for screen readers).
+   *   .stack-row    turns a grid row (a launch, a setup) into a stacked card the same way.
+   *   .slot-fields  lays the four pick fields out as a 2 x 2 grid; from 768px one row.
+   * Interactive targets are at least 44px tall on phones (see min-h-11 md:min-h-0).
+   */
+  .slot-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (width >= 48rem) {
+    .slot-fields {
+      grid-template-columns: 1.3fr 1.3fr 1fr 1fr;
+    }
+  }
+
+  @media (width < 48rem) {
+    .stack-table,
+    .stack-table tbody,
+    .stack-table tr,
+    .stack-table th,
+    .stack-table td {
+      display: block;
+    }
+
+    .stack-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .stack-table tr,
+    .stack-row {
+      display: block;
+      margin-top: 0.75rem;
+      padding: 1rem;
+      background: var(--color-panel);
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-soft);
+    }
+
+    .stack-table th,
+    .stack-table td {
+      width: auto !important;
+      padding: 0 0 0.75rem !important;
+    }
+
+    .stack-table td:last-child {
+      padding-bottom: 0 !important;
+    }
+
+    .stack-table [data-label]::before,
+    .stack-row [data-label]::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 0.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-fg-muted);
+    }
   }
 }
 

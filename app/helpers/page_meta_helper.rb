@@ -1,14 +1,16 @@
 # frozen_string_literal: true
 
 # Link-preview metadata for the layout. Controllers set @page_meta for pages that
-# deserve a custom preview (public profiles); everything else gets the defaults.
+# deserve a custom preview (a profile); everything else gets Home's wording and the
+# site card.
 module PageMetaHelper
-  DEFAULT_DESCRIPTION = "The AI tools and models people actually use, per task. Claim your link and share your loadout."
+  DEFAULT_TITLE = "The AI tools Every uses"
+  DEFAULT_DESCRIPTION = "Which AI tools and models the Every team uses for each kind of work."
 
   def page_meta
     base = request.base_url
     {
-      title: "Loadout: what's in your AI loadout?",
+      title: DEFAULT_TITLE,
       description: DEFAULT_DESCRIPTION,
       url: request.original_url,
       image: "#{base}/og-default.png"

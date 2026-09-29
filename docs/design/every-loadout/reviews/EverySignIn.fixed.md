@@ -1,0 +1,1 @@
+EverySignIn fixes: button label matches headline; explainer rewritten (team, subscribers, everyone else); art 480x480; footer reduced to every.to/loadout; Join Every -> every.to; underline #8c8d91; empty nav removed; privacy line under button now #d0d0d0. Height 900.

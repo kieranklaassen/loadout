@@ -10,7 +10,9 @@ class OauthClient < ApplicationRecord
   has_many :oauth_authorization_codes, dependent: :delete_all
   has_many :oauth_grants, dependent: :delete_all
 
-  normalizes :client_name, with: ->(name) { name.gsub(/[[:cntrl:]]/, " ").squish }
+  # The name is shown to members and agents, so control and format characters
+  # (bidi overrides, zero-width joiners) are dropped: they can make one name look like another.
+  normalizes :client_name, with: ->(name) { name.gsub(/[[:cntrl:]]/, " ").gsub(/\p{Cf}/, "").squish }
 
   before_validation -> { self.client_id ||= SecureRandom.urlsafe_base64(24) }, on: :create
 
@@ -43,6 +45,14 @@ class OauthClient < ApplicationRecord
 
   def self.loopback?(uri)
     uri.scheme&.downcase == "http" && LOOPBACK_HOSTS.include?(uri.hostname.to_s.downcase)
+  end
+
+  # Where a redirect URI sends the member, as the consent screen and the Agents page print
+  # it: the host of an http(s) URI, otherwise scheme and host, so that a private-use scheme
+  # ("x-evil://claude.ai/cb") cannot borrow the look of a familiar host.
+  def self.redirect_host(value)
+    uri = URI.parse(value)
+    %w[http https].include?(uri.scheme&.downcase) && uri.host.present? ? uri.host : "#{uri.scheme}://#{uri.host}"
   end
 
   # Exact match, except that a loopback redirect may use any port (RFC 8252 §7.3),

@@ -30,8 +30,13 @@ module Authentication
     end
 
     def request_authentication
-      session[:return_to_after_authenticating] = request.url
+      remember_return_location
       redirect_to new_session_path
+    end
+
+    # Where sign-in sends the visitor next: this request's own URL, set here, never a parameter.
+    def remember_return_location
+      session[:return_to_after_authenticating] = request.url
     end
 
     def after_authentication_url

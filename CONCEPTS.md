@@ -3,8 +3,9 @@
 Shared vocabulary for this repo. When a term here is ambiguous in conversation,
 this file is the tie-breaker. Keep entries short; link to module docs for depth.
 
-- **Template** — this repo: the canonical Rails app the fleet converges on. New
-  apps clone it; existing apps adopt modules from it à la carte.
+- **Template** — compound-stack-rails, the app Toolbox started from at 0.8.0.
+  Toolbox is a downstream app: it receives template upgrades as PRs and adds no
+  changelog entries of its own.
 - **Module** — an independently adoptable slice of the stack (auth, jobs, deploy,
   …). Each has a `docs/modules/<name>.md` boundary doc and a key in
   `.template-manifest.yml`.
@@ -25,3 +26,22 @@ this file is the tie-breaker. Keep entries short; link to module docs for depth.
   only, and each call goes through `POST /webmcp/tools/:name`.
 - **Born-complete** — a fresh clone of the template already lists every module in
   its manifest, so it starts fully adopted.
+- **Kind of work** — one of the 11 areas a person ranks tools for (coding, writing,
+  research, and so on). Stored as a `Category`.
+- **Pick** — one ranked slot in a kind of work: a tool, an optional model, an
+  optional context size (`200k`, `1m`) and an optional effort. A person keeps up
+  to three per kind, at ranks 1 to 3.
+- **Suggestion** — a pick an agent proposed over MCP or WebMCP. It lives in
+  `pick_suggestions`, is visible only to its owner, and becomes a pick only when
+  the owner confirms it on the web.
+- **Visibility** — who may open a person's page: `only_me` (default), `team` or
+  `link`. Every span in which a person shared is kept as a visibility period.
+- **Audience** — the set of people a given viewer may open. Every count on a page
+  or agent tool is taken over the audience, so it is "N of M" for that viewer.
+- **Launch** — a model with a release date and a Vibe Check link, shown in
+  "Latest model launches" on Home.
+- **Mark** — the light tile that stands for a tool (square) or a model (round):
+  its real single-colour logo when the catalog has one, else the first letter of
+  its name in the serif face.
+- **Every dark** — the app's design system: a near-black page, #111111 panels and
+  three sparing accents. See [docs/modules/frontend.md](docs/modules/frontend.md).

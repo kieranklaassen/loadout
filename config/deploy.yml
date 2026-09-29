@@ -34,6 +34,9 @@ proxy:
   healthcheck:
     path: /up
 
+# bin/docker-entrypoint backs up, migrates and syncs the catalog before /up can answer (default 30).
+deploy_timeout: 120
+
 # Where you keep your container images. Registry server defaults to ghcr.io;
 # username is tenant-specific and required.
 registry:
@@ -50,7 +53,7 @@ env:
     - EVERY_OAUTH_CLIENT_ID
     - EVERY_OAUTH_CLIENT_SECRET
   clear:
-    # Public https origin (https://loadout.every.to): the Every OAuth redirect
+    # Public https origin (https://toolbox.every.to): the Every OAuth redirect
     # URI, the MCP OAuth issuer and resource, and share links are built from it.
     PUBLIC_BASE_URL: "<%= ENV.fetch("PUBLIC_BASE_URL") %>"
     EVERY_OAUTH_BASE_URL: "<%= ENV.fetch("EVERY_OAUTH_BASE_URL") %>"

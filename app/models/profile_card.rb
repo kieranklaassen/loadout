@@ -1,39 +1,101 @@
 # frozen_string_literal: true
 
-# The 1200x630 share card for a profile (and the site-wide default card): an
-# SVG template rendered to PNG by libvips/librsvg with the vendored fonts in
-# vendor/fonts (see config/fontconfig/fonts.conf).
+# The 1200x630 share card for a profile (and the site-wide default card): an SVG
+# rendered to PNG by libvips/librsvg with the vendored fonts in vendor/fonts (see
+# config/fontconfig/fonts.conf). The layout follows docs/design/every-loadout/pages/
+# EveryShare2.dc.html: the name, the top three tools (square marks) and top three
+# models (round marks), the Every lockup and a yellow collage panel.
+#
+# The card is drawn for a signed-out visitor whoever asks for it: only picks a visitor
+# may read, never a pending item. What is drawn is picked from each kind's first pick:
+# a tool (or model) ranks by the number of kinds it leads, ties by first appearance in
+# category order. Marks and the logo are inlined from app/frontend/assets; every string
+# is stripped of control and format characters and escaped before it reaches librsvg.
 class ProfileCard
   WIDTH = 1200
   HEIGHT = 630
-  MAX_ROWS = 6
-  VERSION = 1
+  PANEL_WIDTH = 300
+  MAX_ITEMS = 3
+  # Bump when the drawing changes: it changes every card's ETag and cache key.
+  VERSION = 2
 
+  PAGE = "#020202"
   PAPER = "#fdfaf7"
-  PAPER_DEEP = "#f6f0e8"
   INK = "#121212"
-  INK_SOFT = "#3c3c3c"
-  INK_MUTED = "#6b6b6b"
-  RULE = "#e7e0d6"
-  BLUE = "#1652ea"
+  SOFT = "#d0d0d0"
+  MUTED = "#8c8d91"
+  SKY = "#9ce5f5"
+  YELLOW = "#f6b90f"
 
   SERIF = "Newsreader"
-  SANS = "Inter"
+  SANS = "Hanken Grotesk"
   MONO = "Geist Mono"
 
-  Row = Data.define(:category, :tool, :model)
+  # Layout, from the mock. Blocks are placed the way its flex column does: top and
+  # bottom padding, and the free space split evenly between the blocks.
+  PAD_X = 56
+  PAD_Y = 48
+  CONTENT_WIDTH = WIDTH - PANEL_WIDTH - 2 * PAD_X
+  LOGO_HEIGHT = 30
+  LOCKUP_SIZE = 36
+  LOCKUP_HEIGHT = LOCKUP_SIZE * 1.02
+  HEADLINE_SIZE = 84
+  HEADLINE_MIN_SIZE = 44
+  HEADLINE_HEIGHT = HEADLINE_SIZE * 1.02
+  LABEL_SIZE = 16
+  LABEL_HEIGHT = LABEL_SIZE * 1.3
+  LABEL_GAP = 8
+  ROW_HEIGHT = 60
+  TILE = 52
+  COLUMN_GAP = 32
+  COLUMN_WIDTH = (CONTENT_WIDTH - COLUMN_GAP) / 2
+  NAME_SIZE = 26
+  MAX_LABEL = 22
+  SUBTITLE_SIZE = 28
+  SUBTITLE_HEIGHT = SUBTITLE_SIZE * 1.3
+
+  # How far a baseline sits below the middle of a line box: (ascent - descent) / 2 of each face.
+  SERIF_MID = 0.235
+  SANS_MID = 0.3485
+  MONO_MID = 0.355
+
+  SITE_HEADLINE = [ [ "The AI tools ", false ], [ "Every", true ], [ " uses", false ] ].freeze
+  SITE_SUBTITLE = [ "Which AI tools and models the Every team", "uses for each kind of work." ].freeze
+
+  Item = Data.define(:label, :mark)
 
   def self.site
     new(nil)
   end
 
-  def initialize(user, host: "loadout.every.to")
+  def initialize(user)
     @user = user
-    @host = host
+    @person = PersonPicks.new(viewer: nil).for(user) if user
+  end
+
+  # The tools and models drawn, best first, at most MAX_ITEMS each.
+  def tools
+    @tools ||= top_items(leaders.map { |pick| pick[:tool] })
+  end
+
+  def models
+    @models ||= top_items(leaders.filter_map { |pick| pick[:model] })
+  end
+
+  # Whether a visitor can see anything to draw. The site card draws no picks.
+  def picks?
+    tools.any?
+  end
+
+  # A digest of everything drawn (and the card version): the response's ETag, and the
+  # part of the cache key that makes a stale card impossible.
+  def digest
+    inputs = @user ? [ name, @user.visibility, tools.map(&:to_h), models.map(&:to_h) ] : :site
+    Digest::SHA256.hexdigest([ VERSION, inputs ].to_json)
   end
 
   def cache_key
-    [ "profile_card", VERSION, @user&.id, @user&.loadout_updated_at.to_i, @user&.updated_at.to_i, @host ].join("/")
+    [ "profile_card", VERSION, @user&.id, @user&.loadout_updated_at.to_i, @user&.updated_at.to_i, digest ].join("/")
   end
 
   def to_png
@@ -41,7 +103,7 @@ class ProfileCard
   end
 
   # Active Storage blocks libvips' untrusted loaders process-wide, svgload among
-  # them. This SVG is ours (every user string is escaped), so only the SVG
+  # them. This SVG is ours (every string is stripped and escaped), so only the SVG
   # loader is re-enabled, and again on each render in case something re-blocked it.
   def render
     Vips.block("VipsForeignLoadSvg", false)
@@ -51,179 +113,148 @@ class ProfileCard
   def to_svg
     <<~SVG
       <svg xmlns="http://www.w3.org/2000/svg" width="#{WIDTH}" height="#{HEIGHT}" viewBox="0 0 #{WIDTH} #{HEIGHT}">
-        <rect width="#{WIDTH}" height="#{HEIGHT}" fill="#{PAPER}"/>
-        <rect x="600" width="#{WIDTH - 600}" height="#{HEIGHT}" fill="#{PAPER_DEEP}"/>
-        <line x1="600" y1="0" x2="600" y2="#{HEIGHT}" stroke="#{RULE}" stroke-width="2"/>
-        #{wordmark(72, 64)}
-        #{@user ? identity : site_identity}
-        #{rows_svg}
+        <defs>
+          <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="1.5" fill="#fff" fill-opacity="0.07"/></pattern>
+        </defs>
+        <rect width="#{WIDTH}" height="#{HEIGHT}" fill="#{PAGE}"/>
+        <rect width="#{WIDTH - PANEL_WIDTH}" height="#{HEIGHT}" fill="url(#dots)"/>
+        #{panel}
+        #{@user ? profile : site}
       </svg>
     SVG
   end
 
-  def rows
-    return sample_rows unless @user
-
-    Loadouts::Presenter.new(@user).top_picks.first(MAX_ROWS).map do |category|
-      entry = category[:entries].first
-      Row.new(category: category[:name], tool: entry[:tool], model: entry[:model])
-    end
-  end
-
   private
 
-  def identity
-    name_lines, name_size = fit_name(@user.display_name)
-    name_top = 344
-    line_height = (name_size * 1.02).round
-    names = name_lines.each_with_index.map do |line, index|
-      text(line, x: 72, y: name_top + index * line_height, family: SERIF, size: name_size, weight: 500, fill: INK, spacing: -(name_size * 0.02).round(1))
-    end
-    handle_y = name_top + (name_lines.size - 1) * line_height + 58
-
-    <<~SVG
-      #{avatar(132, 222, 60)}
-      #{names.join("\n")}
-      #{text("#{@host}/#{@user.handle}", x: 72, y: handle_y, family: MONO, size: 24, fill: INK_MUTED)}
-      #{footer}
-    SVG
+  def name
+    @name ||= clean(Audience.person(@user)[:name])
   end
 
-  def site_identity
-    <<~SVG
-      #{text("What’s in your", x: 72, y: 300, family: SERIF, size: 74, weight: 500, fill: INK, spacing: -1.5)}
-      #{text("AI loadout?", x: 72, y: 380, family: SERIF, size: 74, weight: 500, fill: INK, spacing: -1.5, style: "italic")}
-      #{text("The tools and models people actually use,", x: 72, y: 456, family: SANS, size: 24, fill: INK_SOFT)}
-      #{text("per task. Claim your link and share it.", x: 72, y: 490, family: SANS, size: 24, fill: INK_SOFT)}
-      #{text(@host, x: 72, y: 566, family: MONO, size: 20, fill: INK_MUTED, spacing: 0.5)}
-    SVG
+  # The first pick of each kind, in category order.
+  def leaders
+    return [] unless @person
+
+    @person[:kinds].filter_map { |kind| kind[:picks].first }
   end
 
-  def footer
-    label = text("AI LOADOUT", x: 72, y: 566, family: MONO, size: 16, fill: INK_MUTED, spacing: 1.6)
-    return label unless @user.every_member?
-
-    <<~SVG
-      <rect x="192" y="546" width="78" height="28" rx="14" fill="none" stroke="#{BLUE}" stroke-width="1.5"/>
-      #{text("EVERY", x: 231, y: 566, family: MONO, size: 14, fill: BLUE, spacing: 1.4, anchor: "middle")}
-      #{label}
-    SVG
+  def top_items(items)
+    counts = items.map { |item| item[:slug] }.tally
+    items.uniq { |item| item[:slug] }
+      .sort_by.with_index { |item, index| [ -counts[item[:slug]], index ] }
+      .first(MAX_ITEMS)
+      .map { |item| Item.new(label: clean(item[:name]).truncate(MAX_LABEL, omission: "…"), mark: (item[:mark] if Artwork::MARKS.key?(item[:mark]))) }
   end
 
-  def rows_svg
-    list = rows
-    if list.empty?
-      return <<~SVG
-        #{text("No picks yet.", x: 660, y: 320, family: SERIF, size: 44, fill: INK_MUTED, style: "italic")}
-      SVG
-    end
-
-    row_height = 78
-    top = ((HEIGHT - list.size * row_height) / 2.0).round
-    list.each_with_index.map { |row, index| row_svg(row, 660, top + index * row_height, last: index == list.size - 1) }.join("\n")
-  end
-
-  def row_svg(row, x, y, last:)
-    tile = 52
-    tool = row.tool
-    colors = mark_colors(tool[:hue])
-    detail_x = x + tile + 22
-    tool_name = truncate(tool[:name], 22)
-    model_name = row.model && truncate(row.model[:name], [ 34 - tool_name.length, 8 ].max)
-
-    <<~SVG
-      <rect x="#{x}" y="#{y + 12}" width="#{tile}" height="#{tile}" rx="14" fill="#{colors[:background]}" stroke="#{colors[:border]}" stroke-width="1.5"/>
-      #{text(tool[:monogram], x: x + tile / 2, y: y + 12 + tile / 2 + 7, family: MONO, size: 19, weight: 500, fill: colors[:color], anchor: "middle")}
-      #{text(row.category.upcase, x: detail_x, y: y + 30, family: MONO, size: 13, fill: INK_MUTED, spacing: 1.3)}
-      <text x="#{detail_x}" y="#{y + 60}" font-family="#{SANS}" font-size="25" fill="#{INK}"><tspan font-weight="600">#{escape(tool_name)}</tspan>#{model_name ? %(<tspan dx="12" fill="#{INK_MUTED}" font-weight="400">#{escape(model_name)}</tspan>) : ""}</text>
-      #{last ? "" : %(<line x1="#{x}" y1="#{y + 76}" x2="1128" y2="#{y + 76}" stroke="#{RULE}" stroke-width="1"/>)}
-    SVG
-  end
-
-  def wordmark(x, y)
-    <<~SVG
-      <g transform="translate(#{x} #{y - 22}) scale(1.5)">
-        <rect x="2" y="3" width="20" height="5" rx="2.5" fill="#{INK}"/>
-        <rect x="2" y="9.5" width="14" height="5" rx="2.5" fill="#{BLUE}"/>
-        <rect x="2" y="16" width="8" height="5" rx="2.5" fill="#{INK}" opacity="0.35"/>
-      </g>
-      #{text("Loadout", x: x + 44, y: y + 10, family: SERIF, size: 34, weight: 500, fill: INK, spacing: -0.5)}
-    SVG
-  end
-
-  def avatar(cx, cy, r)
-    <<~SVG
-      <circle cx="#{cx}" cy="#{cy}" r="#{r}" fill="#{PAPER_DEEP}" stroke="#{RULE}" stroke-width="2"/>
-      #{text(initials(@user.display_name), x: cx, y: cy + (r * 0.34).round, family: SERIF, size: (r * 0.9).round, weight: 500, fill: INK, anchor: "middle")}
-    SVG
-  end
-
-  def text(content, x:, y:, family:, size:, fill:, weight: 400, spacing: 0, anchor: "start", style: "normal")
-    %(<text x="#{x}" y="#{y}" font-family="#{family}" font-size="#{size}" font-weight="#{weight}" font-style="#{style}" letter-spacing="#{spacing}" text-anchor="#{anchor}" fill="#{fill}">#{escape(content)}</text>)
-  end
-
-  # Newsreader at display sizes averages about 0.46em per character; the left
-  # column is ~470px, so long names wrap to two lines and then shrink.
-  def fit_name(name)
-    [ 76, 64, 54 ].each do |size|
-      per_line = (470 / (size * 0.46)).floor
-      lines = wrap(name, per_line)
-      return [ lines, size ] if lines.size <= 2 && lines.all? { |line| line.length <= per_line }
-    end
-    per_line = (470 / (54 * 0.46)).floor
-    [ wrap(name, per_line).first(2).map { |line| truncate(line, per_line) }, 54 ]
-  end
-
-  def wrap(value, width)
-    value.split(/\s+/).each_with_object([]) do |word, lines|
-      if lines.any? && (lines.last.length + word.length + 1) <= width
-        lines.last << " " << word
-      else
-        lines << word.dup
-      end
-    end
-  end
-
-  def truncate(value, length)
-    value.length > length ? "#{value[0, length - 1].rstrip}…" : value
-  end
-
-  def initials(name)
-    parts = name.split(/\s+/).reject(&:blank?)
-    letters = parts.size > 1 ? parts.first[0] + parts.last[0] : parts.first.to_s[0, 2]
-    letters.presence&.upcase || "?"
+  # Text a librsvg parser can take: no control, format or non-character code points.
+  def clean(value)
+    value.to_s.scrub("").gsub(/\p{Cc}/, " ").gsub(/[\p{Cf}\u{FFFE}\u{FFFF}]/, "").squish
   end
 
   def escape(value)
     ERB::Util.html_escape(value.to_s)
   end
 
-  # Mirrors markColors() in app/frontend/components/tool_mark.tsx.
-  def mark_colors(hue)
-    { background: hsl(hue, 70, 92), color: hsl(hue, 65, 24), border: hsl(hue, 45, 80) }
+  def profile
+    columns = [ [ "TOP TOOLS", tools, false ], [ "TOP MODELS", models, true ] ].select { |_, items, _| items.any? }
+    grid_height = LABEL_HEIGHT + LABEL_GAP + columns.map { |_, items, _| items.size }.max * ROW_HEIGHT
+    lockup_top, headline_top, grid_top = stack(LOCKUP_HEIGHT, HEADLINE_HEIGHT, grid_height)
+
+    <<~SVG
+      #{lockup(lockup_top)}
+      #{headline([ [ name.sub(/\S+\z/, ""), false ], [ name[/\S+\z/].to_s, true ] ], headline_top)}
+      #{columns.each_with_index.map { |(label, items, round), index| column(label, items, round:, x: PAD_X + index * (COLUMN_WIDTH + COLUMN_GAP), top: grid_top) }.join("\n")}
+    SVG
   end
 
-  def hsl(hue, saturation, lightness)
-    s = saturation / 100.0
-    l = lightness / 100.0
-    a = s * [ l, 1 - l ].min
-    channel = lambda do |n|
-      k = (n + hue / 30.0) % 12
-      ((l - a * [ [ k - 3, 9 - k, 1 ].min, -1 ].max) * 255).round
-    end
-    format("#%02x%02x%02x", channel.call(0), channel.call(8), channel.call(4))
+  def site
+    subtitle_height = SITE_SUBTITLE.size * SUBTITLE_HEIGHT
+    lockup_top, headline_top, subtitle_top = stack(LOCKUP_HEIGHT, HEADLINE_HEIGHT, subtitle_height)
+
+    <<~SVG
+      #{lockup(lockup_top)}
+      #{headline(SITE_HEADLINE, headline_top)}
+      #{SITE_SUBTITLE.each_with_index.map { |line, index| text(line, x: PAD_X, y: baseline(subtitle_top + (index + 0.5) * SUBTITLE_HEIGHT, SUBTITLE_SIZE, SANS_MID), family: SANS, size: SUBTITLE_SIZE, fill: SOFT) }.join("\n")}
+    SVG
   end
 
-  def sample_rows
-    [
-      [ "Coding", "Claude Code", "CC", 18, "Claude Opus 5.5" ],
-      [ "Knowledge work", "Claude", "Cl", 18, "Claude Opus 5.5" ],
-      [ "Research", "Perplexity", "Px", 185, nil ],
-      [ "Image", "Midjourney", "MJ", 250, nil ],
-      [ "Video", "Runway", "Rw", 345, nil ],
-      [ "Speech to text", "Whisper", "Wh", 160, nil ]
-    ].map do |category, tool, monogram, hue, model|
-      Row.new(category:, tool: { name: tool, monogram:, hue: }, model: model && { name: model })
+  # The tops of blocks stacked down the card with the free space shared evenly between them.
+  def stack(*heights)
+    gap = (HEIGHT - 2 * PAD_Y - heights.sum) / (heights.size - 1)
+    heights.each_with_index.map { |_, index| PAD_Y + heights.first(index).sum + gap * index }
+  end
+
+  def baseline(middle, size, mid)
+    (middle + mid * size).round(2)
+  end
+
+  def panel
+    collage = Artwork.collage
+    <<~SVG
+      <rect x="#{WIDTH - PANEL_WIDTH}" width="#{PANEL_WIDTH}" height="#{HEIGHT}" fill="#{YELLOW}"/>
+      <image href="#{collage.uri}" x="#{WIDTH - PANEL_WIDTH}" y="0" width="#{PANEL_WIDTH}" height="#{collage.height}"/>
+    SVG
+  end
+
+  def lockup(top)
+    scale = LOGO_HEIGHT / Artwork::LOGO_VIEW_HEIGHT
+    logo_top = top + (LOCKUP_HEIGHT - LOGO_HEIGHT) / 2
+    x = PAD_X + Artwork::LOGO_VIEW_WIDTH * scale + 14
+
+    <<~SVG
+      <g transform="translate(#{PAD_X} #{logo_top.round(2)}) scale(#{scale.round(5)})" fill="#{PAPER}">#{Artwork::LOGO}</g>
+      #{text("Toolbox", x: x.round(2), y: baseline(top + LOCKUP_HEIGHT / 2, LOCKUP_SIZE, SERIF_MID), family: SERIF, size: LOCKUP_SIZE, fill: SKY, style: "italic", spacing: -0.02 * LOCKUP_SIZE)}
+    SVG
+  end
+
+  # The big serif line: segments are [text, italic sky] pairs. One line, shrunk to fit;
+  # a name too long even then is cut.
+  def headline(segments, top)
+    length = [ segments.sum { |string, _| string.length }, 1 ].max
+    size = [ HEADLINE_SIZE, (CONTENT_WIDTH / (length * 0.46)).floor ].min
+    if size < HEADLINE_MIN_SIZE
+      size = HEADLINE_MIN_SIZE
+      segments = [ [ segments.map(&:first).join.truncate((CONTENT_WIDTH / (size * 0.46)).floor, omission: "…"), false ] ]
     end
+    inner = segments.map { |string, italic| italic ? %(<tspan fill="#{SKY}" font-style="italic">#{escape(string)}</tspan>) : escape(string) }.join
+
+    %(<text id="headline" x="#{PAD_X}" y="#{baseline(top + HEADLINE_HEIGHT / 2, size, SERIF_MID)}" font-family="#{SERIF}" font-size="#{size}" letter-spacing="#{-0.02 * size}" fill="#{PAPER}">#{inner}</text>)
+  end
+
+  def column(label, items, round:, x:, top:)
+    rows = items.each_with_index.map { |item, index| item_row(item, round:, x:, top: top + LABEL_HEIGHT + LABEL_GAP + index * ROW_HEIGHT) }
+
+    <<~SVG
+      <g id="#{round ? "top-models" : "top-tools"}">
+        #{text(label, x:, y: baseline(top + LABEL_HEIGHT / 2, LABEL_SIZE, MONO_MID), family: MONO, size: LABEL_SIZE, fill: MUTED, spacing: 0.1 * LABEL_SIZE)}
+        #{rows.join("\n")}
+      </g>
+    SVG
+  end
+
+  # A light tile (square for a tool, round for a model) with the real mark or the
+  # name's first letter in the serif, then the name.
+  def item_row(item, round:, x:, top:)
+    tile_top = top + (ROW_HEIGHT - TILE) / 2
+    middle = tile_top + TILE / 2.0
+    tile = round ? %(<circle cx="#{x + TILE / 2}" cy="#{middle}" r="#{TILE / 2}" fill="#{PAPER}"/>) : %(<rect x="#{x}" y="#{tile_top}" width="#{TILE}" height="#{TILE}" rx="4" fill="#{PAPER}"/>)
+
+    <<~SVG
+      #{tile}
+      #{glyph(item, x:, tile_top:, size: round ? 27 : 29)}
+      #{text(item.label, x: x + TILE + 16, y: baseline(top + ROW_HEIGHT / 2.0, NAME_SIZE, SANS_MID), family: SANS, size: NAME_SIZE, weight: 500, fill: PAPER)}
+    SVG
+  end
+
+  def glyph(item, x:, tile_top:, size:)
+    if item.mark
+      offset = (TILE - size) / 2.0
+      %(<g transform="translate(#{x + offset} #{tile_top + offset}) scale(#{(size / Artwork::MARK_SIZE.to_f).round(5)})" fill="#{INK}">#{Artwork::MARKS.fetch(item.mark)}</g>)
+    else
+      text(item.label.grapheme_clusters.first.to_s.upcase.presence || "?", x: x + TILE / 2, y: baseline(tile_top + TILE / 2.0, 22, SERIF_MID), family: SERIF, size: 22, weight: 500, fill: INK, anchor: "middle")
+    end
+  end
+
+  def text(content, x:, y:, family:, size:, fill:, weight: 400, spacing: 0, anchor: "start", style: "normal")
+    %(<text x="#{x}" y="#{y}" font-family="#{family}" font-size="#{size}" font-weight="#{weight}" font-style="#{style}" letter-spacing="#{spacing.round(2)}" text-anchor="#{anchor}" fill="#{fill}">#{escape(content)}</text>)
   end
 end

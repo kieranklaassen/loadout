@@ -10,7 +10,7 @@ class WellKnownController < ActionController::API
       authorization_servers: [ public_base_url ],
       scopes_supported: [ SCOPE ],
       bearer_methods_supported: [ "header" ],
-      resource_name: "Loadout",
+      resource_name: "Toolbox",
       resource_documentation: "#{public_base_url}/agents"
     }
   end

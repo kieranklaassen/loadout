@@ -6,27 +6,44 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     @user = users(:every_cy)
   end
 
-  test "the full PKCE dance ends in MCP initialize, tools/list, and an update_loadout that names the client (F2)" do
-    _client_id, tokens = connect_agent(user: @user, client_name: "Claude Code")
+  test "the full PKCE dance ends in MCP initialize, tools/list, and a suggest_picks that names the client by id (F2)" do
+    client_id, tokens = connect_agent(user: @user, client_name: "Claude Code")
 
-    assert_equal [ "Bearer", 3600, "loadout" ], tokens.values_at("token_type", "expires_in", "scope")
+    assert_equal [ "Bearer", 3600, "toolbox" ], tokens.values_at("token_type", "expires_in", "scope")
     assert tokens["refresh_token"].present?
     assert_equal "no-store", response.headers["Cache-Control"]
 
     initialize = mcp_request("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "claude-code", version: "1" } }, token: tokens["access_token"])
     assert_response :success
-    assert_equal "loadout", initialize.dig("result", "serverInfo", "name")
+    assert_equal "toolbox", initialize.dig("result", "serverInfo", "name")
     assert_match(/Ask the member before you guess/, initialize.dig("result", "instructions"))
 
     names = mcp_request("tools/list", token: tokens["access_token"]).dig("result", "tools").map { |tool| tool["name"] }
-    assert_equal %w[list_categories search_catalog get_my_loadout update_loadout get_recent_changes], names
+    assert_equal %w[list_categories search_catalog get_my_toolbox get_team_rankings get_recent_changes suggest_picks], names
 
-    result = mcp_request("tools/call", { name: "update_loadout", arguments: { operations: [ { op: "add", category: "video", tool: "runway", primary: true } ] } }, token: tokens["access_token"])["result"]
+    entries_before = @user.entries.count
+    result = mcp_request("tools/call", { name: "suggest_picks", arguments: { operations: [ { op: "suggest", category: "video", tool: "runway", rank: 1 } ] } }, token: tokens["access_token"])["result"]
     assert_equal false, result["isError"], result.dig("content", 0, "text")
-    assert_equal [ "Added Runway for video" ], JSON.parse(result.dig("content", 0, "text"))["changes"]
+    assert_match(/until the member confirms it/, JSON.parse(result.dig("content", 0, "text"))["message"])
 
-    assert_equal [ [ "mcp", "Claude Code" ] ], @user.entry_changes.distinct.pluck(:source, :client_name)
+    suggestion = @user.pick_suggestions.open.sole
+    assert_equal [ OauthClient.find_by!(client_id:).id, "Claude Code", "runway" ], [ suggestion.oauth_client_id, suggestion.client_name, suggestion.tool.slug ]
+    assert_equal entries_before, @user.entries.count
+    assert_equal [ [ "suggested", "mcp", "Claude Code" ] ], @user.entry_changes.where(action: "suggested").pluck(:action, :source, :client_name)
     assert_not_nil @user.oauth_grants.sole.last_used_at
+  end
+
+  test "a decision that is the member's is refused over MCP, and read tools answer as the member" do
+    _client_id, tokens = connect_agent(user: @user, client_name: "Claude Code")
+
+    refused = mcp_request("tools/call", { name: "suggest_picks", arguments: { operations: [ { op: "confirm", suggestion_id: 1 } ] } }, token: tokens["access_token"])["result"]
+    assert_equal true, refused["isError"]
+
+    mine = JSON.parse(mcp_request("tools/call", { name: "get_my_toolbox", arguments: {} }, token: tokens["access_token"]).dig("result", "content", 0, "text"))
+    assert_equal [ "cy", "only_me" ], mine.values_at("handle", "visibility")
+
+    team = JSON.parse(mcp_request("tools/call", { name: "get_team_rankings", arguments: {} }, token: tokens["access_token"]).dig("result", "content", 0, "text"))
+    assert_equal "team", team["audience"]
   end
 
   test "codes and tokens are stored only as digests" do
@@ -62,10 +79,46 @@ class McpOauthTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "oauth/consent", inertia.component
     assert_equal "Claude Code", inertia.props.dig(:client, :name)
+    assert_equal %i[known mark name redirect_host], inertia.props[:client].keys.map(&:to_sym).sort
     assert_equal "127.0.0.1", inertia.props[:redirect_host]
+    assert_equal Agents::Capabilities.to_prop.deep_stringify_keys, inertia.props[:capabilities].deep_stringify_keys
     assert_equal "DENY", response.headers["X-Frame-Options"]
   ensure
     restore_every_oauth
+  end
+
+  test "consent gives an initial and the redirect host to any client but an https redirect on a known host (KTD18)" do
+    _verifier, challenge = pkce_pair
+    sign_in_as(@user)
+    cases = {
+      "https://example.org/cb" => [ "example.org", nil, false ],
+      McpOauthHelper::LOOPBACK_REDIRECT => [ "127.0.0.1", nil, false ],
+      "x-evil://claude.ai/cb" => [ "x-evil://claude.ai", nil, false ],
+      "cursor://anysphere.cursor-retrieval/oauth" => [ "cursor://anysphere.cursor-retrieval", nil, false ],
+      "https://claude.ai.evil.example/cb" => [ "claude.ai.evil.example", nil, false ],
+      "https://claude.ai/api/mcp/auth_callback" => [ "claude.ai", "claude", true ],
+      "https://CLAUDE.com/cb" => [ "CLAUDE.com", "claude", true ]
+    }
+
+    cases.each do |redirect_uri, (host, mark, known)|
+      client_id = register_client(client_name: "Claude", redirect_uris: [ redirect_uri ])
+      get "/oauth/authorize", params: authorization_params(client_id:, challenge:, redirect_uri:)
+
+      assert_response :success, redirect_uri
+      client = inertia.props[:client]
+      assert_equal [ "Claude", host, mark, known ], [ client[:name], client[:redirect_host], client[:mark], client[:known] ], redirect_uri
+      assert_equal host, inertia.props[:redirect_host], redirect_uri
+    end
+  end
+
+  test "a client that registered a known host but sends the member to loopback is not known" do
+    client_id = register_client(client_name: "Claude", redirect_uris: [ McpOauthHelper::LOOPBACK_REDIRECT, "https://claude.ai/api/mcp/auth_callback" ])
+    _verifier, challenge = pkce_pair
+    sign_in_as(@user)
+
+    get "/oauth/authorize", params: authorization_params(client_id:, challenge:)
+
+    assert_equal [ "127.0.0.1", nil, false ], inertia.props[:client].values_at(:redirect_host, :mark, :known)
   end
 
   test "approving redirects with the code, the state, and the issuer; denying says access_denied" do

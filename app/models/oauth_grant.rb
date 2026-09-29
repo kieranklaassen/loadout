@@ -20,6 +20,21 @@ class OauthGrant < ApplicationRecord
     create!(user:, oauth_client: client, resource:, scope:)
   end
 
+  # The clients a member approved, one row each, newest activity first. Call it on the
+  # member's grants; the block adds a page's own fields from a client and its grants.
+  def self.connected_clients(preload: [])
+    active.includes(:oauth_client, *preload).group_by(&:oauth_client).map do |client, grants|
+      extras = block_given? ? yield(client, grants) : {}
+      {
+        id: client.client_id,
+        name: client.client_name,
+        **extras,
+        connected_at: grants.map(&:created_at).min.iso8601,
+        last_used_at: grants.filter_map(&:last_used_at).max&.iso8601
+      }
+    end.sort_by { |agent| agent[:last_used_at] || agent[:connected_at] }.reverse
+  end
+
   def self.authenticate(access_token, resource:)
     return if access_token.blank?
 
@@ -52,8 +67,14 @@ class OauthGrant < ApplicationRecord
     rows == 1
   end
 
+  # Ends the grant and withdraws the suggestions its client still has open.
   def revoke!
-    update!(revoked_at: Time.current) if revoked_at.nil?
+    return unless revoked_at.nil?
+
+    transaction do
+      update!(revoked_at: Time.current)
+      Toolbox::Suggestions.withdraw_for_client(user:, oauth_client:)
+    end
   end
 
   def token_response

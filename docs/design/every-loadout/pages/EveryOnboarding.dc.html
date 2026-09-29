@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Claim your link</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&amp;family=Hanken+Grotesk:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#020202;font-family:'Hanken Grotesk',system-ui,sans-serif}
+.root{box-sizing:border-box;background-color:#020202;background-image:radial-gradient(circle at center,rgba(255,255,255,.07) 0 1.5px,transparent 2px);background-size:28px 28px;color:#fdfaf7;-webkit-font-smoothing:antialiased}
+.d{font-family:'Newsreader',Georgia,serif;font-weight:400;line-height:1.02;letter-spacing:-.02em;margin:0}
+.st{font-family:'Newsreader',Georgia,serif;font-weight:400;letter-spacing:-.005em}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.slot{border:1px dashed #3a3a3a;border-radius:2px;color:#8c8d91;display:flex;align-items:center;padding:0 12px;font-weight:400;font-size:14px}
+.opt{display:flex;gap:12px;padding:14px 16px;background:#111111;box-shadow:0 0 0 1px #2a2a2a;border-radius:4px;margin-bottom:10px;position:relative;cursor:pointer}
+.opt:has(input:checked){box-shadow:0 0 0 2px #9ce5f5}
+.opt:has(input:focus-visible){outline:2px solid #9ce5f5;outline-offset:3px}
+.opt input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.opt .dot{width:18px;height:18px;border-radius:50%;box-sizing:border-box;flex:none;margin-top:2px;border:1.5px solid #5a5a5a}
+.opt input:checked + .dot{border:5px solid #9ce5f5;background:#020202}
+button.btn{border:0;font-family:inherit;cursor:pointer}
+.tile{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;font-family:'Geist Mono',monospace;font-weight:500;flex:none}
+.card{background:#111111;border:1px solid #2a2a2a;border-radius:4px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -16px rgba(0,0,0,.7)}
+.btn{display:inline-flex;align-items:center;background:#9ce5f5;color:#121212;font-weight:600;border-radius:2px;padding:14px 24px;font-size:16px;text-decoration:none}
+.btn2{display:inline-flex;align-items:center;background:#111111;color:#fdfaf7;border:1px solid #2a2a2a;font-weight:600;border-radius:2px;padding:10px 16px;font-size:14px;text-decoration:none}
+.row{display:flex;align-items:center;gap:16px;border-bottom:1px solid #2a2a2a;padding:10px 0}
+a:focus-visible,button:focus-visible{outline:2px solid #9ce5f5;outline-offset:3px}
+th{font-weight:400}
+table{border-collapse:collapse;width:100%}
+td,th{vertical-align:middle;text-align:left}
+.chip{display:inline-flex;align-items:center;gap:8px}
+.lnk{color:#fdfaf7;text-decoration:underline;text-underline-offset:4px;text-decoration-color:#5a5a5a}
+</style>
+</helmet>
+<div class="root" style="width:1440px;height:900px;overflow:hidden;position:relative">
+<header style="display:flex;align-items:center;justify-content:space-between;padding:24px 88px"><a href="EveryHome.dc.html" style="display:flex;align-items:center;gap:8px;text-decoration:none"><img src="/_blob/b51cc330fea9bd9a543797ce5842b565" alt="Every" style="height:22px;filter:invert(1);opacity:.95"><span style="width:1px;height:22px;background:#3a3a3a;margin:0 8px"></span><span class="d" style="font-size:28px;font-style:italic;color:#9ce5f5">Loadout</span></a><a href="EveryProfile2.dc.html" aria-label="Your profile" class="mono" style="width:36px;height:36px;border-radius:3px;background:#1a1a1a;box-shadow:0 0 0 1px #2a2a2a;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#d0d0d0;text-decoration:none">KK</a></header>
+<main style="display:flex;padding:32px 88px 0;gap:72px">
+<div style="flex:1"><div class="mono" style="font-size:12px;letter-spacing:.08em;color:#8c8d91">STEP 1 OF 2 · THEN RANK YOUR FIRST TOOLS</div>
+<h1 class="d" style="font-size:56px;margin-top:14px">Claim your link</h1>
+<p style="font-size:18px;line-height:1.5;color:#d0d0d0;margin:16px 0 0;max-width:520px">This is the address of your loadout. You can change it later in settings.</p>
+<form action="EveryEdit.dc.html" method="post" style="margin:0"><div style="margin-top:32px"><label style="display:block"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px">Your link</span><span style="display:flex;align-items:center;background:#0a0a0a;box-shadow:0 0 0 2px #9ce5f5;border-radius:2px;width:560px;box-sizing:border-box"><span class="mono" style="padding:14px 0 14px 16px;color:#8c8d91;font-size:16px">every.to/loadout/</span><input name="handle" type="text" value="kieran" autocomplete="off" spellcheck="false" aria-describedby="handle-status" style="flex:1;background:transparent;border:0;color:#fdfaf7;font-size:16px;padding:14px 16px 14px 0;font-family:'Geist Mono',monospace;outline:none"></span><span id="handle-status" style="display:flex;align-items:center;gap:8px;font-size:14px;color:#fdfaf7;margin-top:8px"><span aria-hidden="true">&#10003;</span>every.to/loadout/kieran is available</span></label></div>
+<div style="margin-top:32px;max-width:560px"><fieldset style="border:0;padding:0;margin:0"><legend style="font-size:14px;font-weight:600;margin-bottom:10px;padding:0">Who can see it</legend><label class="opt"><input type="radio" name="visibility" value="private" checked><span class="dot"></span><span><span style="display:block;font-weight:600;font-size:16px">Only me</span><span style="display:block;font-size:14px;color:#8c8d91;margin-top:3px;line-height:1.45">Nobody else sees your picks. This is the default.</span></span></label><label class="opt"><input type="radio" name="visibility" value="team"><span class="dot"></span><span><span style="display:block;font-weight:600;font-size:16px">Every team</span><span style="display:block;font-size:14px;color:#8c8d91;margin-top:3px;line-height:1.45">Everyone on the Every team can see it.</span></span></label><label class="opt"><input type="radio" name="visibility" value="public"><span class="dot"></span><span><span style="display:block;font-weight:600;font-size:16px">Anyone with the link</span><span style="display:block;font-size:14px;color:#8c8d91;margin-top:3px;line-height:1.45">Public. We also make a share card for it.</span></span></label></fieldset></div>
+<button type="submit" class="btn" style="margin-top:20px;padding:16px 28px;font-size:17px">Save and rank my first tools</button></form></div>
+<div style="width:520px;flex:none"><div class="mono" style="font-size:12px;letter-spacing:.08em;color:#8c8d91;margin-bottom:12px">PREVIEW</div>
+<div style="background:#111111;box-shadow:0 0 0 1px #2a2a2a;border-radius:4px;padding:28px"><div style="display:flex;align-items:center;gap:16px"><span class="d" style="width:64px;height:64px;background:#1a1a1a;box-shadow:0 0 0 1px #2a2a2a;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:24px">KK</span><div><div class="d" style="font-size:32px">Kieran Klaassen</div><div class="mono" style="font-size:13px;color:#8c8d91;margin-top:4px">every.to/loadout/kieran</div></div></div>
+<div style="margin-top:20px;border-top:1px solid #2a2a2a"><div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #2a2a2a"><span class="st" style="width:130px;font-size:17px;color:#d0d0d0">Coding</span><span class="slot" style="flex:1;height:36px;font-size:13px;display:flex">Empty</span></div><div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #2a2a2a"><span class="st" style="width:130px;font-size:17px;color:#d0d0d0">Writing</span><span class="slot" style="flex:1;height:36px;font-size:13px;display:flex">Empty</span></div></div>
+<p style="font-size:13px;color:#8c8d91;margin:14px 0 0">Only you can see this.</p></div></div>
+</main>
+<footer style="position:absolute;left:88px;right:88px;bottom:0;padding:24px 0;border-top:1px solid #2a2a2a;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#8c8d91"><img src="/_blob/b51cc330fea9bd9a543797ce5842b565" alt="Every" style="height:18px;filter:invert(1);opacity:.9"><span style="font-style:italic;color:#9ce5f5;font-family:'Newsreader',Georgia,serif;font-size:18px">Loadout</span><span class="mono" style="font-size:13px;margin-left:8px">every.to/loadout</span></div><span class="mono" style="font-size:13px;color:#8c8d91">Private by default. Public when you want.</span></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

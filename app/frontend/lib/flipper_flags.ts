@@ -1,5 +1,5 @@
-// Keep the union in step with config/flipper_flag_defaults.yml.
-export type FlipperFlagName = 'public_map'
+// Keep the union in step with config/flipper_flag_defaults.yml. Empty while no flag is live.
+export type FlipperFlagName = never
 type Flags = Partial<Record<FlipperFlagName, boolean>>
 
 let cache: Flags | null = null

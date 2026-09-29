@@ -1,6 +1,7 @@
 # A kind of work people use AI for: coding, knowledge work, video, speech to text.
 class Category < ApplicationRecord
   has_many :entries, dependent: :restrict_with_exception
+  has_many :pick_suggestions, dependent: :delete_all
 
   validates :slug, :name, presence: true
   validates :slug, uniqueness: true

@@ -1,8 +1,21 @@
 #!/bin/bash -e
 
-# If running the rails server then create or migrate existing database
+# If running the rails server then back up, create or migrate the database, and sync the catalog
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  database="storage/${RAILS_ENV:-production}.sqlite3"
+
+  # Some migrations drop data by design, so an existing database gets a consistent copy first
+  # (.backup is safe on a live file). The copy holds emails, so only its owner can read it.
+  if [ -s "$database" ] && ! ./bin/rails db:abort_if_pending_migrations > /dev/null 2>&1; then
+    backup="storage/backup-$(date -u +%Y%m%dT%H%M%SZ).sqlite3"
+    (umask 077 && sqlite3 "$database" ".backup '$backup'")
+    echo "Backed up $database to $backup before migrating" >&2
+  fi
+
   ./bin/rails db:prepare
+
+  # config/catalog.yml changes reach production here. A failed sync is logged, not fatal.
+  ./bin/rails runner "Catalog::Sync.call" || echo "Catalog sync failed; starting the server without it" >&2
 fi
 
 exec "${@}"

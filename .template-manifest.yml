@@ -1,4 +1,4 @@
-# The template's own manifest.
+# Toolbox's manifest: the compound-stack-rails version it runs and the modules it adopted.
 #
 # A clone inherits this file and is therefore BORN COMPLETE — every module is
 # listed at the current template_version. A downstream app that adopts only some

@@ -1,21 +1,81 @@
+# Confirmed picks only, ranked 1 to 3 per person and kind. every_cy is hidden, and
+# her Claude Opus 5 pick is the one thing that would leak if a read ignored that.
+# Each person's rows replay from entry_changes.yml to exactly these.
 ana_cursor:
   user: every_ana
   category: coding
   tool: cursor
   ai_model: opus_5_5
-  primary: true
+  rank: 1
+  context: 1m
+  effort: high
+
+ana_claude_code:
+  user: every_ana
+  category: coding
+  tool: claude_code
+  rank: 2
 
 ana_claude:
   user: every_ana
   category: knowledge_work
   tool: claude
   ai_model: opus_5_5
-  primary: true
-  note: My thinking partner.
+  rank: 1
+
+dee_claude_code:
+  user: every_dee
+  category: coding
+  tool: claude_code
+  ai_model: opus_5_5
+  rank: 1
+  effort: medium
+
+dee_cursor:
+  user: every_dee
+  category: coding
+  tool: cursor
+  ai_model: gpt_6
+  rank: 2
+
+dee_claude:
+  user: every_dee
+  category: knowledge_work
+  tool: claude
+  rank: 1
 
 cy_cursor:
   user: every_cy
   category: coding
   tool: cursor
   ai_model: opus_5
-  primary: true
+  rank: 1
+  context: 200k
+
+eli_cursor:
+  user: outside_eli
+  category: coding
+  tool: cursor
+  ai_model: gpt_6
+  rank: 1
+  context: 200k
+
+eli_claude_code:
+  user: outside_eli
+  category: coding
+  tool: claude_code
+  rank: 2
+
+eli_runway:
+  user: outside_eli
+  category: video
+  tool: runway
+  rank: 1
+
+fay_claude_code:
+  user: every_fay
+  category: coding
+  tool: claude_code
+  ai_model: opus_5_5
+  rank: 1
+  effort: low

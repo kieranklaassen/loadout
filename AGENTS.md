@@ -28,11 +28,15 @@ there, and open a PR. This holds for agents and humans alike.
 
 ## Users & auth
 
-There is **no open registration**. Create users only with:
+There is **no registration route and no password**. Members arrive through Sign
+in with Every (`Sessions::EveryController`): the first successful sign-in creates
+the `User`, and only a verified `@every.to` address counts as the Every team. In
+development, and only there, the sign-in page also lists users under "Dev login"
+(`bin/rails db:seed` creates demo members).
 
-```sh
-EMAIL=you@example.com PASSWORD='a-long-password' bin/rails users:create
-```
+Admins are `users.admin`, or an address in `ADMIN_EMAILS` once Every verified
+it. Remove someone who left Every with
+`EMAIL=person@every.to bin/rails toolbox:remove_member` (see DEPLOYING.md).
 
 Every Inertia page is authenticated by default (the gate lives on
 `InertiaController`); make a page public with `allow_unauthenticated_access`.
@@ -48,11 +52,21 @@ surfaces** (see [docs/modules/webmcp.md](docs/modules/webmcp.md)):
 - Tools run as the signed-in `user`: scope every query to it, keep
   `additionalProperties: false`, and set `read_only_hint: true` only when the
   tool never writes.
+- **Agent writes are suggestions.** The one write tool, `suggest_picks`, goes
+  through `Toolbox::Update`, where sources `mcp` and `webmcp` may run only
+  `suggest` and `withdraw`; the member confirms on the web. Confirm, dismiss,
+  remove, move, visibility, handle, bio, history export, account deletion and
+  agent revocation are web-only: never add a registry tool for them. Read tools
+  call the shared query objects (`TeamRankings`, `Audience`) as the acting
+  member, so an agent sees what the member sees on the site.
+  `Agents::Capabilities` is the one source for the consent and Agents-page
+  "can / can't" copy, and its test ties each line to the registry.
 - Signed-in pages get the manifest as the `webmcp` shared prop, and
   `WebmcpProvider` registers it on the browser's model context. The
   browser calls `POST /webmcp/tools/:name` (session + CSRF). That endpoint is
-  the one sanctioned exception to "no parallel JSON API"; do not add others for tools.
-- MCP clients get the same tools from `ToolRegistry.mcp_server(user:, source: "mcp", client_name:)`,
+  the one sanctioned exception to "no parallel JSON API"; the history download
+  is the second sanctioned non-Inertia response. Do not add others for tools.
+- MCP clients get the same tools from `ToolRegistry.mcp_server(user:, source: "mcp", client_name:, oauth_client_id:)`,
   served at `/mcp` behind the in-app OAuth 2.1 server (`McpController`).
 
 ## Deploying
@@ -71,13 +85,18 @@ config. Secrets resolve at deploy time via shell indirection — none are commit
 - **[docs/solutions/](docs/solutions/)** — durable, dated write-ups of solved
   problems (YAML frontmatter; see the README there).
 - **[CONCEPTS.md](CONCEPTS.md)** — the project's shared vocabulary.
-- **[docs/changelog/](docs/changelog/)** — agent-executable upgrade entries. See
-  its README for the version+module filter algorithm. Upgrades land as reviewable
-  PRs on downstream apps, **never direct pushes**.
+- **[docs/changelog/](docs/changelog/)** — the template's upgrade entries, up to
+  the version this app runs. Toolbox adds none of its own (see below).
 
 ## Template upgrades
 
-This repo is the fleet template. Downstream apps carry a
-`.template-manifest.yml`; an upgrade agent reads changelog entries newer than an
-app's manifest version (filtered to its adopted modules), applies them, bumps the
-manifest, and opens a PR.
+This repo is Toolbox, an app started from compound-stack-rails 0.8.0, not the
+template. `.template-manifest.yml` records the template version it runs; an
+upgrade agent applies the template's newer changelog entries for the adopted
+modules, bumps the manifest, and opens a reviewable PR, **never a direct push**.
+Toolbox's own changes get no `docs/changelog/` entry and no manifest bump.
+
+`docs/modules/frontend.md`, `feature_flags.md` and `webmcp.md` now also describe
+Toolbox's own changes, so adapt an upgrade entry that touches those modules
+rather than applying it as written. `auth` was replaced by Sign in with Every;
+`docs/modules/auth.md` still describes the template's password sign-in.

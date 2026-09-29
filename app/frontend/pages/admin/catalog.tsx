@@ -1,9 +1,11 @@
 import type { Errors } from '@inertiajs/core'
 import { Head, router } from '@inertiajs/react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import AppShell from '../../components/app_shell'
 import Button from '../../components/button'
-import ToolMark from '../../components/tool_mark'
+import Chip from '../../components/chip'
+import Mark from '../../components/mark'
+import SectionLabel from '../../components/section_label'
 import type { AdminCatalogItem, CatalogKind, CatalogStatus, MergeTarget } from '../../types'
 
 type KindFilter = 'all' | CatalogKind
@@ -21,6 +23,10 @@ const BASE = '/admin/catalog_items'
 const itemUrl = (item: AdminCatalogItem, suffix = '') => `${BASE}/${item.id}${suffix}?kind=${item.kind}`
 const visit = { preserveScroll: true, preserveState: true }
 
+const heading = 'font-serif text-[32px] leading-[1.1] tracking-[-0.02em] text-fg'
+const rowAction =
+  'inline-flex min-h-11 items-center rounded-sharp px-2.5 text-caption text-fg-soft transition-colors hover:bg-raised hover:text-fg md:min-h-0 md:py-1'
+
 function kindLabel(kind: CatalogKind) {
   switch (kind) {
     case 'tool':
@@ -34,14 +40,14 @@ function kindLabel(kind: CatalogKind) {
   }
 }
 
-function StatusPill({ status }: { status: CatalogStatus }) {
+function StatusChip({ status }: { status: CatalogStatus }) {
   switch (status) {
     case 'approved':
-      return <span className="rounded-full bg-every-lime/40 px-2 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-ink">Approved</span>
+      return <Chip>Approved</Chip>
     case 'pending':
-      return <span className="rounded-full bg-every-coral/20 px-2 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-ink">Pending</span>
+      return <Chip>Pending review</Chip>
     case 'hidden':
-      return <span className="rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-ink-muted">Hidden</span>
+      return <Chip className="!text-fg-muted">Hidden</Chip>
     default: {
       const unreachable: never = status
       return unreachable
@@ -53,8 +59,16 @@ function setStatus(item: AdminCatalogItem, status: CatalogStatus) {
   router.patch(itemUrl(item), { item: { status } }, visit)
 }
 
-const field =
-  'w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-ink ring-1 ring-rule placeholder:text-ink-muted focus:ring-2 focus:ring-every-blue'
+const formatDate = (iso: string, options: Intl.DateTimeFormatOptions) => new Date(iso).toLocaleDateString(undefined, options)
+
+function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <label className={`block ${className}`}>
+      <SectionLabel>{label}</SectionLabel>
+      <span className="field-box mt-1.5">{children}</span>
+    </label>
+  )
+}
 
 function ItemEditor({
   id,
@@ -67,14 +81,23 @@ function ItemEditor({
   approve: boolean
   onDone?: () => void
 }) {
-  const [values, setValues] = useState({ name: item.name, maker: item.maker ?? '', monogram: item.monogram, hue: item.hue })
+  const isModel = item.kind === 'model'
+  const [values, setValues] = useState({
+    name: item.name,
+    maker: item.maker ?? '',
+    released_on: item.released_on ?? '',
+    vibe_check_url: item.vibe_check_url ?? '',
+  })
   const [errors, setErrors] = useState<Errors>({})
+  const set = (field: keyof typeof values) => (event: { target: { value: string } }) =>
+    setValues({ ...values, [field]: event.target.value })
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    const { released_on, vibe_check_url, ...common } = values
     router.patch(
       itemUrl(item),
-      { item: { ...values, ...(approve ? { status: 'approved' } : {}) } },
+      { item: { ...common, ...(isModel ? { released_on, vibe_check_url } : {}), ...(approve ? { status: 'approved' } : {}) } },
       {
         ...visit,
         onSuccess: () => {
@@ -87,53 +110,29 @@ function ItemEditor({
   }
 
   return (
-    <form id={id} onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr_1fr_5rem] sm:items-end">
-      <div className="hidden sm:block">
-        <ToolMark item={values} size="lg" />
-      </div>
-      <label className="block">
-        <span className="eyebrow">Name</span>
-        <input className={`${field} mt-1`} value={values.name} onChange={(e) => setValues({ ...values, name: e.target.value })} />
-      </label>
-      <label className="block">
-        <span className="eyebrow">Maker</span>
-        <input
-          className={`${field} mt-1`}
-          value={values.maker}
-          placeholder="Who makes it"
-          onChange={(e) => setValues({ ...values, maker: e.target.value })}
-        />
-      </label>
-      <label className="block">
-        <span className="eyebrow">Mark</span>
-        <input
-          className={`${field} mt-1 font-mono`}
-          value={values.monogram}
-          maxLength={3}
-          onChange={(e) => setValues({ ...values, monogram: e.target.value })}
-        />
-      </label>
-      <label className="flex items-center gap-3 sm:col-span-3 sm:col-start-2">
-        <span className="eyebrow w-10 shrink-0">Hue</span>
-        <input
-          type="range"
-          min={0}
-          max={359}
-          value={values.hue}
-          onChange={(e) => setValues({ ...values, hue: Number(e.target.value) })}
-          className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full accent-ink"
-          style={{ background: 'linear-gradient(90deg, hsl(0 70% 80%), hsl(60 70% 80%), hsl(120 70% 80%), hsl(180 70% 80%), hsl(240 70% 80%), hsl(300 70% 80%), hsl(359 70% 80%))' }}
-        />
-        <span className="w-8 text-right font-mono text-xs tabular-nums text-ink-muted">{values.hue}</span>
-        <span className="sm:hidden">
-          <ToolMark item={values} size="sm" />
-        </span>
-      </label>
+    <form id={id} onSubmit={submit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <Field label="Name">
+        <input value={values.name} onChange={set('name')} />
+      </Field>
+      <Field label="Maker">
+        <input value={values.maker} placeholder="Who makes it" onChange={set('maker')} />
+      </Field>
+      {isModel && (
+        <>
+          <Field label="Release date">
+            <input type="date" value={values.released_on} onChange={set('released_on')} />
+          </Field>
+          <Field label="Vibe Check link">
+            <input type="url" value={values.vibe_check_url} placeholder="https://checks.every.to/…" onChange={set('vibe_check_url')} />
+          </Field>
+          <p className="text-caption text-fg-muted md:col-span-2">
+            Home lists a model as a launch only when it has both a release date and a Vibe Check link on an allowed Every host.
+          </p>
+        </>
+      )}
       {Object.keys(errors).length > 0 && (
-        <p role="alert" className="text-sm text-every-coral sm:col-span-4">
-          {Object.entries(errors)
-            .map(([key, message]) => `${key} ${String(message)}`)
-            .join('. ')}
+        <p role="alert" className="text-caption text-coral md:col-span-2">
+          {Object.values(errors).map(String).join('. ')}
         </p>
       )}
     </form>
@@ -147,27 +146,23 @@ function MergeControl({ item, targets }: { item: AdminCatalogItem; targets: Merg
 
   const merge = () => {
     if (!chosen) return
-    const people = item.people === 1 ? '1 person' : `${item.people} people`
-    if (!window.confirm(`Merge ${item.name} into ${chosen.name}? ${people} will move over and ${item.name} is deleted.`)) return
+    if (!window.confirm(`Merge ${item.name} into ${chosen.name}? Everyone who picked ${item.name} moves over and ${item.name} is deleted.`)) return
     router.post(itemUrl(item, '/merge'), { target_id: chosen.id }, visit)
   }
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <select
-        aria-label={`Merge ${item.name} into`}
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
-        className="min-w-0 flex-1 rounded-full border-0 bg-white py-1.5 pl-3 pr-8 text-sm ring-1 ring-rule focus:ring-2 focus:ring-every-blue"
-      >
-        <option value="">Merge into…</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-      <Button variant="secondary" disabled={!chosen} onClick={merge} className="!px-3 !py-1.5">
+      <div className="field-box min-w-0 flex-1">
+        <select aria-label={`Merge ${item.name} into`} value={target} onChange={(e) => setTarget(e.target.value)}>
+          <option value="">Merge into…</option>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <Button variant="secondary" disabled={!chosen} onClick={merge}>
         Merge
       </Button>
     </div>
@@ -175,43 +170,42 @@ function MergeControl({ item, targets }: { item: AdminCatalogItem; targets: Merg
 }
 
 function Meta({ item }: { item: AdminCatalogItem }) {
-  const added = new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const added = formatDate(item.created_at, { month: 'short', day: 'numeric' })
   return (
-    <p className="text-xs text-ink-muted">
-      {kindLabel(item.kind)}
+    <p className="font-mono text-caption text-fg-muted">
+      {kindLabel(item.kind)} · {item.slug}
       {item.created_by && (
         <>
           {' '}
-          · added by <span className="text-ink-soft">{item.created_by.name}</span>
+          · added by <span className="text-fg-soft">{item.created_by.name}</span>
         </>
       )}{' '}
-      · {added} · {item.people === 1 ? '1 person' : `${item.people} people`}
+      · {added}
     </p>
   )
 }
 
 function PendingCard({ item, targets }: { item: AdminCatalogItem; targets: MergeTarget[] }) {
   return (
-    <li className="card p-5">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate font-medium">
-            {item.name} <span className="font-mono text-xs font-normal text-ink-muted">{item.slug}</span>
-          </p>
+    <li className="panel p-5">
+      <div className="mb-4 flex flex-wrap items-start gap-3">
+        <Mark item={item} size="lg" />
+        <div className="min-w-0 flex-1 basis-40">
+          <p className="truncate font-medium text-fg">{item.name}</p>
           <Meta item={item} />
         </div>
-        <StatusPill status={item.status} />
+        <StatusChip status={item.status} />
       </div>
       <ItemEditor id={`edit-${item.kind}-${item.id}`} item={item} approve />
-      <div className="mt-4 flex flex-col gap-3 border-t border-rule/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="sm:w-72">
+      <div className="mt-5 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sm:w-80">
           <MergeControl item={item} targets={targets} />
         </div>
-        <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" onClick={() => setStatus(item, 'hidden')} className="!px-3 !py-1.5 text-ink-muted">
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="ghost" onClick={() => setStatus(item, 'hidden')}>
             Hide
           </Button>
-          <Button type="submit" form={`edit-${item.kind}-${item.id}`} variant="blue" className="!py-1.5">
+          <Button type="submit" form={`edit-${item.kind}-${item.id}`}>
             Approve
           </Button>
         </div>
@@ -222,61 +216,54 @@ function PendingCard({ item, targets }: { item: AdminCatalogItem; targets: Merge
 
 function ItemRow({ item, targets }: { item: AdminCatalogItem; targets: MergeTarget[] }) {
   const [open, setOpen] = useState(false)
-  const action = 'rounded-full px-2.5 py-1 text-xs text-ink-soft transition hover:bg-ink/5 hover:text-ink'
 
   const remove = () => {
-    if (window.confirm(`Delete ${item.name}? Nobody uses it.`)) router.delete(itemUrl(item), visit)
+    if (window.confirm(`Delete ${item.name}? This only works when nobody has it on their toolbox.`)) router.delete(itemUrl(item), visit)
   }
 
   return (
     <li className="py-3">
-      <div className="flex items-center gap-3">
-        <ToolMark item={item} size="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Mark item={item} size="sm" />
+        <div className="min-w-0 flex-1 basis-48">
+          <p className="truncate text-sm font-medium text-fg">
             {item.name}
-            {item.maker && <span className="font-normal text-ink-muted"> · {item.maker}</span>}
+            {item.maker && <span className="font-normal text-fg-muted"> · {item.maker}</span>}
           </p>
-          <p className="truncate font-mono text-[0.7rem] text-ink-muted">
+          <p className="truncate font-mono text-caption text-fg-muted">
             {kindLabel(item.kind).toLowerCase()} · {item.slug}
             {item.family && ` · ${item.family}`}
+            {item.released_on && ` · released ${formatDate(item.released_on, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}`}
           </p>
         </div>
-        <span className="hidden w-20 text-right font-mono text-xs tabular-nums text-ink-soft sm:block">
-          {item.people} {item.people === 1 ? 'person' : 'people'}
-        </span>
-        <span className="w-20 text-right">
-          <StatusPill status={item.status} />
-        </span>
+        <StatusChip status={item.status} />
         <div className="flex shrink-0 items-center">
-          <button type="button" className={action} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+          <button type="button" className={rowAction} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
             {open ? 'Close' : 'Edit'}
           </button>
           {item.status === 'hidden' ? (
-            <button type="button" className={action} onClick={() => setStatus(item, 'approved')}>
+            <button type="button" className={rowAction} onClick={() => setStatus(item, 'approved')}>
               Restore
             </button>
           ) : (
-            <button type="button" className={action} onClick={() => setStatus(item, 'hidden')}>
+            <button type="button" className={rowAction} onClick={() => setStatus(item, 'hidden')}>
               Hide
             </button>
           )}
         </div>
       </div>
       {open && (
-        <div className="mt-3 rounded-2xl bg-paper-deep/70 p-4 sm:ml-10">
+        <div className="panel mt-3 p-4 md:ml-10">
           <ItemEditor id={`row-${item.kind}-${item.id}`} item={item} approve={item.status === 'pending'} onDone={() => setOpen(false)} />
-          <div className="mt-4 flex flex-col gap-3 border-t border-rule/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="sm:w-72">
+          <div className="mt-5 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="sm:w-80">
               <MergeControl item={item} targets={targets} />
             </div>
             <div className="flex items-center justify-end gap-3">
-              {item.people === 0 && (
-                <button type="button" onClick={remove} className="text-xs text-every-coral hover:underline">
-                  Delete
-                </button>
-              )}
-              <Button type="submit" form={`row-${item.kind}-${item.id}`} variant={item.status === 'pending' ? 'blue' : 'primary'} className="!py-1.5">
+              <button type="button" onClick={remove} className={`${rowAction} !text-coral`}>
+                Delete
+              </button>
+              <Button type="submit" form={`row-${item.kind}-${item.id}`}>
                 {item.status === 'pending' ? 'Approve' : 'Save'}
               </Button>
             </div>
@@ -299,14 +286,14 @@ function Segmented<T extends string>({
   onChange: (value: T) => void
 }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-full bg-white p-0.5 ring-1 ring-rule">
+    <div role="group" aria-label={label} className="inline-flex rounded-sharp border border-line bg-field p-0.5">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
-          className={`rounded-full px-3 py-1 text-xs transition ${option.value === value ? 'bg-ink text-paper' : 'text-ink-soft hover:text-ink'}`}
+          className={`min-h-11 rounded-sharp px-3 text-caption transition-colors md:min-h-0 md:py-1 ${option.value === value ? 'bg-sky text-on-light' : 'text-fg-soft hover:text-fg'}`}
         >
           {option.label}
         </button>
@@ -342,39 +329,41 @@ export default function AdminCatalog({ pending, items, filters, counts, merge_ta
   }, [query])
 
   return (
-    <AppShell wide>
+    <AppShell>
       <Head title="Catalog review" />
 
-      <header className="flex flex-col gap-6 border-b border-rule pb-8 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-6 border-b border-line pb-8 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="eyebrow">Admin</p>
-          <h1 className="display mt-3 text-5xl">Catalog review</h1>
-          <p className="mt-3 max-w-lg text-ink-soft">
-            Members add tools and models while picking. Approve them, tidy the name and mark, fold duplicates into the real
-            thing, or hide them from pickers.
+          <SectionLabel as="p">Admin</SectionLabel>
+          <h1 className="mt-3 font-serif text-[44px] leading-[1.02] tracking-[-0.02em] text-fg md:text-[56px]">Catalog review</h1>
+          <p className="mt-3 max-w-lg text-fg-soft">
+            Members add tools and models while picking. Approve them, tidy the name, fold duplicates into the real thing, or hide them
+            from pickers. Set a model&rsquo;s release date and Vibe Check link to list it as a launch.
           </p>
         </div>
         <div className="flex items-end gap-6">
           <dl className="flex gap-6">
             {(['pending', 'approved', 'hidden'] as const).map((status) => (
-              <div key={status}>
-                <dd className="display text-3xl tabular-nums">{counts[status]}</dd>
-                <dt className="eyebrow mt-1">{status}</dt>
+              <div key={status} className="flex flex-col-reverse">
+                <dt>
+                  <SectionLabel className="mt-1 block">{status}</SectionLabel>
+                </dt>
+                <dd className="font-serif text-3xl tabular-nums text-fg">{counts[status]}</dd>
               </div>
             ))}
           </dl>
-          <a href="/admin/flipper" className="text-sm text-ink underline decoration-rule underline-offset-4 hover:text-every-blue">
+          <a href="/admin/flipper" className="text-link text-sm">
             Feature flags
           </a>
         </div>
       </header>
 
-      <section aria-labelledby="pending-heading" className="mt-10">
-        <h2 id="pending-heading" className="display text-3xl">
+      <section aria-labelledby="pending-heading" className="mt-12">
+        <h2 id="pending-heading" className={heading}>
           Waiting for review
         </h2>
         {pending.length === 0 ? (
-          <p className="mt-4 rounded-2xl border border-dashed border-rule px-5 py-8 text-center text-sm text-ink-muted">
+          <p className="mt-4 rounded-soft border border-dashed border-line-strong px-5 py-8 text-center text-sm text-fg-muted">
             Nothing waiting. Everything members added has been reviewed.
           </p>
         ) : (
@@ -387,8 +376,8 @@ export default function AdminCatalog({ pending, items, filters, counts, merge_ta
       </section>
 
       <section aria-labelledby="all-heading" className="mt-16">
-        <div className="flex flex-col gap-4 border-t border-ink pt-5 lg:flex-row lg:items-center lg:justify-between">
-          <h2 id="all-heading" className="display text-3xl">
+        <div className="flex flex-col gap-4 border-t border-line pt-6 lg:flex-row lg:items-center lg:justify-between">
+          <h2 id="all-heading" className={heading}>
             Everything
           </h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -413,21 +402,18 @@ export default function AdminCatalog({ pending, items, filters, counts, merge_ta
                 { value: 'hidden', label: 'Hidden' },
               ]}
             />
-            <input
-              type="search"
-              aria-label="Search the catalog"
-              placeholder="Search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full rounded-full border-0 bg-white px-4 py-1.5 text-sm ring-1 ring-rule focus:ring-2 focus:ring-every-blue sm:w-48"
-            />
+            <div className="field-box w-full sm:w-52">
+              <input type="search" aria-label="Search the catalog" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
           </div>
         </div>
-        <p className="eyebrow mt-4">{items.length === 1 ? '1 item' : `${items.length} items`}</p>
+        <SectionLabel as="p" className="mt-4">
+          {items.length === 1 ? '1 item' : `${items.length} items`}
+        </SectionLabel>
         {items.length === 0 ? (
-          <p className="mt-6 text-sm text-ink-muted">Nothing matches.</p>
+          <p className="mt-6 text-sm text-fg-muted">Nothing matches.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-rule/70">
+          <ul className="mt-2 divide-y divide-line">
             {items.map((item) => (
               <ItemRow key={`${item.kind}-${item.id}`} item={item} targets={merge_targets[item.kind]} />
             ))}
