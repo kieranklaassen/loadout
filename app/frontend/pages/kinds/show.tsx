@@ -103,7 +103,7 @@ export default function KindPage({ filters, notice, category, ranked, tools, mod
       <div className="mt-3.5 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           <h1 className="font-serif text-[48px] leading-[1.02] tracking-[-0.02em] text-fg md:text-[72px]">{category.name}</h1>
-          <p className="mt-2.5 max-w-[660px] text-lg text-fg-soft">
+          <p className="mt-2.5 max-w-[660px] text-lg text-fg-soft" suppressHydrationWarning>
             {category.blurb}
             {!empty && (
               <>

@@ -34,7 +34,14 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     File.write(File.join(@dir, "bin/rails"), FAKE_RAILS, perm: 0o755)
   end
 
-  teardown { FileUtils.remove_entry(@dir) if @dir }
+  teardown do
+    pid = File.exist?(File.join(@dir, "ssr.pid")) ? File.read(File.join(@dir, "ssr.pid")).to_i : 0
+    Process.kill("TERM", pid) if pid > 1
+  rescue Errno::ESRCH
+    nil
+  ensure
+    FileUtils.remove_entry(@dir) if @dir
+  end
 
   test "with migrations pending it takes a private, consistent backup before migrating, then prepares, syncs and starts the server" do
     create_database
@@ -105,6 +112,42 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     assert_no_match(/Backed up/, result.stderr)
   end
 
+  test "with the SSR bundle built it starts the render server, waits for its port, then starts the server" do
+    install_fake_ssr(listen: true)
+
+    result = run_entrypoint("./bin/rails", "server")
+
+    assert result.success?, result.stderr
+    assert_render_server_started_once_before_the_server
+  end
+
+  test "a render server that never listens delays the boot but does not stop it" do
+    install_fake_ssr(listen: false)
+
+    result = run_entrypoint("./bin/rails", "server")
+
+    assert result.success?, result.stderr
+    assert_render_server_started_once_before_the_server
+  end
+
+  test "INERTIA_SSR_ENABLED=false starts no render server" do
+    install_fake_ssr(listen: true)
+
+    result = run_entrypoint("./bin/rails", "server", "INERTIA_SSR_ENABLED" => "false")
+
+    assert result.success?, result.stderr
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls
+  end
+
+  test "without a built SSR bundle no render server starts" do
+    File.write(File.join(@dir, "bin/ssr"), "#!/bin/bash\necho ssr >> calls.log\n", perm: 0o755)
+
+    result = run_entrypoint("./bin/rails", "server")
+
+    assert result.success?, result.stderr
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls
+  end
+
   test "other commands run untouched" do
     create_database
 
@@ -117,6 +160,14 @@ class DockerEntrypointTest < ActiveSupport::TestCase
 
   private
 
+  # The render server starts in the background, so where "ssr" lands among the boot steps is a
+  # race; what matters is that it starts once, before the server, and changes nothing else.
+  def assert_render_server_started_once_before_the_server
+    assert_equal 1, calls.count("ssr")
+    assert_operator calls.index("ssr"), :<, calls.index("server")
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls - [ "ssr" ]
+  end
+
   Result = Struct.new(:stdout, :stderr, :status) do
     def success? = status.success?
   end
@@ -124,6 +175,15 @@ class DockerEntrypointTest < ActiveSupport::TestCase
   def run_entrypoint(*command, **env)
     stdout, stderr, status = Open3.capture3(env.transform_keys(&:to_s).merge("RAILS_ENV" => "production"), ENTRYPOINT, *command, chdir: @dir)
     Result.new(stdout, stderr, status)
+  end
+
+  # A stand-in bin/ssr plus a bundle file. With listen: true it opens the render port
+  # (13714) the way the real server does, so the entrypoint's wait ends at once.
+  def install_fake_ssr(listen:)
+    FileUtils.mkdir_p(File.join(@dir, "public/vite-ssr"))
+    FileUtils.touch(File.join(@dir, "public/vite-ssr/ssr.js"))
+    body = listen ? %(exec ruby -rsocket -e 'TCPServer.new("127.0.0.1", 13714); sleep 15') : "sleep 15"
+    File.write(File.join(@dir, "bin/ssr"), "#!/bin/bash\necho ssr >> calls.log\necho $$ > ssr.pid\n#{body}\n", perm: 0o755)
   end
 
   def calls

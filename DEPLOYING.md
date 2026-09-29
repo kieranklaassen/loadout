@@ -84,6 +84,14 @@ not list this variable, so add it under `env.clear` there before you set it.
 
 `bin/docker-entrypoint` runs these steps before the server, on every start:
 
+0. **Render server.** Starts `bin/ssr` in the background, so it boots while the database is
+   prepared. It runs `node public/vite-ssr/ssr.js` (built by `assets:precompile`, with every
+   dependency bundled in, so the image needs only the `node` binary) on port 13714 and starts it
+   again if it exits. After the catalog sync the entrypoint waits up to 10 seconds for the port,
+   then starts Rails either way. Server rendering is on by default in production; if the render
+   server is down or slower than `INERTIA_SSR_TIMEOUT` (2 seconds), that request falls back to
+   client rendering. Set `INERTIA_SSR_ENABLED=false` to turn it off: no render server starts and
+   Rails does not call it. Both run in the one container, so there is no second Kamal role.
 1. **Backup.** If the database exists and migrations are pending, take a consistent copy with
    sqlite3 `.backup` to `storage/backup-<UTC timestamp>.sqlite3` (mode 0600). Nothing is backed
    up when nothing is pending, and a new database has nothing to back up. Only

@@ -168,7 +168,7 @@ function Agents({ agents }: { agents: ConnectedAgent[] }) {
             <li key={agent.id} className="flex items-center justify-between gap-4 py-3">
               <div className="min-w-0">
                 <p className="truncate font-medium text-fg">{agent.name}</p>
-                <p className="text-caption text-fg-muted">
+                <p className="text-caption text-fg-muted" suppressHydrationWarning>
                   Connected {relativeDate(agent.connected_at)}
                   {agent.last_used_at && ` · last used ${relativeDate(agent.last_used_at)}`}
                 </p>

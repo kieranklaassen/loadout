@@ -76,4 +76,12 @@ class DeployConfigTest < ActiveSupport::TestCase
     assert_match(/^EXPOSE 80$/, dockerfile)
     assert_match(%r{CMD \["\./bin/thrust", "\./bin/rails", "server"\]}, dockerfile)
   end
+
+  test "the final image carries Node for the SSR render server, and the entrypoint starts bin/ssr" do
+    final_stage = File.read(DOCKERFILE).split(/^FROM base$/).last
+    assert_match(%r{^COPY --from=build /usr/local/node/bin/node /usr/local/bin/node$}, final_stage)
+    assert_match(/^ENTRYPOINT \["\/rails\/bin\/docker-entrypoint"\]$/, final_stage)
+    assert_match(%r{^\s+\./bin/ssr &$}, Rails.root.join("bin/docker-entrypoint").read)
+    assert Rails.root.join("bin/ssr").executable?
+  end
 end

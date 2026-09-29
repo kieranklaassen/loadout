@@ -4,6 +4,18 @@
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   database="storage/${RAILS_ENV:-production}.sqlite3"
 
+  # Server rendering: the render server runs beside Rails in this container (bin/ssr
+  # restarts it if it dies). It starts first so it boots while the database is
+  # prepared; INERTIA_SSR_ENABLED=false turns it off, and so does a missing bundle.
+  case "${INERTIA_SSR_ENABLED:-true}" in
+    false | FALSE | 0 | f | F | off | OFF) ;;
+    *)
+      if [ -f public/vite-ssr/ssr.js ]; then
+        ./bin/ssr &
+        start_ssr=1
+      fi ;;
+  esac
+
   # Some migrations drop data by design, so an existing database gets a consistent copy first
   # (.backup is safe on a live file). The copy holds emails, so only its owner can read it.
   if [ -s "$database" ] && ! ./bin/rails db:abort_if_pending_migrations > /dev/null 2>&1; then
@@ -16,6 +28,15 @@ if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
 
   # config/catalog.yml changes reach production here. A failed sync is logged, not fatal.
   ./bin/rails runner "Catalog::Sync.call" || echo "Catalog sync failed; starting the server without it" >&2
+
+  # Rails renders pages as soon as it serves, so wait (briefly) for the render server.
+  # If it never comes up, pages fall back to client rendering.
+  if [ -n "$start_ssr" ]; then
+    for _ in $(seq 1 100); do
+      (exec 3<>/dev/tcp/127.0.0.1/13714) 2>/dev/null && break
+      sleep 0.1
+    done || true
+  fi
 fi
 
 exec "${@}"

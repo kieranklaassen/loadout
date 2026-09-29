@@ -15,9 +15,10 @@ FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 WORKDIR /rails
 
 # Install base packages. librsvg2-2 + fontconfig render the profile share cards
-# (ProfileCard); the fonts themselves are vendored in vendor/fonts.
+# (ProfileCard); the fonts themselves are vendored in vendor/fonts. libstdc++6 is
+# what the Node binary copied into the final image links against.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl fontconfig libjemalloc2 librsvg2-2 libvips sqlite3 && \
+    apt-get install --no-install-recommends -y curl fontconfig libjemalloc2 libstdc++6 librsvg2-2 libvips sqlite3 && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -36,7 +37,8 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libvips libyaml-dev node-gyp pkg-config python-is-python3 && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Install Node.js for the Vite production build (not shipped in the final image)
+# Install Node.js for the Vite production build. Only the node binary reaches the
+# final image, to run the SSR render server.
 ARG NODE_VERSION=24.21.0
 ENV PATH=/usr/local/node/bin:$PATH
 RUN curl -sL https://github.com/nodenv/node-build/archive/master.tar.gz | tar xz -C /tmp/ && \
@@ -63,8 +65,9 @@ COPY . .
 # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY,
-# then drop node_modules — the built bundle in public/vite is all runtime needs.
+# Precompiling assets for production without requiring secret RAILS_MASTER_KEY. This
+# builds the client bundle (public/vite) and the self-contained SSR bundle
+# (public/vite-ssr/ssr.js), then drops node_modules — neither needs it at runtime.
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile && \
     rm -rf node_modules
 
@@ -82,6 +85,9 @@ USER 1000:1000
 # Copy built artifacts: gems, application
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
+
+# Node runs the SSR render server (bin/ssr, started beside Rails by bin/docker-entrypoint).
+COPY --from=build /usr/local/node/bin/node /usr/local/bin/node
 
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
