@@ -2,7 +2,7 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-/** "just now", "5 min ago", "yesterday", "4 days ago", "Sep 12", "Sep 12, 2025". */
+/** "just now", "5 min ago", "yesterday", "4 days ago", "Sep 12", "Sep 12, 2025". Older dates read the UTC day so the server render and the browser agree. */
 export function relativeDate(iso: string, now: Date = new Date()): string {
   const date = new Date(iso)
   const elapsed = now.getTime() - date.getTime()
@@ -18,11 +18,12 @@ export function relativeDate(iso: string, now: Date = new Date()): string {
   if (days === 1) return 'yesterday'
   if (days < 7) return `${days} days ago`
 
-  const sameYear = date.getFullYear() === now.getFullYear()
+  const sameYear = date.getUTCFullYear() === now.getUTCFullYear()
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     ...(sameYear ? {} : { year: 'numeric' }),
+    timeZone: 'UTC',
   })
 }
 

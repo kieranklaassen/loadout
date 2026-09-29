@@ -225,7 +225,7 @@ function AgentRow({ agent, onRevoked }: { agent: Agent; onRevoked: () => void })
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold">{agent.name}</p>
           <p className="font-mono text-caption text-fg-muted [overflow-wrap:anywhere]">{agent.redirect_host}</p>
-          <p className="font-mono text-caption text-fg-muted">
+          <p className="font-mono text-caption text-fg-muted" suppressHydrationWarning>
             {shortDate(agent.connected_at)} · {agent.last_used_at ? `used ${relativeDate(agent.last_used_at)}` : 'never used'}
           </p>
         </div>

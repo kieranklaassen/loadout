@@ -15,6 +15,11 @@ describe('relativeDate', () => {
     expect(relativeDate('2026-09-01T12:00:00Z', now)).toBe('Sep 1')
     expect(relativeDate('2025-03-14T12:00:00Z', now)).toBe('Mar 14, 2025')
   })
+
+  it('names an older date by its UTC day, so the server render and any browser zone agree', () => {
+    expect(relativeDate('2026-09-01T23:30:00Z', now)).toBe('Sep 1')
+    expect(relativeDate('2025-12-31T23:30:00Z', now)).toBe('Dec 31, 2025')
+  })
 })
 
 describe('shortDate', () => {
