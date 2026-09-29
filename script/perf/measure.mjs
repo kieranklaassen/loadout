@@ -166,7 +166,10 @@ const LCP_OBSERVER = `
   window.__lcp = 0;
   try {
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) window.__lcp = entry.startTime;
+      for (const entry of list.getEntries()) {
+        window.__lcp = entry.startTime;
+        window.__lcpInfo = { tag: entry.element ? entry.element.tagName : '', url: entry.url || '', size: entry.size, id: entry.id || '' };
+      }
     }).observe({ type: 'largest-contentful-paint', buffered: true });
   } catch (e) {}
 `
@@ -209,7 +212,7 @@ async function loadPage(cdp, base, page, cookie) {
     if (method === 'Network.requestWillBeSent' && !p.request.url.startsWith('data:')) {
       inflight += 1
       lastActivity = Date.now()
-      requests.set(p.requestId, { type: p.type, url: p.request.url, bytes: 0 })
+      requests.set(p.requestId, { type: p.type, url: p.request.url, bytes: 0, start: p.timestamp })
     } else if (method === 'Network.responseReceived') {
       const entry = requests.get(p.requestId)
       if (entry) {
@@ -220,7 +223,10 @@ async function loadPage(cdp, base, page, cookie) {
       }
     } else if (method === 'Network.loadingFinished') {
       const entry = requests.get(p.requestId)
-      if (entry) entry.bytes = p.encodedDataLength
+      if (entry) {
+        entry.bytes = p.encodedDataLength
+        entry.end = p.timestamp
+      }
       inflight = Math.max(0, inflight - 1)
       lastActivity = Date.now()
     } else if (method === 'Network.loadingFailed') {
@@ -257,7 +263,7 @@ async function loadPage(cdp, base, page, cookie) {
   const timing = await evaluate(`(() => {
     const nav = performance.getEntriesByType('navigation')[0];
     const fcp = performance.getEntriesByName('first-contentful-paint')[0];
-    return { ttfb: nav ? nav.responseStart : 0, fcp: fcp ? fcp.startTime : 0, lcp: window.__lcp || 0 };
+    return { ttfb: nav ? nav.responseStart : 0, fcp: fcp ? fcp.startTime : 0, lcp: window.__lcp || 0, lcpInfo: window.__lcpInfo || null };
   })()`)
   const text = normalize((await evaluate('document.body.innerText')) ?? '')
   const missingList = page.landmarks.filter((landmark) => !text.includes(landmark))
@@ -280,6 +286,8 @@ async function loadPage(cdp, base, page, cookie) {
     hydrationErrors,
     errors,
     noLcp: timing.lcp === 0,
+    lcpInfo: timing.lcpInfo,
+    waterfall: process.env.PERF_WATERFALL ? all.map((r) => ({ type: r.type, url: r.url.replace(base, ''), kb: Math.round(r.bytes / 102.4) / 10, start: Math.round(((r.start ?? 0) - (all[0]?.start ?? 0)) * 1000), end: Math.round(((r.end ?? r.start ?? 0) - (all[0]?.start ?? 0)) * 1000) })) : undefined,
   }
   await cdp.send('Target.closeTarget', { targetId }).catch(() => {})
   await cdp.send('Target.disposeBrowserContext', { browserContextId }).catch(() => {})
@@ -394,6 +402,14 @@ async function main() {
       }
     }
     cdp.close()
+    if (process.env.PERF_WATERFALL) {
+      for (const page of PAGES) {
+        const sample = samples[page.key].find((entry) => !entry.failed)
+        if (!sample) continue
+        log(`waterfall ${page.path} (lcp ${Math.round(sample.lcp)} ms, fcp ${Math.round(sample.fcp)} ms, ttfb ${Math.round(sample.ttfb)} ms) lcp element: ${JSON.stringify(sample.lcpInfo)}`)
+        for (const r of sample.waterfall) log(`  ${String(r.start).padStart(5)}-${String(r.end).padStart(5)} ms ${r.type.padEnd(10)} ${String(r.kb).padStart(6)} KB ${r.url.slice(0, 90)}`)
+      }
+    }
 
     const good = (key) => samples[key].filter((sample) => !sample.failed)
     const perPage = (key, field) => (good(key).length ? median(good(key).map((sample) => sample[field])) : NaN)
