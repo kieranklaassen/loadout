@@ -32,8 +32,13 @@ module EverySilentSignIn
       attempted_at.zero? || Time.current.to_i - attempted_at > ATTEMPT_TTL.to_i
     end
 
+    # OmniAuth answers /auth/every with a redirect to every.to, which an Inertia
+    # visit cannot follow over XHR, so an Inertia request gets the location
+    # response that makes the browser navigate instead.
     def start_silent_sign_in
       session[ATTEMPT_KEY] = Time.current.to_i
+      return inertia_location(SILENT_SIGN_IN_PATH) if request.headers["X-Inertia"].present?
+
       redirect_to SILENT_SIGN_IN_PATH
     end
 

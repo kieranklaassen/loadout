@@ -120,6 +120,13 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "none", "openid basic_profile" ], params.values_at("prompt", "scope")
   end
 
+  test "an Inertia visit to the sign-in page is sent to Every as a full navigation" do
+    get new_session_path, headers: { "X-Inertia" => "true", "X-Inertia-Version" => InertiaRails.configuration.version.to_s }
+
+    assert_response :conflict
+    assert_equal "/auth/every?prompt=none", response.headers["X-Inertia-Location"]
+  end
+
   test "a browser signed in to every.to as a trusted app lands signed in without seeing a page" do
     stub_every_token
     stub_every_userinfo
