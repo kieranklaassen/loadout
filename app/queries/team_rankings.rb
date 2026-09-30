@@ -215,7 +215,9 @@ class TeamRankings
     by_rank = (1..Entry::MAX_RANK).index_with do |rank|
       holders.select { |entry| entry.rank == rank }.filter_map { |entry| audience.person_ref(entry.user_id) }.sort_by { |person| Audience.name_key(person[:name], person[:handle]) }
     end
-    standing(tally).merge(by_rank:, unnamed: tally.people.size - by_rank.values.sum(&:size))
+    # People, not rows: the same person can hold one model on two tools in a kind.
+    named = holders.map(&:user_id).uniq.count { |user_id| audience.person_ref(user_id) }
+    standing(tally).merge(by_rank:, unnamed: tally.people.size - named)
   end
 
   # People, not picks: each person has a tool once per kind, so a group is at most one pick each.
