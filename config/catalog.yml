@@ -114,37 +114,83 @@ models:
   - { slug: claude-opus-5, name: Claude Opus 5, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O5, categories: [coding, knowledge-work] }
   - { slug: claude-fable-5-1, name: Claude Fable 5.1, maker: Anthropic, family: claude-fable, mark: claude, hue: 28, monogram: F5, categories: [writing, knowledge-work, coding] }
   - { slug: claude-fable-5, name: Claude Fable 5, maker: Anthropic, family: claude-fable, mark: claude, hue: 28, monogram: F5, categories: [writing] }
+  - { slug: claude-sonnet-5-5, name: Claude Sonnet 5.5, maker: Anthropic, family: claude-sonnet, mark: claude, hue: 24, monogram: S5, categories: [coding, knowledge-work, writing, classification], released_on: 2026-09-28 }
   - { slug: claude-sonnet-5, name: Claude Sonnet 5, maker: Anthropic, family: claude-sonnet, mark: claude, hue: 24, monogram: S5, categories: [coding, knowledge-work, classification] }
   - { slug: claude-haiku-4-5, name: Claude Haiku 4.5, maker: Anthropic, family: claude-haiku, mark: claude, hue: 32, monogram: H4, categories: [classification] }
-  # OpenAI
+  # OpenAI. Slugs gpt-5-6 and gpt-5-6-mini predate the Sol and Terra names; slugs are kept so picks survive.
   - { slug: gpt-6-astra, name: GPT-6 Astra, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G6, categories: [coding, knowledge-work, research, writing, personal-agents], released_on: 2026-09-04 }
-  - { slug: gpt-5-6, name: GPT-5.6, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G5, categories: [coding, knowledge-work, research] }
-  - { slug: gpt-5-6-mini, name: GPT-5.6 mini, maker: OpenAI, family: gpt-mini, mark: openai, hue: 165, monogram: Gm, categories: [classification] }
+  - { slug: gpt-6-1-sol, name: GPT-6.1 Sol, maker: OpenAI, family: gpt-sol, mark: openai, hue: 160, monogram: S6, categories: [coding, knowledge-work, research, writing], released_on: 2026-09-29 }
+  - { slug: gpt-6-sol, name: GPT-6 Sol, maker: OpenAI, family: gpt-sol, mark: openai, hue: 160, monogram: S6, categories: [coding, knowledge-work], released_on: 2026-09-22 }
+  - { slug: gpt-5-6, name: GPT-5.6 Sol, maker: OpenAI, family: gpt-sol, mark: openai, hue: 160, monogram: G5, categories: [coding, knowledge-work, research] }
+  - { slug: gpt-5-6-mini, name: GPT-5.6 Terra, maker: OpenAI, family: gpt-terra, mark: openai, hue: 165, monogram: Gt, categories: [classification] }
+  - { slug: gpt-6-luna, name: GPT-6 Luna, maker: OpenAI, family: gpt-luna, mark: openai, hue: 165, monogram: L6, categories: [classification, knowledge-work], released_on: 2026-09-22 }
+  - { slug: gpt-5-6-luna, name: GPT-5.6 Luna, maker: OpenAI, family: gpt-luna, mark: openai, hue: 165, monogram: L5, categories: [classification] }
+  - { slug: gpt-oss-120b, name: gpt-oss-120b, maker: OpenAI, family: gpt-oss, mark: openai, hue: 160, monogram: Os, categories: [classification, coding] }
+  - { slug: gpt-oss-20b, name: gpt-oss-20b, maker: OpenAI, family: gpt-oss, mark: openai, hue: 160, monogram: Os, categories: [classification] }
   # Google
-  - { slug: gemini-3-8-pro, name: Gemini 3.8 Pro, maker: Google, family: gemini-pro, mark: googlegemini, hue: 225, monogram: G3, categories: [knowledge-work, research, coding] }
-  - { slug: gemini-3-8-flash, name: Gemini 3.8 Flash, maker: Google, family: gemini-flash, mark: googlegemini, hue: 230, monogram: GF, categories: [classification, knowledge-work] }
+  - { slug: gemini-3-8-flash, name: Gemini 3.8 Flash, maker: Google, family: gemini-flash, mark: googlegemini, hue: 230, monogram: GF, categories: [classification, knowledge-work, coding] }
+  - { slug: gemini-3-8-pro, name: Gemini 3.1 Pro, maker: Google, family: gemini-pro, mark: googlegemini, hue: 225, monogram: G3, categories: [knowledge-work, research, coding] }
+  - { slug: gemini-3-5-flash-lite, name: Gemini 3.5 Flash-Lite, maker: Google, family: gemini-flash-lite, mark: googlegemini, hue: 235, monogram: GL, categories: [classification] }
   # Others
-  - { slug: muse-spark-1-3, name: Muse Spark 1.3, maker: Meta, family: muse-spark, hue: 215, monogram: MS, categories: [personal-agents] }
-  - { slug: grok-4-7, name: Grok 4.7, maker: xAI, family: grok, hue: 0, monogram: G4, categories: [research, knowledge-work] }
+  - { slug: muse-spark-1-3, name: Muse Spark 1.3, maker: Meta, family: muse-spark, hue: 215, monogram: MS, categories: [personal-agents, coding, knowledge-work] }
+  - { slug: grok-4-7, name: Grok 4.7, maker: xAI, family: grok, hue: 0, monogram: G4, categories: [research, knowledge-work, coding] }
+  - { slug: grok-build-0-1, name: Grok Build 0.1, maker: xAI, family: grok-build, hue: 0, monogram: GB, categories: [coding], released_on: 2026-05-29 }
   - { slug: composer-2-5, name: Composer 2.5, maker: Cursor, family: composer, mark: cursor, hue: 220, monogram: C2, categories: [coding] }
-  - { slug: kimi-k3, name: Kimi K3, maker: Moonshot AI, family: kimi, hue: 200, monogram: K3, categories: [coding] }
-  - { slug: deepseek-v4, name: DeepSeek V4, maker: DeepSeek, family: deepseek, hue: 215, monogram: D4, categories: [coding, classification] }
+  - { slug: mistral-medium-3-5, name: Mistral Medium 3.5, maker: Mistral AI, family: mistral-medium, hue: 25, monogram: M3, categories: [coding, knowledge-work] }
+  - { slug: mistral-large-3, name: Mistral Large 3, maker: Mistral AI, family: mistral-large, hue: 25, monogram: L3, categories: [knowledge-work, writing] }
+  - { slug: mistral-small-4, name: Mistral Small 4, maker: Mistral AI, family: mistral-small, hue: 25, monogram: M4, categories: [classification] }
+  - { slug: qwen-3-8-max, name: Qwen3.8 Max, maker: Alibaba, family: qwen-max, hue: 265, monogram: Q3, categories: [coding, knowledge-work] }
+  - { slug: qwen-3-8-flash, name: Qwen3.8 Flash, maker: Alibaba, family: qwen-flash, hue: 265, monogram: QF, categories: [classification] }
+  - { slug: kimi-k3, name: Kimi K3, maker: Moonshot AI, family: kimi, hue: 200, monogram: K3, categories: [coding, knowledge-work] }
+  - { slug: kimi-k2-7-code, name: Kimi K2.7 Code, maker: Moonshot AI, family: kimi-code, hue: 200, monogram: KC, categories: [coding] }
+  - { slug: deepseek-v4, name: DeepSeek V4 Pro, maker: DeepSeek, family: deepseek-pro, hue: 215, monogram: D4, categories: [coding, classification] }
+  - { slug: deepseek-v4-1-flash, name: DeepSeek V4.1 Flash, maker: DeepSeek, family: deepseek-flash, hue: 215, monogram: DF, categories: [classification, coding] }
+  - { slug: glm-5-3, name: GLM-5.3, maker: Z.ai, family: glm, hue: 240, monogram: GL, categories: [coding], released_on: 2026-08-14 }
   - { slug: jev, name: Jev, maker: TypeSafe, family: jev, hue: 255, monogram: Jv, categories: [classification] }
-  # Media
-  - { slug: veo-4, name: Veo 4, maker: Google, family: veo, mark: google, hue: 200, monogram: V4, categories: [video] }
+  # Media. Slug veo-4 predates the rename to Veo 3.1 (Google never shipped a Veo 4).
+  - { slug: veo-4, name: Veo 3.1, maker: Google, family: veo, mark: google, hue: 200, monogram: V3, categories: [video] }
   - { slug: veo-3, name: Veo 3, maker: Google, family: veo, mark: google, hue: 200, monogram: V3, categories: [video] }
+  - { slug: gemini-omni-flash, name: Gemini Omni Flash, maker: Google, family: gemini-omni, mark: googlegemini, hue: 225, monogram: GO, categories: [video] }
+  - { slug: grok-imagine-video-1-5, name: Grok Imagine Video 1.5, maker: xAI, family: grok-imagine-video, hue: 0, monogram: GV, categories: [video, animation], released_on: 2026-06-16 }
+  - { slug: flux-3, name: FLUX 3, maker: Black Forest Labs, family: flux-video, hue: 30, monogram: F3, categories: [video] }
   - { slug: sora-2, name: Sora 2, maker: OpenAI, family: sora, mark: openai, hue: 160, monogram: S2, categories: [video] }
   - { slug: kling-3, name: Kling 3, maker: Kuaishou, family: kling, hue: 120, monogram: K3, categories: [video, animation] }
   - { slug: runway-gen-4-5, name: Runway Gen-4.5, maker: Runway, family: runway-gen, hue: 345, monogram: R4, categories: [video, animation] }
   - { slug: midjourney-v8, name: Midjourney V8, maker: Midjourney, family: midjourney, hue: 250, monogram: M8, categories: [image] }
   - { slug: midjourney-v7, name: Midjourney V7, maker: Midjourney, family: midjourney, hue: 250, monogram: M7, categories: [image] }
-  - { slug: gpt-image-2, name: GPT Image 2, maker: OpenAI, family: gpt-image, mark: openai, hue: 160, monogram: GI, categories: [image] }
+  - { slug: gpt-image-2-5-sunburst, name: GPT-Image-2.5 Sunburst, maker: OpenAI, family: gpt-image, mark: openai, hue: 160, monogram: GI, categories: [image] }
+  - { slug: gpt-image-2-5-flare, name: GPT-Image-2.5 Flare, maker: OpenAI, family: gpt-image, mark: openai, hue: 160, monogram: GI, categories: [image] }
+  - { slug: gpt-image-2, name: GPT-Image-2, maker: OpenAI, family: gpt-image, mark: openai, hue: 160, monogram: GI, categories: [image] }
   - { slug: nano-banana-2, name: Nano Banana 2, maker: Google, family: nano-banana, mark: google, hue: 52, monogram: N2, categories: [image] }
+  - { slug: nano-banana-2-lite, name: Nano Banana 2 Lite, maker: Google, family: nano-banana, mark: google, hue: 52, monogram: NL, categories: [image] }
+  - { slug: nano-banana-pro, name: Nano Banana Pro, maker: Google, family: nano-banana, mark: google, hue: 52, monogram: NP, categories: [image] }
+  - { slug: grok-imagine-image-2-0, name: Grok Imagine Image 2.0, maker: xAI, family: grok-imagine-image, hue: 0, monogram: GI, categories: [image] }
+  - { slug: muse-image-1-0, name: Muse Image 1.0, maker: Meta, family: muse-image, hue: 215, monogram: MI, categories: [image] }
   - { slug: flux-2, name: FLUX.2, maker: Black Forest Labs, family: flux, hue: 30, monogram: F2, categories: [image] }
+  - { slug: eleven-v4, name: Eleven v4, maker: ElevenLabs, family: eleven, mark: elevenlabs, hue: 0, monogram: E4, categories: [text-to-speech], released_on: 2026-09-28 }
+  - { slug: eleven-v4-turbo, name: Eleven v4 Turbo, maker: ElevenLabs, family: eleven, mark: elevenlabs, hue: 0, monogram: ET, categories: [text-to-speech], released_on: 2026-09-28 }
   - { slug: eleven-v3, name: Eleven v3, maker: ElevenLabs, family: eleven, mark: elevenlabs, hue: 0, monogram: E3, categories: [text-to-speech] }
+  - { slug: sonic-3-6, name: Sonic-3.6, maker: Cartesia, family: sonic, hue: 205, monogram: S3, categories: [text-to-speech], released_on: 2026-08-27 }
   - { slug: sonic-3, name: Sonic 3, maker: Cartesia, family: sonic, hue: 205, monogram: S3, categories: [text-to-speech] }
+  - { slug: gemini-3-8-flash-tts, name: Gemini 3.8 Flash TTS, maker: Google, family: gemini-tts, mark: googlegemini, hue: 225, monogram: GT, categories: [text-to-speech] }
+  - { slug: gpt-4o-mini-tts, name: GPT-4o mini TTS, maker: OpenAI, family: gpt-tts, mark: openai, hue: 160, monogram: TT, categories: [text-to-speech] }
+  - { slug: voxtral-tts, name: Voxtral TTS, maker: Mistral AI, family: voxtral-tts, hue: 25, monogram: VT, categories: [text-to-speech] }
+  - { slug: gpt-live-1, name: GPT-Live 1, maker: OpenAI, family: gpt-live, mark: openai, hue: 160, monogram: GL, categories: [text-to-speech, speech-to-text] }
+  - { slug: gpt-realtime-2-1, name: GPT-Realtime-2.1, maker: OpenAI, family: gpt-realtime, mark: openai, hue: 160, monogram: RT, categories: [text-to-speech, speech-to-text] }
+  - { slug: gpt-realtime-2-1-mini, name: GPT-Realtime-2.1 mini, maker: OpenAI, family: gpt-realtime, mark: openai, hue: 160, monogram: RT, categories: [text-to-speech, speech-to-text] }
   - { slug: gpt-realtime, name: GPT Realtime, maker: OpenAI, family: gpt-realtime, mark: openai, hue: 160, monogram: RT, categories: [text-to-speech, speech-to-text] }
+  - { slug: gpt-realtime-translate, name: GPT-Realtime-Translate, maker: OpenAI, family: gpt-realtime-translate, mark: openai, hue: 160, monogram: RT, categories: [speech-to-text, text-to-speech] }
+  - { slug: gemini-3-8-live, name: Gemini 3.8 Live, maker: Google, family: gemini-live, mark: googlegemini, hue: 225, monogram: GL, categories: [text-to-speech, speech-to-text] }
   - { slug: whisper-large-v3, name: Whisper large-v3, maker: OpenAI, family: whisper, mark: openai, hue: 160, monogram: W3, categories: [speech-to-text] }
-  - { slug: gpt-transcribe, name: GPT Transcribe, maker: OpenAI, family: gpt-transcribe, mark: openai, hue: 160, monogram: GT, categories: [speech-to-text] }
+  - { slug: gpt-transcribe, name: GPT-Transcribe, maker: OpenAI, family: gpt-transcribe, mark: openai, hue: 160, monogram: GT, categories: [speech-to-text] }
+  - { slug: gpt-live-transcribe, name: GPT-Live-Transcribe, maker: OpenAI, family: gpt-transcribe, mark: openai, hue: 160, monogram: GT, categories: [speech-to-text] }
+  - { slug: gpt-realtime-whisper, name: GPT-Realtime-Whisper, maker: OpenAI, family: whisper, mark: openai, hue: 160, monogram: RW, categories: [speech-to-text] }
+  - { slug: gemini-3-5-transcribe, name: Gemini 3.5 Transcribe, maker: Google, family: gemini-transcribe, mark: googlegemini, hue: 225, monogram: GT, categories: [speech-to-text] }
+  - { slug: scribe-v2, name: Scribe v2, maker: ElevenLabs, family: scribe, mark: elevenlabs, hue: 0, monogram: Sc, categories: [speech-to-text] }
+  - { slug: voxtral-mini-transcribe-2, name: Voxtral Mini Transcribe 2, maker: Mistral AI, family: voxtral-transcribe, hue: 25, monogram: VM, categories: [speech-to-text] }
+  - { slug: muse-voice-transcribe-1-0, name: Muse Voice Transcribe 1.0, maker: Meta, family: muse-voice-transcribe, hue: 215, monogram: MV, categories: [speech-to-text] }
   - { slug: nova-3, name: Nova-3, maker: Deepgram, family: nova, hue: 150, monogram: N3, categories: [speech-to-text] }
+  - { slug: suno-v6, name: Suno v6, maker: Suno, family: suno, mark: suno, hue: 45, monogram: S6, categories: [music], released_on: 2026-09-09 }
   - { slug: suno-v5, name: Suno v5, maker: Suno, family: suno, mark: suno, hue: 45, monogram: S5, categories: [music] }
+  - { slug: eleven-music-v2-5, name: Eleven Music v2.5, maker: ElevenLabs, family: eleven-music, mark: elevenlabs, hue: 0, monogram: EM, categories: [music] }
+  - { slug: lyria-3-5, name: Lyria 3.5, maker: Google, family: lyria, mark: google, hue: 40, monogram: Ly, categories: [music] }

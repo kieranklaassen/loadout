@@ -17,6 +17,18 @@ class SearchCatalogToolTest < ActiveSupport::TestCase
     assert_empty search(query: "old thing")["tools"]
   end
 
+  test "finds the synced OpenAI line-up by tier, version, and kind" do
+    Catalog::Sync.call
+    models = ->(query) { search(query:)["models"].map { |model| model["name"] } }
+
+    assert_equal [ "GPT-6.1 Sol", "GPT-6 Sol", "GPT-5.6 Sol" ], models.("sol")
+    assert_equal [ "GPT-6 Luna", "GPT-5.6 Luna" ], models.("luna")
+    assert_equal [ "GPT-6.1 Sol" ], models.("6.1")
+    assert_equal [ "GPT-Image-2.5 Sunburst", "GPT-Image-2.5 Flare", "GPT-Image-2" ], models.("gpt-image")
+    assert_includes models.("transcribe"), "GPT-Live-Transcribe"
+    assert_includes models.("mistral"), "Mistral Medium 3.5"
+  end
+
   test "ranks items suggested for the category first" do
     found = search(query: "claude", category: "knowledge-work")
 
