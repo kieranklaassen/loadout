@@ -60,12 +60,48 @@ class Catalog::SyncTest < ActiveSupport::TestCase
   end
 
   test "every catalog item has a unique slug and a unique name" do
-    data = YAML.safe_load_file(Catalog::Sync::PATH, permitted_classes: [ Date ])
+    data = Catalog::Sync.data
 
     %w[tools models].each do |kind|
       assert_empty data[kind].map { |item| item["slug"] }.tally.select { |_, count| count > 1 }.keys, "duplicate #{kind} slugs"
       assert_empty data[kind].map { |item| item["name"].downcase }.tally.select { |_, count| count > 1 }.keys, "duplicate #{kind} names"
     end
+  end
+
+  test "pairs each tool with the models it runs, the tool's own first" do
+    Catalog::Sync.call
+    paired = ->(slug) { Tool.find_by!(slug:).paired_ai_models.map(&:slug) }
+
+    assert_equal %w[veo-4 veo-3], paired.("veo")
+    assert_equal %w[runway-gen-4-5 veo-4 veo-3], paired.("runway")
+    assert_equal "composer-2-5", paired.("cursor").first
+    assert_includes paired.("cursor"), "claude-opus-5-5"
+    assert_empty paired.("claude-code").map { |slug| AiModel.find_by!(slug:).maker }.uniq - [ "Anthropic" ]
+    assert_equal [ "jev" ], paired.("typesafe-jev")
+    assert_equal [ "whisper-large-v3" ], paired.("macwhisper")
+    assert_not Tool.find_by!(slug: "pika").paired?, "a tool whose models nobody lists pairs with nothing"
+  end
+
+  test "every model a tool lists is a family or a slug in the catalog, and no LLM pairs with a video-only tool" do
+    data = Catalog::Sync.data
+    known = data["models"].flat_map { |model| [ model["family"], model["slug"] ] }.compact
+    listed = data["tools"].flat_map { |tool| Array(tool["models"]).flatten }.uniq
+
+    assert_empty listed - known, "tool models that match no model family or slug"
+    Catalog::Sync.call
+    video_only = Tool.all.select { |tool| tool.category_slugs == [ "video" ] && tool.paired? }
+    assert_not_empty video_only
+    video_only.each do |tool|
+      assert_empty tool.paired_ai_models.reject { |model| model.category_slugs.include?("video") || model.category_slugs.include?("image") }.map(&:slug), tool.slug
+    end
+  end
+
+  test "a tool's paired models follow the catalog, even on a tool an admin renamed" do
+    tool = Tool.create!(slug: "acme", name: "Acme IDE", monogram: "Ac", paired_models: [ "gpt" ], admin_edited_at: Time.current)
+    Catalog::Sync.call(path: write_catalog(tools: [ { "slug" => "acme", "name" => "Acme", "hue" => 10, "monogram" => "Ac", "models" => [ [ "claude-opus" ], "jev" ] } ]))
+
+    assert_equal %w[claude-opus jev], tool.reload.paired_models
+    assert_equal "Acme IDE", tool.name
   end
 
   test "never un-hides an admin-hidden item or overwrites a member suggestion" do
@@ -80,7 +116,7 @@ class Catalog::SyncTest < ActiveSupport::TestCase
   end
 
   test "every category in the catalog file is covered by at least one tool" do
-    data = YAML.safe_load_file(Catalog::Sync::PATH, permitted_classes: [ Date ])
+    data = Catalog::Sync.data
     tool_categories = data["tools"].flat_map { |tool| tool["categories"] }.uniq
     missing = data["categories"].map { |category| category["slug"] } - tool_categories
 
@@ -116,7 +152,7 @@ class Catalog::SyncTest < ActiveSupport::TestCase
   end
 
   test "every mark key in the catalog has an SVG, and every SVG is used" do
-    data = YAML.safe_load_file(Catalog::Sync::PATH, permitted_classes: [ Date ])
+    data = Catalog::Sync.data
     keys = (data["tools"] + data["models"]).filter_map { |item| item["mark"] }.uniq
     files = Dir[MARKS_DIR.join("*.svg")].map { |file| File.basename(file, ".svg") }
 

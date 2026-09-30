@@ -40,6 +40,31 @@ class SearchCatalogToolTest < ActiveSupport::TestCase
     assert_equal [ "runway" ], search(category: "video")["tools"].map { |tool| tool["slug"] }
   end
 
+  test "a tool lists only the models it runs, and a query narrows them" do
+    tools(:runway).update!(paired_models: %w[claude-opus])
+
+    found = search(tool: "runway")
+    assert_equal [ "runway" ], found["tools"].map { |tool| tool["slug"] }
+    assert_equal %w[claude-opus-5-5 claude-opus-5], found["models"].map { |model| model["slug"] }
+    assert_nil found["note"]
+    assert_equal %w[claude-opus-5-5], search(tool: "runway", query: "5.5")["models"].map { |model| model["slug"] }
+    assert_empty search(tool: "runway", query: "gpt")["models"]
+  end
+
+  test "a tool the catalog pairs with nothing says so and searches every model" do
+    found = search(tool: "cursor", query: "gpt")
+
+    assert_equal %w[gpt-6-astra], found["models"].map { |model| model["slug"] }
+    assert_match(/does not list which models Cursor runs/, found["note"])
+  end
+
+  test "an unknown tool is a readable error" do
+    result = ToolRegistry.call("search_catalog", arguments: { tool: "nope" }, user: users(:every_ana), source: "webmcp")
+
+    assert result[:isError]
+    assert_match(/Unknown tool "nope"/, result[:content].first[:text])
+  end
+
   test "needs a query or a category, and a real category" do
     assert ToolRegistry.call("search_catalog", arguments: {}, user: users(:every_ana), source: "webmcp")[:isError]
 

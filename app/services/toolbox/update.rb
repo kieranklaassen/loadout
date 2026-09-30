@@ -23,7 +23,8 @@
 # holds anything else the call fails with Suggestions::CHANGED and writes nothing.
 # Leave it out (seeds, the console) to skip that check. Unknown tools and models, and
 # another member's pending ones, become this member's pending catalog items; agents
-# may add a few a day. Raises Toolbox::Update::Error
+# may add a few a day. On suggest, a catalog model must be one the tool runs
+# (Tool#paired_ai_models). Raises Toolbox::Update::Error
 # with a message a person or an agent can act on.
 module Toolbox
   class Update
@@ -34,6 +35,7 @@ module Toolbox
     OPERATIONS = (WEB_OPERATIONS + AGENT_OPERATIONS).freeze
     MAX_OPERATIONS = 50
     MAX_NEW_ITEMS_PER_DAY = 5
+    PAIRED_MODELS_LISTED = 8
     CHOICES = { context: Entry::CONTEXTS, effort: Entry::EFFORTS }.freeze
 
     # changes: entry_changes rows written; suggestions: the suggestion rows created or
@@ -138,11 +140,27 @@ module Toolbox
     def suggest(operation)
       category = category_for(operation)
       tool = resolve(Tool, operation[:tool], required: true)
+      ai_model = resolve(AiModel, operation[:model])
+      check_pairing(tool, ai_model)
       absorb(suggestions.suggest(
-        category:, tool:, ai_model: resolve(AiModel, operation[:model]),
+        category:, tool:, ai_model:,
         context: choice(:context, operation[:context]), effort: choice(:effort, operation[:effort]),
         slot_hint: optional_rank(operation, "A rank hint must be 1, 2 or 3.")
       ))
+    end
+
+    # An agent's model has to be one the catalog says the tool runs. A tool with no
+    # approved paired model, and a model only this member has (pending review), pass: the
+    # catalog cannot say either way. The member still picks any model on the web.
+    def check_pairing(tool, ai_model)
+      return if ai_model.nil? || ai_model.pending? || !tool.paired?
+
+      paired = tool.paired_ai_models
+      return if paired.empty? || paired.include?(ai_model)
+
+      options = paired.first(PAIRED_MODELS_LISTED).map { |model| "#{model.name} (#{model.slug})" }
+      options << "#{paired.size - PAIRED_MODELS_LISTED} more (search_catalog with tool: #{tool.slug.inspect})" if paired.size > PAIRED_MODELS_LISTED
+      raise Error, "#{tool.name} does not run #{ai_model.name}. Use one of #{options.to_sentence(last_word_connector: ", or ", two_words_connector: " or ")}, or leave model out."
     end
 
     def absorb(outcome)

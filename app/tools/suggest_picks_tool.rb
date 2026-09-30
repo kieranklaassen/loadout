@@ -16,7 +16,9 @@ class SuggestPicksTool < ApplicationTool
     effort and a `rank` hint from 1 to 3 for where it belongs) and `withdraw` (suggestion_id
     of one of your own suggestions). `category` is a slug from list_categories; `tool` and
     `model` are slugs from search_catalog (a name that is not in the catalog becomes a new
-    item flagged for review, so check spelling first). A member ranks up to three picks
+    item flagged for review, so check spelling first). The model must be one the tool runs:
+    search_catalog with `tool` lists them, and any other catalog model is refused (Veo runs
+    Veo models, not Claude). A member ranks up to three picks
     per kind of work and a tool appears once per kind. Read get_my_toolbox first so you
     suggest a change instead of a duplicate, ask the member before you guess, and do not
     suggest again something they dismissed: the error says when. A kind holds at most three

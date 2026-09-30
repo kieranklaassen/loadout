@@ -125,6 +125,33 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
     assert_match(/dismissed on .* do not suggest it again/i, error_text(suggest([ { op: "suggest", category: "video", tool: "runway" } ])))
   end
 
+  test "a model the tool does not run is refused with the ones it does, and nothing is suggested" do
+    tools(:runway).update!(paired_models: %w[claude-opus])
+
+    assert_no_difference -> { PickSuggestion.count } do
+      text = error_text(suggest([ { op: "suggest", category: "video", tool: "runway", model: "gpt-6-astra" } ]))
+      assert_equal "Runway does not run GPT-6 Astra. Use one of Claude Opus 5.5 (claude-opus-5-5) or Claude Opus 5 (claude-opus-5), or leave model out.", text
+    end
+    assert_equal "claude-opus-5", payload(suggest([ { op: "suggest", category: "video", tool: "runway", model: "claude-opus-5" } ]))["suggestions"].sole["model"]
+  end
+
+  test "a hidden model is held to the pairing, and a tool whose paired models are all hidden takes any model" do
+    tools(:runway).update!(paired_models: %w[claude-opus])
+    ai_models(:gpt_6).update!(status: "hidden")
+    assert_match(/Runway does not run GPT-6 Astra/, error_text(suggest([ { op: "suggest", category: "video", tool: "runway", model: "gpt-6-astra" } ])))
+
+    AiModel.where(family: "claude-opus").update_all(status: "hidden")
+    assert_equal "gpt-6-astra", payload(suggest([ { op: "suggest", category: "video", tool: "runway", model: "gpt-6-astra" } ]))["suggestions"].sole["model"]
+  end
+
+  test "any model passes for a tool the catalog pairs with nothing, and a model only the member has passes too" do
+    assert_equal "gpt-6-astra", payload(suggest([ { op: "suggest", category: "video", tool: "runway", model: "gpt-6-astra" } ]))["suggestions"].sole["model"]
+
+    tools(:runway).update!(paired_models: %w[claude-opus])
+    body = payload(suggest([ { op: "suggest", category: "video", tool: "runway", model: "Gen-5 Preview" } ]))
+    assert AiModel.find_by!(slug: body["suggestions"].sole["model"]).pending?
+  end
+
   test "a rank hint above three, a bad context or effort, and an unknown kind are readable errors" do
     assert_no_difference -> { PickSuggestion.count } do
       assert_match(/rank/, error_text(suggest([ { op: "suggest", category: "video", tool: "runway", rank: 4 } ])))

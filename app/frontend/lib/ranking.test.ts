@@ -4,21 +4,17 @@ import {
   layoutSlots,
   modelAction,
   movedMessage,
-  optionGroups,
   progress,
   progressLabel,
   startedCount,
   teamCountText,
   toolAction,
-  toolsUsedElsewhere,
-  type CatalogOption,
   type EditorKind,
   type TeamStanding,
 } from './ranking'
 
 const coding = { slug: 'coding', name: 'Coding', blurb: 'Writing and shipping software.' }
 const runway = markItem('runway', 'Runway')
-const zed = markItem('zed', 'Zed')
 
 const kind = (overrides: Partial<EditorKind> = {}): EditorKind => ({ category: coding, picks: [], suggestions: [], to_confirm: 0, ...overrides })
 const standing = (item = cursorMark, n = 2): TeamStanding => ({ item, count: { n, of: 6 }, yours_rank: null })
@@ -134,33 +130,7 @@ describe('the team list rules', () => {
   })
 })
 
-describe('optionGroups', () => {
-  const option = (item: typeof cursorMark, suggested_for: string[]): CatalogOption => ({ ...item, suggested_for })
-
-  it('lists the items that suit the kind first and the rest after, each once', () => {
-    const options = [option(runway, ['video']), option(cursorMark, ['coding']), option(zed, [])]
-
-    const { suggested, rest } = optionGroups(options, 'coding', null)
-
-    expect(suggested.map((item) => item.slug)).toEqual(['cursor'])
-    expect(rest.map((item) => item.slug)).toEqual(['runway', 'zed'])
-  })
-
-  it('keeps a saved item the catalog no longer lists', () => {
-    const { rest } = optionGroups([option(cursorMark, ['coding'])], 'coding', zed)
-
-    expect(rest.map((item) => item.slug)).toEqual(['zed'])
-  })
-})
-
 describe('slot helpers', () => {
-  it('finds the tools other slots use', () => {
-    const state = kind({ picks: [rankedPick({ rank: 1 }), rankedPick({ rank: 2, tool: cursorMark })] })
-
-    expect([...toolsUsedElsewhere(state, 1)]).toEqual(['cursor'])
-    expect([...toolsUsedElsewhere(state, 3)].sort()).toEqual(['claude-code', 'cursor'])
-  })
-
   it('announces a move as the new rank, spelled as an ordinal', () => {
     expect(movedMessage('Cursor', 1)).toBe('Cursor is now 1st')
   })
