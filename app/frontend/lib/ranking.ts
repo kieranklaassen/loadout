@@ -14,8 +14,8 @@ export type EditorKind = {
   to_confirm: number
 }
 
-/** A catalog item the selects offer, with the kinds it suits. */
-export type CatalogOption = MarkItem & { suggested_for: string[] }
+/** A catalog item the pickers offer, with the kinds it suits; a tool also lists the models it runs, its own first. */
+export type CatalogOption = MarkItem & { suggested_for: string[]; maker?: string | null; models?: string[] }
 
 export type Catalog = {
   tools: CatalogOption[]
@@ -103,19 +103,6 @@ export function modelAction(kind: EditorKind, standing: TeamStanding): TeamActio
   const target = kind.picks.find((pick) => !pick.model)
   return target ? { type: 'use', label: `Use in ${rankLabel(target.rank)} pick`, rank: target.rank } : null
 }
-
-/** A select's options: those that suit the kind first, then the rest. The saved item stays offered even if the catalog no longer lists it. */
-export function optionGroups(options: CatalogOption[], category: string, saved: MarkItem | null) {
-  const all = saved && !options.some((option) => option.slug === saved.slug) ? [...options, { ...saved, suggested_for: [] }] : options
-  return {
-    suggested: all.filter((option) => option.suggested_for.includes(category)),
-    rest: all.filter((option) => !option.suggested_for.includes(category)),
-  }
-}
-
-/** The slugs of the tools the other slots of the kind already use. */
-export const toolsUsedElsewhere = (kind: EditorKind, rank: number) =>
-  new Set(kind.picks.filter((pick) => pick.rank !== rank).map((pick) => pick.tool.slug))
 
 /** What a screen reader hears after a row changes. */
 export const movedMessage = (name: string, rank: number) => `${name} is now ${rankLabel(rank)}`

@@ -1,18 +1,9 @@
 import type { ReactNode } from 'react'
+import { assemble, canAdd, modelForTool, modelSections, toolSections } from '../../lib/picker'
 import { rankLabel } from '../../lib/rank_label'
-import {
-  contextOptionLabel,
-  effortOptionLabel,
-  optionGroups,
-  toolsUsedElsewhere,
-  type Catalog,
-  type CatalogOption,
-  type EditorKind,
-  type Enums,
-  type SlotView,
-} from '../../lib/ranking'
+import { contextOptionLabel, effortOptionLabel, type Catalog, type EditorKind, type Enums, type SlotView, type TeamTop } from '../../lib/ranking'
 import Chip from '../chip'
-import Mark from '../mark'
+import Combobox from '../combobox'
 import { sectionLabelClasses } from '../section_label'
 import SuggestionSlot from './suggestion_slot'
 import type { EditorActions, SlotFields } from './use_editor_actions'
@@ -23,10 +14,9 @@ const rowButton =
 
 // `busy` is a request in flight: the select stays focusable (`disabled` would drop focus) and the
 // editor ignores a change, so the select shows the saved value again.
-function SelectField({ id, label, mark, disabled, busy, value, onChange, children }: {
+function SelectField({ id, label, disabled, busy, value, onChange, children }: {
   id: string
   label: string
-  mark?: ReactNode
   disabled: boolean
   busy: boolean
   value: string
@@ -39,7 +29,6 @@ function SelectField({ id, label, mark, disabled, busy, value, onChange, childre
         {label}
       </label>
       <div className={`field-box ${disabled ? 'opacity-60' : ''}`}>
-        {mark}
         <select
           id={id}
           disabled={disabled}
@@ -58,35 +47,14 @@ function SelectField({ id, label, mark, disabled, busy, value, onChange, childre
   )
 }
 
-function Options({ options, category, saved, label, disabled }: {
-  options: CatalogOption[]
-  category: EditorKind['category']
-  saved: CatalogOption | null
-  label: string
-  disabled?: Set<string>
-}) {
-  const { suggested, rest } = optionGroups(options, category.slug, saved)
-  const option = (item: CatalogOption) => (
-    <option key={item.slug} value={item.slug} disabled={disabled?.has(item.slug)}>
-      {item.name}
-      {item.pending ? ' (pending review)' : ''}
-    </option>
-  )
-
-  return (
-    <>
-      {suggested.length > 0 && <optgroup label={`Suggested for ${category.name}`}>{suggested.map(option)}</optgroup>}
-      {rest.length > 0 && <optgroup label={label}>{rest.map(option)}</optgroup>}
-    </>
-  )
-}
-
 /** One of the three slots: a confirmed pick with its four selects, an empty slot, or a slot suggestions are waiting to fill. */
-export default function Slot({ kind, view, catalog, enums, actions }: {
+export default function Slot({ kind, view, catalog, enums, top, actions }: {
   kind: EditorKind
   view: SlotView
   catalog: Catalog
   enums: Enums
+  /** What the team uses in this kind, to list the popular tools and models first. */
+  top?: TeamTop[string]
   actions: EditorActions
 }) {
   const { rank, pick, suggestions } = view
@@ -99,8 +67,10 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
     effort: 'effort' in draft ? (draft.effort ?? '') : (pick?.effort ?? ''),
   }
   const change = (fields: SlotFields) => actions.saveSlot(rank, pick, fields)
-  const toolItem = catalog.tools.find((item) => item.slug === shown.tool) ?? pick?.tool
+  const toolOption = catalog.tools.find((item) => item.slug === shown.tool)
+  const toolItem = toolOption ?? pick?.tool
   const modelItem = catalog.models.find((item) => item.slug === shown.model) ?? pick?.model
+  const chooseTool = (slug: string) => change({ tool: slug, ...modelForTool(catalog.tools.find((item) => item.slug === slug), shown.model) })
   const waiting = !pick && suggestions.length > 0
 
   const surface = pick
@@ -142,31 +112,35 @@ export default function Slot({ kind, view, catalog, enums, actions }: {
           </div>
         ) : (
           <>
-            <div className="slot-fields">
-              <SelectField
+            <div className="slot-fields relative">
+              <Combobox
                 id={`slot-${rank}-tool`}
                 label="Tool"
-                mark={toolItem && <Mark item={toolItem} size="sm" />}
-                disabled={false}
+                placeholder="Choose"
+                selected={toolItem}
                 busy={actions.busy}
-                value={shown.tool}
-                onChange={(value) => value && change({ tool: value })}
-              >
-                {!pick && <option value="">Choose</option>}
-                <Options options={catalog.tools} category={kind.category} saved={pick?.tool ? { ...pick.tool, suggested_for: [] } : null} label="All tools" disabled={toolsUsedElsewhere(kind, rank)} />
-              </SelectField>
-              <SelectField
+                showAllLabel="Show all tools"
+                list={(query, showAll) => assemble(toolSections({ tools: catalog.tools, kind, rank, saved: pick?.tool, standings: top?.tools }), query, showAll)}
+                canAdd={canAdd}
+                onSelect={(slug) => slug && chooseTool(slug)}
+                onAdd={(name) => change({ tool: name })}
+              />
+              <Combobox
                 id={`slot-${rank}-model`}
                 label={pick ? 'Model' : 'Model (optional)'}
-                mark={modelItem && <Mark item={modelItem} size="sm" />}
+                placeholder="Not set"
+                selected={modelItem}
                 disabled={!pick}
                 busy={actions.busy}
-                value={shown.model}
-                onChange={(value) => change({ model: value || null })}
-              >
-                <option value="">Not set</option>
-                <Options options={catalog.models} category={kind.category} saved={pick?.model ? { ...pick.model, suggested_for: [] } : null} label="All models" />
-              </SelectField>
+                clearLabel="Not set"
+                showAllLabel="Show all models"
+                list={(query, showAll) =>
+                  assemble(modelSections({ models: catalog.models, tool: toolOption, category: kind.category, saved: pick?.model, standings: top?.models }), query, showAll)
+                }
+                canAdd={canAdd}
+                onSelect={(slug) => change({ model: slug })}
+                onAdd={(name) => change({ model: name })}
+              />
               <SelectField
                 id={`slot-${rank}-context`}
                 label="Context"

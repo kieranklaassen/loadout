@@ -35,7 +35,7 @@ export default function KindPanel({ kind, catalog, enums, teamTop }: {
 
       <ol className="mt-4 flex flex-col gap-3">
         {slots.map((view) => (
-          <Slot key={view.rank} kind={kind} view={view} catalog={catalog} enums={enums} actions={actions} />
+          <Slot key={view.rank} kind={kind} view={view} catalog={catalog} enums={enums} top={teamTop[kind.category.slug]} actions={actions} />
         ))}
       </ol>
 

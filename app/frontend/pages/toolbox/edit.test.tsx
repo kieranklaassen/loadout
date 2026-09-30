@@ -80,8 +80,21 @@ const saved = { props: { flash: {} } }
 const succeed = (_url: string, _data: unknown, options: { onSuccess?: (page: unknown) => void }) => options.onSuccess?.(saved)
 
 const slot = (name: string) => screen.getByRole('group', { name })
-const field = (name: string, label: string) => within(slot(name)).getByLabelText(label, { exact: false }) as HTMLSelectElement
+// The first labelled element: an open picker's listbox carries the same label.
+const field = (name: string, label: string) => within(slot(name)).getAllByLabelText(label, { exact: false })[0] as HTMLSelectElement
 const options = (select: HTMLSelectElement) => Array.from(select.options).map((entry) => entry.value)
+type User = ReturnType<typeof userEvent.setup>
+// The open picker's sections as [label, [row text]], and the rows after them (Show all, Add).
+const listed = () => {
+  const listbox = screen.getByRole('listbox')
+  return within(listbox)
+    .queryAllByRole('group')
+    .map((group) => [group.firstElementChild?.textContent, within(group).getAllByRole('option').map((row) => row.querySelector('.truncate')?.textContent)])
+}
+const choose = async (user: User, name: string, label: string, row: string | RegExp) => {
+  await user.click(field(name, label))
+  await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: row }))
+}
 
 beforeEach(() => {
   ;[patch, post, del, reload, replaceProp].forEach((mock) => mock.mockReset())
@@ -126,13 +139,12 @@ describe('Rank editor layout', () => {
 })
 
 describe('slots and their selects', () => {
-  it('labels TOOL, MODEL, CONTEXT and EFFORT with real labels on real selects, in every slot', () => {
+  it('labels TOOL and MODEL pickers and CONTEXT and EFFORT selects with real labels, in every slot', () => {
     render(<ToolboxEdit {...props()} />)
 
     for (const name of ['1st pick', '2nd pick', 'Add your 3rd pick']) {
-      for (const label of ['Tool', 'Model', 'Context', 'Effort']) {
-        expect(field(name, label).tagName).toBe('SELECT')
-      }
+      for (const label of ['Tool', 'Model']) expect(field(name, label)).toHaveAttribute('role', 'combobox')
+      for (const label of ['Context', 'Effort']) expect(field(name, label).tagName).toBe('SELECT')
     }
     expect(within(slot('Add your 3rd pick')).getByLabelText('Model (optional)')).toBeInTheDocument()
   })
@@ -144,27 +156,37 @@ describe('slots and their selects', () => {
     expect(options(field('1st pick', 'Effort'))).toEqual(['', 'low', 'medium', 'high'])
   })
 
-  it('groups tools as Suggested for the kind, then All tools, and models the same way', () => {
+  it('lists tools Suggested for the kind, most used on the team first, with the rest behind Show all, and models the same way', async () => {
+    const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)
 
-    const tool = field('1st pick', 'Tool')
-    const groups = Array.from(tool.querySelectorAll('optgroup')).map((group) => [group.label, Array.from(group.querySelectorAll('option')).map((entry) => entry.textContent)])
-    expect(groups).toEqual([
-      ['Suggested for Coding', ['Cursor', 'Claude Code', 'Codex']],
+    await user.click(field('1st pick', 'Tool'))
+    expect(listed()).toEqual([['Suggested for Coding', ['Claude Code', 'Cursor', 'Codex']]])
+    expect(screen.getByRole('option', { name: /Claude Code.*5 of 6 use it/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('option', { name: 'Show all tools (1 more)' }))
+    expect(listed()).toEqual([
+      ['Suggested for Coding', ['Claude Code', 'Cursor', 'Codex']],
       ['All tools', ['Runway']],
     ])
-    const model = Array.from(field('1st pick', 'Model').querySelectorAll('optgroup')).map((group) => group.label)
-    expect(model).toEqual(['Suggested for Coding', 'All models'])
+    expect(field('1st pick', 'Tool')).toHaveFocus()
+
+    await user.keyboard('{Escape}')
+    await user.click(field('1st pick', 'Model'))
+    expect(listed()).toEqual([['Suggested for Coding', ['Claude Opus 5.5']]])
+    expect(screen.getByRole('option', { name: 'Show all models (1 more)' })).toBeInTheDocument()
   })
 
-  it('shows a saved value and offers Not set on model, context and effort', () => {
+  it('shows a saved value and offers Not set on model, context and effort', async () => {
+    const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)
 
-    expect(field('1st pick', 'Tool')).toHaveValue('claude-code')
-    expect(field('1st pick', 'Model')).toHaveValue('claude-opus-5-5')
+    expect(field('1st pick', 'Tool')).toHaveValue('Claude Code')
+    expect(field('1st pick', 'Model')).toHaveValue('Claude Opus 5.5')
     expect(field('1st pick', 'Context')).toHaveValue('1m')
     expect(field('1st pick', 'Effort')).toHaveValue('high')
-    expect(options(field('1st pick', 'Model'))[0]).toBe('')
+    await user.click(field('1st pick', 'Model'))
+    expect(within(screen.getByRole('listbox')).getAllByRole('option')[0]).toHaveTextContent('Not set')
+    expect(screen.getByRole('option', { name: /Claude Opus 5.5/ })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('leaves only TOOL on in an empty slot until a tool is saved', () => {
@@ -175,21 +197,26 @@ describe('slots and their selects', () => {
     for (const label of ['Model', 'Context', 'Effort']) expect(field('1st pick', label)).toBeEnabled()
   })
 
-  it('disables a tool another slot of the kind already uses, but not the slot’s own', () => {
+  it('disables a tool another slot of the kind already uses, but not the slot’s own', async () => {
+    const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)
 
-    const second = field('2nd pick', 'Tool')
-    expect(within(second).getByRole('option', { name: 'Claude Code' })).toBeDisabled()
-    expect(within(second).getByRole('option', { name: 'Cursor' })).toBeEnabled()
-    expect(within(field('Add your 3rd pick', 'Tool')).getByRole('option', { name: 'Claude Code' })).toBeDisabled()
-    expect(within(field('Add your 3rd pick', 'Tool')).getByRole('option', { name: 'Codex' })).toBeEnabled()
+    await user.click(field('2nd pick', 'Tool'))
+    expect(screen.getByRole('option', { name: /Claude Code.*Your 1st pick/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('option', { name: /Cursor/ })).not.toHaveAttribute('aria-disabled')
+    await user.keyboard('{Escape}')
+    await user.click(field('Add your 3rd pick', 'Tool'))
+    expect(screen.getByRole('option', { name: /Claude Code/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('option', { name: /Codex/ })).not.toHaveAttribute('aria-disabled')
+    await user.click(screen.getByRole('option', { name: /Claude Code/ }))
+    expect(patch).not.toHaveBeenCalled()
   })
 
   it('keeps a saved tool the catalog no longer offers', () => {
     const hidden = markItem('old-thing', 'Old Thing')
     render(<ToolboxEdit {...props({}, { picks: [rankedPick({ rank: 1, tool: hidden, model: null })] })} />)
 
-    expect(field('1st pick', 'Tool')).toHaveValue('old-thing')
+    expect(field('1st pick', 'Tool')).toHaveValue('Old Thing')
   })
 })
 
@@ -198,7 +225,7 @@ describe('autosave', () => {
     const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)
 
-    await user.selectOptions(field('Add your 3rd pick', 'Tool'), 'codex')
+    await choose(user, 'Add your 3rd pick', 'Tool', /Codex/)
 
     expect(patch).toHaveBeenCalledTimes(1)
     expect(patch).toHaveBeenCalledWith(
@@ -212,7 +239,8 @@ describe('autosave', () => {
     const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)
 
-    await user.selectOptions(field('1st pick', 'Model'), 'gpt-6-astra')
+    await user.type(field('1st pick', 'Model'), 'astra')
+    await user.keyboard('{Enter}')
 
     expect(patch).toHaveBeenCalledTimes(1)
     expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, model: 'gpt-6-astra', expected_tool: 'claude-code' }] })
@@ -222,7 +250,7 @@ describe('autosave', () => {
     const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)
 
-    await user.selectOptions(field('1st pick', 'Model'), '')
+    await choose(user, '1st pick', 'Model', 'Not set')
     await user.selectOptions(field('1st pick', 'Context'), '')
     await user.selectOptions(field('1st pick', 'Effort'), '')
 
@@ -237,7 +265,7 @@ describe('autosave', () => {
     const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)
 
-    await user.selectOptions(field('1st pick', 'Tool'), 'codex')
+    await choose(user, '1st pick', 'Tool', /Codex/)
 
     expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 1, tool: 'codex', expected_tool: 'claude-code' }] })
   })
@@ -342,8 +370,8 @@ describe('move and remove', () => {
     const swapped = [rankedPick({ rank: 1, tool: cursorMark, model: null }), rankedPick({ rank: 2, tool: claudeCodeMark, model: opusMark, context: '1m', effort: 'high' })]
     rerender(<ToolboxEdit {...props({}, { picks: swapped })} />)
 
-    expect(field('1st pick', 'Tool')).toHaveValue('cursor')
-    expect(field('2nd pick', 'Tool')).toHaveValue('claude-code')
+    expect(field('1st pick', 'Tool')).toHaveValue('Cursor')
+    expect(field('2nd pick', 'Tool')).toHaveValue('Claude Code')
     expect(within(slot('2nd pick')).getByRole('button', { name: 'Move Claude Code down' })).toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -422,7 +450,7 @@ describe('one request at a time', () => {
     render(<ToolboxEdit {...props()} />)
 
     await user.selectOptions(field('1st pick', 'Effort'), 'low')
-    await user.selectOptions(field('2nd pick', 'Model'), 'gpt-6-astra')
+    await choose(user, '2nd pick', 'Model', /Claude Opus 5.5/)
 
     expect(patch).toHaveBeenCalledTimes(1)
     expect(field('2nd pick', 'Model')).toHaveValue('')
@@ -431,7 +459,8 @@ describe('one request at a time', () => {
     land(held[0]!)
     expect(within(slot('1st pick')).getByRole('status')).toHaveTextContent('Saved')
 
-    await user.selectOptions(field('2nd pick', 'Model'), 'gpt-6-astra')
+    await user.type(field('2nd pick', 'Model'), 'gpt 6')
+    await user.click(screen.getByRole('option', { name: /GPT-6 Astra/ }))
     expect(patch).toHaveBeenCalledTimes(2)
     expect(patch.mock.calls[1]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 2, model: 'gpt-6-astra', expected_tool: 'cursor' }] })
   })
@@ -491,7 +520,17 @@ describe('one request at a time', () => {
     render(<ToolboxEdit {...props()} />)
     await user.click(within(slot('1st pick')).getByRole('button', { name: 'Move Claude Code down' }))
 
-    for (const [name, label, value] of [['1st pick', 'Tool', 'codex'], ['1st pick', 'Model', 'gpt-6-astra'], ['2nd pick', 'Context', '200k'], ['2nd pick', 'Effort', 'low']]) {
+    for (const [name, label, row] of [['1st pick', 'Tool', /Codex/], ['1st pick', 'Model', 'Not set']] as const) {
+      const input = field(name, label)
+      const shown = input.value
+      await choose(user, name, label, row)
+
+      expect(input).not.toBeDisabled()
+      expect(input).toHaveAttribute('aria-disabled', 'true')
+      expect(input).toHaveValue(shown)
+      expect(document.activeElement).toBe(input)
+    }
+    for (const [name, label, value] of [['2nd pick', 'Context', '200k'], ['2nd pick', 'Effort', 'low']]) {
       const select = field(name!, label!)
       const shown = select.value
       select.focus()
@@ -599,7 +638,7 @@ describe('suggestions', () => {
     expect(box.getByText('Now')).toBeInTheDocument()
     expect(box.getByText('Suggested')).toBeInTheDocument()
     expect(box.getByText('low effort')).toBeInTheDocument()
-    expect(box.getByLabelText('Tool')).toHaveValue('cursor')
+    expect(box.getByLabelText('Tool')).toHaveValue('Cursor')
   })
 
   it('shows a change as the pick Confirm saves, keeping what the pick has where the agent named nothing', () => {
@@ -775,15 +814,17 @@ describe('Add a tool or model', () => {
     expect(screen.getByText(/Added Beta Model/)).toBeInTheDocument()
   })
 
-  it('adds the new item to the lists as pending without selecting it anywhere', () => {
+  it('adds the new item to the lists as pending without selecting it anywhere', async () => {
+    const user = userEvent.setup()
     const zed = { ...option({ ...markItem('zed', 'Zed'), pending: true }, []), pending: true }
     const state = props({ catalog: { ...catalog, tools: [...catalog.tools, zed] } })
     render(<ToolboxEdit {...state} />)
 
     const third = field('Add your 3rd pick', 'Tool')
-    expect(within(third).getByRole('option', { name: 'Zed (pending review)' })).toBeInTheDocument()
+    await user.click(third)
+    expect(listed()).toContainEqual(['Added by you', ['Zed · pending review']])
     expect(third).toHaveValue('')
-    expect(field('1st pick', 'Tool')).toHaveValue('claude-code')
+    expect(field('1st pick', 'Tool')).toHaveValue('Claude Code')
   })
 
   it('says Already in the list for an exact catalog match and does not post', async () => {
@@ -848,6 +889,92 @@ describe('Add a tool or model', () => {
     expect(screen.getByRole('button', { name: 'Add' })).not.toHaveAttribute('aria-disabled')
     await user.click(screen.getByRole('button', { name: 'Add' }))
     expect(post).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('the Tool and Model pickers', () => {
+  const veoMark = markItem('veo', 'Veo', 'tool', 'google')
+  const jevMark = markItem('typesafe-jev', 'TypeSafe Jev')
+  const veo31 = markItem('veo-4', 'Veo 3.1', 'model', 'google')
+  const veo3 = markItem('veo-3', 'Veo 3', 'model', 'google')
+  const kling = markItem('kling-3', 'Kling 3', 'model')
+  const jev = markItem('jev', 'Jev', 'model')
+  const videoCatalog = {
+    tools: [
+      ...catalog.tools,
+      { ...option(veoMark, ['video']), models: ['veo-4', 'veo-3'] },
+      { ...option(jevMark, ['video']), models: ['jev'] },
+    ],
+    models: [...catalog.models, option(veo31, ['video']), option(veo3, ['video']), option(kling, ['video']), option(jev, [])],
+  }
+  const onVideo = (picks = [rankedPick({ rank: 1, tool: veoMark, model: null })]) =>
+    props({ catalog: videoCatalog, selected_kind: 'video', kinds: KIND_NAMES.map((name) => kindOf(name, name === 'Video' ? { picks } : {})) })
+
+  it('lists Veo’s own models first, then the other video models, and no LLMs until Show all', async () => {
+    const user = userEvent.setup()
+    render(<ToolboxEdit {...onVideo()} />)
+
+    await user.click(field('1st pick', 'Model'))
+    expect(listed()).toEqual([
+      ['Works with Veo', ['Veo 3.1', 'Veo 3']],
+      ['Other models for Video', ['Kling 3']],
+    ])
+    await user.click(screen.getByRole('option', { name: /Show all models/ }))
+    expect(listed()[2]).toEqual(['All models', ['Claude Opus 5.5', 'GPT-6 Astra', 'Jev']])
+  })
+
+  it('finds any model by typing, with the tool’s models ranked first', async () => {
+    const user = userEvent.setup()
+    render(<ToolboxEdit {...onVideo()} />)
+
+    await user.type(field('1st pick', 'Model'), 'opus')
+    expect(listed()).toEqual([['All models', ['Claude Opus 5.5']]])
+    await user.clear(field('1st pick', 'Model'))
+    await user.type(field('1st pick', 'Model'), 'veo')
+    expect(listed()).toEqual([['Works with Veo', ['Veo 3.1', 'Veo 3']]])
+  })
+
+  it('fills in the model of a tool that runs exactly one, and clears one the new tool does not run', async () => {
+    const user = userEvent.setup()
+    render(<ToolboxEdit {...onVideo([rankedPick({ rank: 1, tool: runway, model: opusMark })])} />)
+
+    await choose(user, 'Add your 2nd pick', 'Tool', /TypeSafe Jev/)
+    expect(patch.mock.calls[0]![1].operations[0]).toMatchObject({ rank: 2, tool: 'typesafe-jev', model: 'jev' })
+
+    await choose(user, '1st pick', 'Tool', /^Veo/)
+    expect(patch.mock.calls[1]![1].operations[0]).toEqual({ op: 'set_pick', category: 'video', rank: 1, tool: 'veo', model: null, expected_tool: 'runway' })
+  })
+
+  it('moves with the arrow keys, picks with Enter, and Escape puts the saved value back', async () => {
+    const user = userEvent.setup()
+    render(<ToolboxEdit {...onVideo()} />)
+    const model = field('1st pick', 'Model')
+
+    await user.click(model)
+    expect(model).toHaveAttribute('aria-activedescendant', 'slot-1-model-option-0')
+    await user.keyboard('{ArrowDown}')
+    expect(model).toHaveAttribute('aria-activedescendant', 'slot-1-model-option-1')
+    expect(screen.getByRole('option', { name: /Veo 3$/ })).toHaveAttribute('id', 'slot-1-model-option-1')
+    await user.keyboard('{Enter}')
+    expect(patch.mock.calls[0]![1].operations[0]).toMatchObject({ rank: 1, model: 'veo-3' })
+    expect(model).toHaveAttribute('aria-expanded', 'false')
+
+    await user.type(model, 'kli')
+    await user.keyboard('{Escape}')
+    expect(model).toHaveValue('')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('offers to add a name nothing matches, and saves it into the slot as a pending item', async () => {
+    const user = userEvent.setup()
+    render(<ToolboxEdit {...props()} />)
+
+    await user.type(field('Add your 3rd pick', 'Tool'), 'Brand New Tool')
+    await user.click(screen.getByRole('option', { name: /Add “Brand New Tool” as a suggestion/ }))
+
+    expect(patch.mock.calls[0]![1]).toEqual({ operations: [{ op: 'set_pick', category: 'coding', rank: 3, tool: 'Brand New Tool', expected_tool: null }] })
+    await user.type(field('Add your 3rd pick', 'Tool'), 'curs')
+    expect(screen.queryByRole('option', { name: /Add “/ })).not.toBeInTheDocument()
   })
 })
 
