@@ -34,7 +34,8 @@
 #      at the earlier of the day's end and the period's end, so edits made after narrowing
 #      on the same day never count.
 #   3. Count. A day counts only if at least MIN_PEOPLE covered people had a pick in the kind.
-#      Only approved tools count (their model too, if approved); a person is a person once.
+#      Approved and retired (hidden) tools count, their model too; a member's pending item does not.
+#      A person is a person once.
 #   4. Lead. The leader is TeamRankings' rule: people, then 1st picks, then name (Audience.sort_key,
 #      the item id last so ties are stable). Today's leader is therefore the Kind table's.
 #
