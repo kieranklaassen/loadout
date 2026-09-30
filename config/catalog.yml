@@ -19,6 +19,7 @@
 categories:
   - { slug: coding, name: Coding, blurb: "Writing, reviewing, and shipping code." }
   - { slug: knowledge-work, name: Knowledge work, blurb: "Email, docs, planning, thinking out loud." }
+  - { slug: personal-agents, name: Personal agents, blurb: "Always-on agents that act for you across email, messages, calendar, and phone." }
   - { slug: writing, name: Writing, blurb: "Drafting, editing, and finding the right words." }
   - { slug: research, name: Research, blurb: "Search, reading, and synthesis." }
   - { slug: classification, name: Classification, blurb: "Labeling, routing, scoring, and extraction at scale." }
@@ -43,19 +44,33 @@ tools:
   - { slug: v0, name: v0, maker: Vercel, hue: 0, monogram: v0, categories: [coding] }
   - { slug: lovable, name: Lovable, maker: Lovable, hue: 340, monogram: Lo, categories: [coding] }
   # Assistants
-  - { slug: claude, name: Claude, maker: Anthropic, mark: claude, hue: 18, monogram: Cl, categories: [knowledge-work, writing, research] }
-  - { slug: chatgpt, name: ChatGPT, maker: OpenAI, mark: openai, hue: 160, monogram: GP, categories: [knowledge-work, writing, research] }
+  - { slug: claude, name: Claude, maker: Anthropic, mark: claude, hue: 18, monogram: Cl, categories: [knowledge-work, writing, research, personal-agents] }
+  - { slug: chatgpt, name: ChatGPT, maker: OpenAI, mark: openai, hue: 160, monogram: GP, categories: [knowledge-work, writing, research, personal-agents] }
   - { slug: gemini, name: Gemini, maker: Google, mark: googlegemini, hue: 225, monogram: Ge, categories: [knowledge-work, research] }
   - { slug: grok, name: Grok, maker: xAI, hue: 0, monogram: Gk, categories: [knowledge-work, research] }
   - { slug: perplexity, name: Perplexity, maker: Perplexity, mark: perplexity, hue: 185, monogram: Px, categories: [research] }
   - { slug: notebooklm, name: NotebookLM, maker: Google, mark: google, hue: 40, monogram: NL, categories: [research, knowledge-work] }
-  - { slug: cora, name: Cora, maker: Every, hue: 205, monogram: Co, categories: [knowledge-work] }
+  - { slug: cora, name: Cora, maker: Every, hue: 205, monogram: Co, categories: [knowledge-work, personal-agents] }
   - { slug: spiral, name: Spiral, maker: Every, hue: 280, monogram: Sp, categories: [writing] }
   - { slug: sparkle, name: Sparkle, maker: Every, hue: 50, monogram: Sk, categories: [knowledge-work] }
   - { slug: monologue, name: Monologue, maker: Every, hue: 300, monogram: Mo, categories: [speech-to-text] }
   - { slug: granola, name: Granola, maker: Granola, hue: 95, monogram: Gr, categories: [knowledge-work] }
   - { slug: raycast-ai, name: Raycast AI, maker: Raycast, hue: 5, monogram: Ra, categories: [knowledge-work] }
   - { slug: notion-ai, name: Notion AI, maker: Notion, hue: 0, monogram: "No", categories: [knowledge-work, writing] }
+  # Personal agents
+  - { slug: instinct, name: Instinct, maker: Instinct, hue: 25, monogram: In, categories: [personal-agents] }
+  - { slug: muse, name: Muse, maker: Meta, hue: 215, monogram: Mu, categories: [personal-agents] }
+  - { slug: dots, name: Dots, maker: OpenAI, mark: openai, hue: 160, monogram: Dt, categories: [personal-agents] }
+  - { slug: grok-bot, name: Grok Bot, maker: xAI, hue: 0, monogram: GB, categories: [personal-agents] }
+  - { slug: gemini-spark, name: Gemini Spark, maker: Google, mark: googlegemini, hue: 225, monogram: GS, categories: [personal-agents] }
+  - { slug: poke, name: Poke, maker: The Interaction Company, hue: 45, monogram: Po, categories: [personal-agents] }
+  - { slug: cue, name: Cue, maker: Manus, hue: 280, monogram: Ce, categories: [personal-agents] }
+  - { slug: perplexity-computer, name: Perplexity Computer, maker: Perplexity, mark: perplexity, hue: 185, monogram: PC, categories: [personal-agents] }
+  - { slug: lindy, name: Lindy, maker: Lindy, hue: 260, monogram: Li, categories: [personal-agents, knowledge-work] }
+  - { slug: martin, name: Martin, maker: Martin, hue: 190, monogram: Ma, categories: [personal-agents] }
+  - { slug: alexa-plus, name: Alexa+, maker: Amazon, hue: 195, monogram: A+, categories: [personal-agents] }
+  - { slug: openclaw, name: OpenClaw, maker: OpenClaw, hue: 5, monogram: Cw, categories: [personal-agents] }
+  - { slug: hermes-agent, name: Hermes Agent, maker: Nous Research, hue: 40, monogram: HA, categories: [personal-agents] }
   # Classification and APIs
   - { slug: typesafe-jev, name: TypeSafe Jev, maker: TypeSafe, hue: 255, monogram: Jv, categories: [classification] }
   - { slug: openai-api, name: OpenAI API, maker: OpenAI, mark: openai, hue: 160, monogram: OA, categories: [classification] }
@@ -95,20 +110,21 @@ tools:
 
 models:
   # Anthropic
-  - { slug: claude-opus-5-5, name: Claude Opus 5.5, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O5, categories: [coding, knowledge-work, writing, research] }
+  - { slug: claude-opus-5-5, name: Claude Opus 5.5, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O5, categories: [coding, knowledge-work, writing, research, personal-agents] }
   - { slug: claude-opus-5, name: Claude Opus 5, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O5, categories: [coding, knowledge-work] }
   - { slug: claude-fable-5-1, name: Claude Fable 5.1, maker: Anthropic, family: claude-fable, mark: claude, hue: 28, monogram: F5, categories: [writing, knowledge-work, coding] }
   - { slug: claude-fable-5, name: Claude Fable 5, maker: Anthropic, family: claude-fable, mark: claude, hue: 28, monogram: F5, categories: [writing] }
   - { slug: claude-sonnet-5, name: Claude Sonnet 5, maker: Anthropic, family: claude-sonnet, mark: claude, hue: 24, monogram: S5, categories: [coding, knowledge-work, classification] }
   - { slug: claude-haiku-4-5, name: Claude Haiku 4.5, maker: Anthropic, family: claude-haiku, mark: claude, hue: 32, monogram: H4, categories: [classification] }
   # OpenAI
-  - { slug: gpt-6-astra, name: GPT-6 Astra, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G6, categories: [coding, knowledge-work, research, writing], released_on: 2026-09-04 }
+  - { slug: gpt-6-astra, name: GPT-6 Astra, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G6, categories: [coding, knowledge-work, research, writing, personal-agents], released_on: 2026-09-04 }
   - { slug: gpt-5-6, name: GPT-5.6, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G5, categories: [coding, knowledge-work, research] }
   - { slug: gpt-5-6-mini, name: GPT-5.6 mini, maker: OpenAI, family: gpt-mini, mark: openai, hue: 165, monogram: Gm, categories: [classification] }
   # Google
   - { slug: gemini-3-8-pro, name: Gemini 3.8 Pro, maker: Google, family: gemini-pro, mark: googlegemini, hue: 225, monogram: G3, categories: [knowledge-work, research, coding] }
   - { slug: gemini-3-8-flash, name: Gemini 3.8 Flash, maker: Google, family: gemini-flash, mark: googlegemini, hue: 230, monogram: GF, categories: [classification, knowledge-work] }
   # Others
+  - { slug: muse-spark-1-3, name: Muse Spark 1.3, maker: Meta, family: muse-spark, hue: 215, monogram: MS, categories: [personal-agents] }
   - { slug: grok-4-7, name: Grok 4.7, maker: xAI, family: grok, hue: 0, monogram: G4, categories: [research, knowledge-work] }
   - { slug: composer-2-5, name: Composer 2.5, maker: Cursor, family: composer, mark: cursor, hue: 220, monogram: C2, categories: [coding] }
   - { slug: kimi-k3, name: Kimi K3, maker: Moonshot AI, family: kimi, hue: 200, monogram: K3, categories: [coding] }

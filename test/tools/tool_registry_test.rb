@@ -133,7 +133,7 @@ class ToolRegistryTest < ActiveSupport::TestCase
     kinds = YAML.safe_load_file(Rails.root.join("config/catalog.yml"), permitted_classes: [ Date ])["categories"].map { |category| category["slug"] }
     text = ([ ToolRegistry::INSTRUCTIONS ] + ToolRegistry.tools.map(&:description) + ToolRegistry.tools.map { |tool| tool.input_schema.to_h.to_json }).join(" ")
 
-    assert_equal 11, kinds.size
+    assert_equal 12, kinds.size
     assert_operator kinds.count { |kind| text.include?(kind) }, :<=, 2, "descriptions should point to list_categories, not list kinds"
     assert_no_match(/update_toolbox|go-to|\bnotes?\b/i, text)
   end

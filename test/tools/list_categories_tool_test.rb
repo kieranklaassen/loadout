@@ -21,11 +21,11 @@ class ListCategoriesToolTest < ActiveSupport::TestCase
     assert_equal 0, categories_for(users(:every_ana)).last["entries_count"], "ana has an open suggestion for video, not a pick"
   end
 
-  test "the catalog has the 11 kinds of work and no other" do
+  test "the catalog has the 12 kinds of work and no other" do
     Catalog::Sync.call
 
     categories = categories_for(users(:every_ana))
-    assert_equal 11, categories.size
+    assert_equal 12, categories.size
     assert_not_includes categories.map { |category| category["slug"] }, "other"
   end
 end
