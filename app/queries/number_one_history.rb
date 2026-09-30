@@ -94,11 +94,11 @@ class NumberOneHistory
     day_end = day_start + 1.day
     picks = timelines.flat_map do |user_id, timeline|
       instant = sampled_until(user_id, day_start, day_end) or next []
-      slots_before(timeline, instant).values.select { |change| change.tool.approved? }.map { |change| [ user_id, change ] }
+      slots_before(timeline, instant).values.select { |change| !change.tool.pending? }.map { |change| [ user_id, change ] }
     end
     return if picks.map(&:first).uniq.size < MIN_PEOPLE
 
-    [ date, leader(picks, :tool), leader(picks.select { |_, change| change.ai_model&.approved? }, :ai_model) ]
+    [ date, leader(picks, :tool), leader(picks.select { |_, change| change.ai_model && !change.ai_model.pending? }, :ai_model) ]
   end
 
   # The instant to read a person's slots at on a day, or nil when they do not count that day.

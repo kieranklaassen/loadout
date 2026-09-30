@@ -7,6 +7,12 @@ namespace :toolbox do
     puts "Wrote #{path.relative_path_from(Rails.root)}"
   end
 
+  desc "Write config/vibe_checks.yml into team members' dated history (runs on every deploy; safe to run again)"
+  task import_vibe_checks: :environment do
+    written = VibeChecks::Import.call
+    puts written.empty? ? "No Vibe Check member is in Toolbox yet." : written.map { |email, rows| "#{email}: #{rows} #{"row".pluralize(rows)}" }
+  end
+
   desc "Remove a member who left Every (EMAIL=person@every.to): the same deletion as Settings, so their picks, history, suggestions, visibility periods, sessions and agent grants go too"
   task remove_member: :environment do
     email = ENV["EMAIL"].to_s.strip

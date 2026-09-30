@@ -6,7 +6,8 @@
 # touches member-suggested items. A model's release date and Vibe Check link
 # belong to the admin: the catalog only fills them while they are blank and the
 # model has never been edited by an admin. A tool's paired models always follow
-# the catalog. Categories are never deleted.
+# the catalog. Categories are never deleted. An item marked `retired` is created hidden:
+# it stays out of the pickers and exists so dated history can name it.
 module Catalog
   class Sync
     PATH = Rails.root.join("config/catalog.yml")
@@ -52,7 +53,7 @@ module Catalog
         end
         fields.merge!(family: attrs["family"], **launch_fields(item, attrs)) if klass == AiModel
         fields[:paired_models] = Array(attrs["models"]).flatten.uniq if klass == Tool
-        fields[:status] = "approved" if item.new_record?
+        fields[:status] = attrs["retired"] ? "hidden" : "approved" if item.new_record?
         item.update!(fields)
       end
     end

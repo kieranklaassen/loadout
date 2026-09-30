@@ -12,6 +12,8 @@
 # hue, monogram: legacy columns the app no longer draws. monogram is required;
 #   quote it, because YAML reads a bare No, On or Off as a boolean.
 # categories: where the item is suggested first in pickers.
+# retired: true creates the item hidden, out of the pickers, for tools and models that only
+#   appear in dated history (config/vibe_checks.yml). It only applies when the item is created.
 # models (tools only): the models the tool runs, the tool maker's own first. Each entry
 #   is a model family (every model in it, now and later) or a model slug; the lists
 #   under model_groups can be dropped in with *name. The Rank editor shows these first
@@ -207,3 +209,13 @@ models:
   - { slug: suno-v5, name: Suno v5, maker: Suno, family: suno, mark: suno, hue: 45, monogram: S5, categories: [music] }
   - { slug: eleven-music-v2-5, name: Eleven Music v2.5, maker: ElevenLabs, family: eleven-music, mark: elevenlabs, hue: 0, monogram: EM, categories: [music] }
   - { slug: lyria-3-5, name: Lyria 3.5, maker: Google, family: lyria, mark: google, hue: 40, monogram: Ly, categories: [music] }
+  # Retired: older models that only appear in dated history (config/vibe_checks.yml). Created hidden.
+  - { slug: claude-opus-4-8, name: Claude Opus 4.8, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O4, categories: [coding], retired: true }
+  - { slug: claude-opus-4-6, name: Claude Opus 4.6, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O4, categories: [coding], retired: true }
+  - { slug: claude-opus-4-5, name: Claude Opus 4.5, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O4, categories: [coding], retired: true }
+  - { slug: claude-sonnet-4-5, name: Claude Sonnet 4.5, maker: Anthropic, family: claude-sonnet, mark: claude, hue: 24, monogram: S4, categories: [coding, writing], retired: true }
+  - { slug: claude-3-7-sonnet, name: Claude 3.7 Sonnet, maker: Anthropic, family: claude-sonnet, mark: claude, hue: 24, monogram: S3, categories: [coding], retired: true }
+  - { slug: gpt-5-5, name: GPT-5.5, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G5, categories: [coding, writing], retired: true }
+  - { slug: gpt-5-4, name: GPT-5.4, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G5, categories: [coding], retired: true }
+  - { slug: gpt-5-3-codex, name: GPT-5.3 Codex, maker: OpenAI, family: gpt-codex, mark: openai, hue: 160, monogram: C5, categories: [coding], retired: true }
+  - { slug: gpt-5-1-codex, name: GPT-5.1 Codex, maker: OpenAI, family: gpt-codex, mark: openai, hue: 160, monogram: C5, categories: [coding], retired: true }
