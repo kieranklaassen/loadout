@@ -43,11 +43,12 @@ class SearchCatalogTool < ApplicationTool
       Tool.approved.find_by_name_or_slug(arguments[:tool]) || raise(Error, "Unknown tool #{arguments[:tool].to_s.inspect}. Search for it with query first.")
     end
 
-    # A tool the catalog pairs with nothing says so, and the search runs over every model.
+    # A tool the catalog pairs with no approved model says so, and the search runs over every model.
     def paired(tool, query, category)
-      models = tool.paired? ? tool.paired_ai_models : AiModel.approved.ordered.to_a
-      result = { tools: [ prop(tool) ], models: search(models, query, category, browse: tool.paired?) }
-      result[:note] = "The catalog does not list which models #{tool.name} runs, so any model is accepted." unless tool.paired?
+      paired = tool.paired_ai_models
+      models = paired.presence || AiModel.approved.ordered.to_a
+      result = { tools: [ prop(tool) ], models: search(models, query, category, browse: paired.any?) }
+      result[:note] = "The catalog does not list which models #{tool.name} runs, so any model is accepted." if paired.empty?
       result
     end
 

@@ -19,6 +19,7 @@ type Row =
   | { type: 'add'; name: string }
 
 const enabled = (row: Row) => row.type !== 'option' || !row.option.disabled
+const keyOf = (row: Row) => (row.type === 'option' ? `option:${row.option.slug}` : row.type)
 
 export default function Combobox({
   id,
@@ -52,7 +53,8 @@ export default function Combobox({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
-  const [active, setActive] = useState(-1)
+  // The active row by key, not index: rows shift when a save elsewhere changes the props.
+  const [activeKey, setActiveKey] = useState<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const labelId = `${id}-label`
   const listboxId = `${id}-listbox`
@@ -67,9 +69,10 @@ export default function Combobox({
     ...(result.hidden > 0 ? [{ type: 'show-all' as const, hidden: result.hidden }] : []),
     ...(onAdd && canAdd?.(typed, result) ? [{ type: 'add' as const, name }] : []),
   ]
-  const firstEnabled = () => rows.findIndex(enabled)
-  // The rows change as the query does, so the active row falls back to the first one that can be picked.
-  const current = rows[active] && enabled(rows[active]) ? active : firstEnabled()
+  const indexOf = (key: string | null) => rows.findIndex((row) => keyOf(row) === key && enabled(row))
+  // Without a choice of its own the active row is the saved item; with a query or nothing saved, the first row that can be picked.
+  const fallback = typed.trim() || !selected ? rows.findIndex(enabled) : indexOf(`option:${selected.slug}`)
+  const current = indexOf(activeKey) >= 0 ? indexOf(activeKey) : fallback
   let offset = rows[0]?.type === 'clear' ? 1 : 0
   const groupStarts = result.groups.map((group) => {
     const start = offset
@@ -79,19 +82,19 @@ export default function Combobox({
 
   useEffect(() => {
     if (open && current >= 0) document.getElementById(optionId(current))?.scrollIntoView?.({ block: 'nearest' })
-  })
+  }, [open, current])
 
   const close = () => {
     setOpen(false)
     setQuery(null)
     setShowAll(false)
-    setActive(-1)
+    setActiveKey(null)
   }
 
   const openList = () => {
     if (disabled) return
     setOpen(true)
-    setActive(rows.findIndex((row) => row.type === 'option' && row.option.slug === selected?.slug))
+    setActiveKey(null)
   }
 
   const choose = (row: Row | undefined) => {
@@ -113,15 +116,17 @@ export default function Combobox({
       next = (next + step + rows.length) % rows.length
       if (enabled(rows[next]!)) break
     }
-    setActive(next)
+    setActiveKey(keyOf(rows[next]!))
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.nativeEvent.isComposing) return
     switch (event.key) {
       case 'ArrowDown':
       case 'ArrowUp':
         event.preventDefault()
-        if (!open || event.altKey) openList()
+        if (open && event.altKey && event.key === 'ArrowUp') close()
+        else if (!open || event.altKey) openList()
         else move(event.key === 'ArrowDown' ? 1 : -1)
         break
       case 'Enter':
@@ -142,7 +147,7 @@ export default function Combobox({
 
   const rowClass = (at: number, extra = '') =>
     `flex min-h-11 cursor-pointer items-center gap-2.5 px-3 py-1.5 md:min-h-9 ${at === current ? 'bg-raised' : ''} ${extra}`
-  const hover = (at: number) => () => at !== current && enabled(rows[at]!) && setActive(at)
+  const hover = (at: number) => () => at !== current && enabled(rows[at]!) && setActiveKey(keyOf(rows[at]!))
 
   return (
     <div className="min-w-0 md:relative">
@@ -170,7 +175,7 @@ export default function Combobox({
           onChange={(event) => {
             setQuery(event.target.value)
             setOpen(true)
-            setActive(-1)
+            setActiveKey(null)
           }}
           onFocus={(event) => event.target.select()}
           onClick={() => !open && openList()}
@@ -195,14 +200,21 @@ export default function Combobox({
         </button>
       </div>
 
+      <p aria-live="polite" aria-atomic="true" className="sr-only">
+        {open && typed.trim() ? (rows.some((row) => row.type === 'option') ? `${rows.filter((row) => row.type === 'option').length} matches` : 'No matches') : ''}
+      </p>
+
       {open && (
         <div
-          id={listboxId}
-          role="listbox"
-          aria-labelledby={labelId}
           onMouseDown={(event) => event.preventDefault()}
           className="panel absolute inset-x-0 z-30 mt-1 max-h-[min(24rem,60vh)] overflow-y-auto py-1 md:right-auto md:w-[22rem] md:min-w-full"
         >
+          {rows.length === 0 && (
+            <p aria-hidden="true" className="px-3 py-2.5 text-caption text-fg-muted">
+              No matches.
+            </p>
+          )}
+          <div id={listboxId} role="listbox" aria-labelledby={labelId}>
           {rows[0]?.type === 'clear' && (
             <div id={optionId(0)} role="option" aria-selected={false} className={rowClass(0, 'text-fg-soft')} onMouseMove={hover(0)} onClick={() => choose(rows[0])}>
               {rows[0].label}
@@ -246,7 +258,6 @@ export default function Combobox({
               })}
             </div>
           ))}
-          {rows.length === 0 && <p className="px-3 py-2.5 text-caption text-fg-muted">No matches.</p>}
           {rows.map((row, at) =>
             row.type === 'show-all' ? (
               <div key="show-all" id={optionId(at)} role="option" aria-selected={false} className={rowClass(at, 'mt-1 border-t border-line text-caption text-fg-soft')} onMouseMove={hover(at)} onClick={() => choose(row)}>
@@ -264,9 +275,7 @@ export default function Combobox({
               </div>
             ) : null,
           )}
-          <p role="status" aria-live="polite" className="sr-only">
-            {typed.trim() ? `${rows.filter((row) => row.type === 'option').length} matches` : ''}
-          </p>
+          </div>
         </div>
       )}
     </div>

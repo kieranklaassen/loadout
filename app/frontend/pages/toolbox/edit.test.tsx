@@ -965,6 +965,29 @@ describe('the Tool and Model pickers', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
+  it('opens on the saved model even when it suits another kind, so Enter changes nothing', async () => {
+    const user = userEvent.setup()
+    render(<ToolboxEdit {...onVideo([rankedPick({ rank: 1, tool: veoMark, model: opusMark })])} />)
+    const model = field('1st pick', 'Model')
+
+    await user.click(model)
+    expect(listed()[0]).toEqual(['Current', ['Claude Opus 5.5']])
+    expect(screen.getByRole('option', { name: /Claude Opus 5.5/ })).toHaveAttribute('id', model.getAttribute('aria-activedescendant'))
+    await user.keyboard('{Enter}')
+    expect(patch).not.toHaveBeenCalled()
+  })
+
+  it('keeps the member’s pending model when the tool changes', async () => {
+    const user = userEvent.setup()
+    const mine = { ...markItem('my-model-x1y2', 'My Model', 'model'), pending: true }
+    const state = onVideo([rankedPick({ rank: 1, tool: runway, model: mine })])
+    state.catalog = { ...videoCatalog, models: [...videoCatalog.models, option(mine)] }
+    render(<ToolboxEdit {...state} />)
+
+    await choose(user, '1st pick', 'Tool', /^Veo/)
+    expect(patch.mock.calls[0]![1].operations[0]).toEqual({ op: 'set_pick', category: 'video', rank: 1, tool: 'veo', expected_tool: 'runway' })
+  })
+
   it('offers to add a name nothing matches, and saves it into the slot as a pending item', async () => {
     const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)

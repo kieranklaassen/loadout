@@ -149,14 +149,14 @@ module Toolbox
       ))
     end
 
-    # An agent's model has to be one the catalog says the tool runs. A tool the catalog
-    # pairs with nothing, and a model only this member has (pending review), pass: the
+    # An agent's model has to be one the catalog says the tool runs. A tool with no
+    # approved paired model, and a model only this member has (pending review), pass: the
     # catalog cannot say either way. The member still picks any model on the web.
     def check_pairing(tool, ai_model)
-      return unless tool.paired? && ai_model&.approved?
+      return if ai_model.nil? || ai_model.pending? || !tool.paired?
 
       paired = tool.paired_ai_models
-      return if paired.include?(ai_model)
+      return if paired.empty? || paired.include?(ai_model)
 
       options = paired.first(PAIRED_MODELS_LISTED).map { |model| "#{model.name} (#{model.slug})" }
       options << "#{paired.size - PAIRED_MODELS_LISTED} more (search_catalog with tool: #{tool.slug.inspect})" if paired.size > PAIRED_MODELS_LISTED

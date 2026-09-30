@@ -46,13 +46,23 @@ describe('modelSections', () => {
     ])
   })
 
-  it('lists the member’s pending models on their own, and keeps a saved model the catalog no longer offers', () => {
+  it('lists the member’s pending models on their own', () => {
     const mine = { ...model('my-model-x1y2', 'My Model'), pending: true }
-    const gone = markItem('sora-2', 'Sora 2', 'model')
-    const sections = modelSections({ models: [...models, mine], tool: null, category: video, saved: gone })
+    const sections = modelSections({ models: [...models, mine], tool: null, category: video, saved: null })
 
     expect(sections.find((section) => section.id === 'yours')?.options.map((option) => option.slug)).toEqual(['my-model-x1y2'])
-    expect(sections.find((section) => section.id === 'all')?.options.map((option) => option.slug)).toContain('sora-2')
+  })
+
+  it('keeps the saved model in view: under Current when it would wait behind Show all, in place otherwise', () => {
+    const gone = markItem('sora-2', 'Sora 2', 'model')
+    const hidden = modelSections({ models, tool: null, category: video, saved: gone })
+    expect(hidden[0]).toMatchObject({ id: 'current', label: 'Current', always: true, options: [{ slug: 'sora-2' }] })
+
+    const offKind = modelSections({ models, tool: tool('veo', 'Veo', ['veo-4', 'veo-3']), category: video, saved: opus })
+    expect(offKind[0]).toMatchObject({ id: 'current', options: [{ slug: 'claude-opus-5-5' }] })
+    expect(slugs(offKind.find((section) => section.id === 'all')!.options)).not.toContain('claude-opus-5-5')
+
+    expect(modelSections({ models, tool: null, category: video, saved: kling })[0]!.id).toBe('kind')
   })
 
   it('orders the kind’s models by how many on the team use them, with the count as a note', () => {
@@ -123,20 +133,23 @@ describe('canAdd', () => {
 })
 
 describe('modelForTool', () => {
+  const jev = model('jev', 'Jev')
+
   it('fills in the one model a tool runs', () => {
-    expect(modelForTool(tool('jev', 'TypeSafe Jev', ['jev']), '')).toEqual({ model: 'jev' })
-    expect(modelForTool(tool('jev', 'TypeSafe Jev', ['jev']), 'jev')).toEqual({})
+    expect(modelForTool(tool('jev', 'TypeSafe Jev', ['jev']), undefined)).toEqual({ model: 'jev' })
+    expect(modelForTool(tool('jev', 'TypeSafe Jev', ['jev']), jev)).toEqual({})
   })
 
-  it('clears a model the new tool does not run, and keeps one it does', () => {
+  it('clears a catalog model the new tool does not run, and keeps one it does', () => {
     const veo = tool('veo', 'Veo', ['veo-4', 'veo-3'])
-    expect(modelForTool(veo, 'claude-opus-5-5')).toEqual({ model: null })
-    expect(modelForTool(veo, 'veo-3')).toEqual({})
-    expect(modelForTool(veo, '')).toEqual({})
+    expect(modelForTool(veo, opus)).toEqual({ model: null })
+    expect(modelForTool(veo, veo3)).toEqual({})
+    expect(modelForTool(veo, undefined)).toEqual({})
   })
 
-  it('leaves the model alone for a tool the catalog pairs with nothing', () => {
-    expect(modelForTool(tool('pika', 'Pika'), 'claude-opus-5-5')).toEqual({})
-    expect(modelForTool(undefined, 'claude-opus-5-5')).toEqual({})
+  it('keeps the member’s own pending model, and leaves the model alone for a tool the catalog pairs with nothing', () => {
+    expect(modelForTool(tool('veo', 'Veo', ['veo-4', 'veo-3']), { ...model('my-model-x1y2', 'My Model'), pending: true })).toEqual({})
+    expect(modelForTool(tool('pika', 'Pika'), opus)).toEqual({})
+    expect(modelForTool(undefined, opus)).toEqual({})
   })
 })

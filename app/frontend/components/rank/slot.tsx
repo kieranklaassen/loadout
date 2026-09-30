@@ -68,9 +68,10 @@ export default function Slot({ kind, view, catalog, enums, top, actions }: {
   }
   const change = (fields: SlotFields) => actions.saveSlot(rank, pick, fields)
   const toolOption = catalog.tools.find((item) => item.slug === shown.tool)
+  const modelOption = catalog.models.find((item) => item.slug === shown.model)
   const toolItem = toolOption ?? pick?.tool
-  const modelItem = catalog.models.find((item) => item.slug === shown.model) ?? pick?.model
-  const chooseTool = (slug: string) => change({ tool: slug, ...modelForTool(catalog.tools.find((item) => item.slug === slug), shown.model) })
+  const modelItem = modelOption ?? pick?.model
+  const chooseTool = (slug: string) => change({ tool: slug, ...modelForTool(catalog.tools.find((item) => item.slug === slug), modelOption) })
   const waiting = !pick && suggestions.length > 0
 
   const surface = pick
@@ -120,7 +121,7 @@ export default function Slot({ kind, view, catalog, enums, top, actions }: {
                 selected={toolItem}
                 busy={actions.busy}
                 showAllLabel="Show all tools"
-                list={(query, showAll) => assemble(toolSections({ tools: catalog.tools, kind, rank, saved: pick?.tool, standings: top?.tools }), query, showAll)}
+                list={(query, showAll) => assemble(toolSections({ tools: catalog.tools, kind, rank, saved: toolItem, standings: top?.tools }), query, showAll)}
                 canAdd={canAdd}
                 onSelect={(slug) => slug && chooseTool(slug)}
                 onAdd={(name) => change({ tool: name })}
@@ -135,7 +136,7 @@ export default function Slot({ kind, view, catalog, enums, top, actions }: {
                 clearLabel="Not set"
                 showAllLabel="Show all models"
                 list={(query, showAll) =>
-                  assemble(modelSections({ models: catalog.models, tool: toolOption, category: kind.category, saved: pick?.model, standings: top?.models }), query, showAll)
+                  assemble(modelSections({ models: catalog.models, tool: toolOption, category: kind.category, saved: modelItem, standings: top?.models }), query, showAll)
                 }
                 canAdd={canAdd}
                 onSelect={(slug) => change({ model: slug })}

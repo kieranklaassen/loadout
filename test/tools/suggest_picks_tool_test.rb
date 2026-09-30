@@ -135,6 +135,15 @@ class SuggestPicksToolTest < ActiveSupport::TestCase
     assert_equal "claude-opus-5", payload(suggest([ { op: "suggest", category: "video", tool: "runway", model: "claude-opus-5" } ]))["suggestions"].sole["model"]
   end
 
+  test "a hidden model is held to the pairing, and a tool whose paired models are all hidden takes any model" do
+    tools(:runway).update!(paired_models: %w[claude-opus])
+    ai_models(:gpt_6).update!(status: "hidden")
+    assert_match(/Runway does not run GPT-6 Astra/, error_text(suggest([ { op: "suggest", category: "video", tool: "runway", model: "gpt-6-astra" } ])))
+
+    AiModel.where(family: "claude-opus").update_all(status: "hidden")
+    assert_equal "gpt-6-astra", payload(suggest([ { op: "suggest", category: "video", tool: "runway", model: "gpt-6-astra" } ]))["suggestions"].sole["model"]
+  end
+
   test "any model passes for a tool the catalog pairs with nothing, and a model only the member has passes too" do
     assert_equal "gpt-6-astra", payload(suggest([ { op: "suggest", category: "video", tool: "runway", model: "gpt-6-astra" } ]))["suggestions"].sole["model"]
 
