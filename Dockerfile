@@ -68,8 +68,13 @@ RUN bundle exec bootsnap precompile -j 1 app/ lib/
 # Precompiling assets for production without requiring secret RAILS_MASTER_KEY. This
 # builds the client bundle (public/vite) and the self-contained SSR bundle
 # (public/vite-ssr/ssr.js), then drops node_modules — neither needs it at runtime.
+# Precompiling boots the app, which leaves an empty storage/production.sqlite3.
+# Docker copies an image's files into a new named volume on first mount, so a
+# fresh deploy would start with that file and db:prepare would skip loading the
+# queue, cache, and cable schemas.
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile && \
-    rm -rf node_modules
+    rm -rf node_modules && \
+    rm -f storage/*.sqlite3*
 
 
 
