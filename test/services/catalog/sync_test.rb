@@ -29,6 +29,45 @@ class Catalog::SyncTest < ActiveSupport::TestCase
     assert_equal [ "Meta", "muse-spark" ], AiModel.find_by!(slug: "muse-spark-1-3").then { |model| [ model.maker, model.family ] }
   end
 
+  test "seeds OpenAI's current GPT-6, GPT-6.1 and GPT-5.6 models, newest first" do
+    Catalog::Sync.call
+
+    openai = AiModel.ordered.where(maker: "OpenAI").pluck(:name)
+    lineup = [ "GPT-6 Astra", "GPT-6.1 Sol", "GPT-6 Sol", "GPT-5.6 Sol", "GPT-5.6 Terra", "GPT-6 Luna", "GPT-5.6 Luna" ]
+    assert_equal lineup, openai & lineup
+    assert_empty [ "GPT-Image-2.5 Sunburst", "GPT-Image-2.5 Flare", "GPT-Live 1", "GPT-Realtime-2.1", "GPT-Live-Transcribe", "GPT-4o mini TTS", "gpt-oss-120b" ] - openai
+    assert_equal %w[coding knowledge-work research writing], AiModel.find_by!(slug: "gpt-6-1-sol").category_slugs
+    assert_includes AiModel.find_by!(slug: "gpt-6-luna").category_slugs, "classification"
+    assert_includes AiModel.find_by!(slug: "gpt-image-2-5-sunburst").category_slugs, "image"
+    assert_includes AiModel.find_by!(slug: "gpt-live-transcribe").category_slugs, "speech-to-text"
+    assert_includes AiModel.find_by!(slug: "gpt-4o-mini-tts").category_slugs, "text-to-speech"
+  end
+
+  test "names the models that never shipped under their catalog slug after the real ones" do
+    Catalog::Sync.call
+
+    renamed = %w[gpt-5-6 gpt-5-6-mini gemini-3-8-pro veo-4 deepseek-v4].index_with { |slug| AiModel.find_by!(slug:).name }
+    assert_equal({ "gpt-5-6" => "GPT-5.6 Sol", "gpt-5-6-mini" => "GPT-5.6 Terra", "gemini-3-8-pro" => "Gemini 3.1 Pro", "veo-4" => "Veo 3.1", "deepseek-v4" => "DeepSeek V4 Pro" }, renamed)
+  end
+
+  test "seeds each vendor's current models with their makers" do
+    Catalog::Sync.call
+
+    makers = AiModel.where(slug: %w[claude-sonnet-5-5 gemini-omni-flash grok-build-0-1 muse-image-1-0 mistral-medium-3-5 deepseek-v4-1-flash qwen-3-8-max kimi-k2-7-code glm-5-3 eleven-v4 suno-v6]).pluck(:slug, :maker).to_h
+    assert_equal({ "claude-sonnet-5-5" => "Anthropic", "gemini-omni-flash" => "Google", "grok-build-0-1" => "xAI", "muse-image-1-0" => "Meta",
+                   "mistral-medium-3-5" => "Mistral AI", "deepseek-v4-1-flash" => "DeepSeek", "qwen-3-8-max" => "Alibaba", "kimi-k2-7-code" => "Moonshot AI",
+                   "glm-5-3" => "Z.ai", "eleven-v4" => "ElevenLabs", "suno-v6" => "Suno" }, makers)
+  end
+
+  test "every catalog item has a unique slug and a unique name" do
+    data = YAML.safe_load_file(Catalog::Sync::PATH, permitted_classes: [ Date ])
+
+    %w[tools models].each do |kind|
+      assert_empty data[kind].map { |item| item["slug"] }.tally.select { |_, count| count > 1 }.keys, "duplicate #{kind} slugs"
+      assert_empty data[kind].map { |item| item["name"].downcase }.tally.select { |_, count| count > 1 }.keys, "duplicate #{kind} names"
+    end
+  end
+
   test "never un-hides an admin-hidden item or overwrites a member suggestion" do
     suggestion = Tool.create!(slug: "cora", name: "My Cora", status: "pending", created_by: users(:one))
     Catalog::Sync.call
