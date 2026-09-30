@@ -7,12 +7,23 @@ import { sectionLabelClasses } from '../section_label'
 
 export type Person = { handle: string; name: string }
 
-/** A tool or model, N of M, and the people who ranked it 1st, 2nd and 3rd. The server lists only people the viewer may open. */
-export type Listing = { item: MarkItem; count: CountValue; by_rank: Record<string, Person[]> }
+/**
+ * A tool or model, N of M, and the people who ranked it 1st, 2nd and 3rd. The server names only people the
+ * viewer may open; `unnamed` is how many other people counted have it, never split by rank.
+ */
+export type Listing = { item: MarkItem; count: CountValue; by_rank: Record<string, Person[]>; unnamed: number }
 
-/** "1st for Kieran, Dan; 2nd for Rob". */
-function RankNames({ byRank }: { byRank: Listing['by_rank'] }) {
+/** "and 2 others" after names, "2 people" without any. */
+export function othersText(unnamed: number, named: boolean) {
+  if (unnamed <= 0) return ''
+  const people = unnamed === 1 ? 'other' : 'others'
+  return named ? `and ${unnamed} ${people}` : `${unnamed} ${unnamed === 1 ? 'person' : 'people'}, not listed`
+}
+
+/** "1st for Kieran, Dan; 2nd for Rob · and 2 others". */
+function RankNames({ byRank, unnamed }: { byRank: Listing['by_rank']; unnamed: number }) {
   const groups = Object.entries(byRank).filter(([, people]) => people.length > 0)
+  const others = othersText(unnamed, groups.length > 0)
 
   return (
     <p className="mt-0.5 text-sm text-fg-muted">
@@ -30,6 +41,7 @@ function RankNames({ byRank }: { byRank: Listing['by_rank'] }) {
           ))}
         </span>
       ))}
+      {others && (groups.length > 0 ? ` · ${others}` : others)}
     </p>
   )
 }
@@ -43,7 +55,7 @@ export default function RankedList({ title, listings, empty }: { title: string; 
         <p className="border-b border-line py-4 text-fg-muted">{empty}</p>
       ) : (
         <ol>
-          {listings.map(({ item, count, by_rank }, index) => (
+          {listings.map(({ item, count, by_rank, unnamed }, index) => (
             <li
               key={item.slug}
               className="grid grid-cols-[1.5rem_2.75rem_minmax(0,1fr)] items-center gap-x-3.5 border-b border-line py-4 md:grid-cols-[1.5rem_2.75rem_minmax(0,1fr)_auto]"
@@ -52,7 +64,7 @@ export default function RankedList({ title, listings, empty }: { title: string; 
               <Mark item={item} size="lg" />
               <div>
                 <p className="font-semibold text-fg">{item.name}</p>
-                <RankNames byRank={by_rank} />
+                <RankNames byRank={by_rank} unnamed={unnamed} />
               </div>
               <Count count={count} label="use it" className="col-start-3 mt-1 text-sm text-fg-soft md:col-start-auto md:mt-0" />
             </li>

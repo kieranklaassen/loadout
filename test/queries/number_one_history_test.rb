@@ -25,6 +25,11 @@ end
 
 # Fixture people are removed so a population is exactly the one a test builds; the
 # fixture universe is checked in NumberOneHistoryFixturesTest below.
+#
+# On the team every onboarded member counts every day they have picks, whatever they
+# share and whoever is looking; a private member is never named, and an era names no
+# one. Visibility periods clip history only outside the team (SHOW others), so the
+# period scenarios are written with `outsider`s read by a team viewer under "others".
 class NumberOneHistoryTest < ActiveSupport::TestCase
   include HistoryReplayAssertions
 
@@ -43,6 +48,11 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
 
   # A verified @every.to address, so the person is on the team.
   def member(handle, visibility: "team") = add_person(handle, visibility:, team: true)
+
+  # A non-team address, so the person is in SHOW others and their periods clip them.
+  def outsider(handle, visibility: "team") = add_person(handle, visibility:, team: false)
+
+  def person(handle, team:, visibility: "team") = team ? member(handle, visibility:) : outsider(handle, visibility:)
 
   def rank(user, position, tool, model: nil, category: "coding", **choices)
     Toolbox::Update.call(
@@ -75,9 +85,9 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
   def watcher = @watcher ||= member("watcher", visibility: "only_me")
 
   # Cursor leads on people alone: two of them rank it, and every other tool has one.
-  def three_teammates
+  def three_teammates(team: true)
     on 1, 5, 10
-    ana, bob, cyd = %w[ana bob cyd].map { |handle| member(handle) }
+    ana, bob, cyd = %w[ana bob cyd].map { |handle| person(handle, team:) }
     rank ana, 1, @zed
     rank ana, 2, @cursor
     rank bob, 1, @windsurf
@@ -87,10 +97,10 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
   end
 
   # Dan ranks Claude Code (2 people, 2 first picks) past Cursor (2 people, none first).
-  def dan_shares_from_march_to_may(again_in_july:)
-    three_teammates
+  def dan_shares_from_march_to_may(again_in_july:, team: true)
+    three_teammates(team:)
     on 3, 2
-    dan = member("dan")
+    dan = person("dan", team:)
     rank dan, 1, @claude_code
     on 5, 4
     dan.update!(visibility: "only_me")
@@ -103,10 +113,10 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
 
   # AE4, the shape of the history
 
-  test "AE4: a fourth person counts for March to May and from July on, not while they were Only me" do
-    dan_shares_from_march_to_may(again_in_july: true)
+  test "AE4: outside the team, a fourth person counts for March to May and from July on, not while they were Only me" do
+    dan_shares_from_march_to_may(again_in_july: true, team: false)
 
-    result = eras(watcher)
+    result = eras(watcher, show: "others")
 
     assert_equal(
       [
@@ -117,14 +127,41 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
       ],
       result
     )
-    assert_current_era_matches_kind_table(result, watcher)
+    assert_current_era_matches_kind_table(result, watcher, show: "others")
   end
 
-  test "AE4: a person who is Only me today counts for no day at all, in anyone else's history" do
-    dan_shares_from_march_to_may(again_in_july: false)
+  test "AE4: outside the team, a person who is Only me today counts for no day at all, in anyone else's history" do
+    dan_shares_from_march_to_may(again_in_july: false, team: false)
 
-    assert_equal [ era("2026-01-05", nil, @cursor) ], eras(watcher)
-    assert_equal [], eras(nil), "team-only sharers are nobody's business to a visitor"
+    assert_equal [ era("2026-01-05", nil, @cursor) ], eras(watcher, show: "others")
+    assert_equal [], eras(nil, show: "others"), "team-only sharers are nobody's business to a visitor"
+  end
+
+  [ true, false ].each do |again_in_july|
+    test "on the team, a member counts every day from their first pick, for every viewer, whatever they share (again in July: #{again_in_july})" do
+      dan = dan_shares_from_march_to_may(again_in_july:)
+      expected = [ era("2026-01-05", "2026-03-01", @cursor), era("2026-03-02", nil, @claude_code) ]
+
+      [ watcher, nil, dan ].each do |viewer|
+        result = eras(viewer)
+        assert_equal expected, result, "for #{viewer&.handle || "a visitor"}"
+        assert_current_era_matches_kind_table(result, viewer)
+      end
+    end
+  end
+
+  test "on the team, a member who is Only me today moves the history but is named nowhere" do
+    dan_shares_from_march_to_may(again_in_july: false)
+    assert_equal "only_me", User.find_by!(handle: "dan").visibility
+
+    { watcher => 1, nil => 2 }.each do |viewer, unnamed|
+      kind = TeamRankings.new(viewer:).kind(@coding)
+      claude_code = kind[:tools].find { |entry| entry[:item][:slug] == @claude_code.slug }
+      assert_equal 2, claude_code[:count][:n], "cyd and dan"
+      assert_equal unnamed, claude_code[:unnamed], "dan, and for a visitor team-only cyd too, counted anonymously"
+      assert_not_includes kind.to_json, "\"dan\""
+      assert_not_includes eras(viewer).to_json, "dan"
+    end
   end
 
   test "a viewer's own history is included in full, even while they are Only me" do
@@ -136,20 +173,34 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
     assert_current_era_matches_kind_table(result, dan)
   end
 
-  test "AE4: an anonymous or non-team viewer never sees a team-only period" do
+  test "AE4: outside the team, an anonymous or non-team viewer never sees a team-only period" do
     on 1, 5, 10
-    people = %w[pia quinn rex].map { |handle| member(handle, visibility: "team") }
+    people = %w[pia quinn rex].map { |handle| outsider(handle, visibility: "team") }
     people.each { |person| rank person, 1, @cursor }
     on 2, 10
     people.each { |person| rank person, 1, @claude_code }
     on 4, 1
     people.each { |person| person.update!(visibility: "link") }
-    outsider = add_person("nina", visibility: "only_me")
+    nina = outsider("nina", visibility: "only_me")
 
-    assert_equal [ era("2026-01-05", "2026-02-09", @cursor), era("2026-02-10", nil, @claude_code) ], eras(watcher)
-    assert_equal [ era("2026-04-01", nil, @claude_code) ], eras(nil), "they went public on April 1; the team-only months do not exist for a visitor"
-    assert_equal eras(nil), eras(outsider)
+    assert_equal [ era("2026-01-05", "2026-02-09", @cursor), era("2026-02-10", nil, @claude_code) ], eras(watcher, show: "others")
+    assert_equal [ era("2026-04-01", nil, @claude_code) ], eras(nil, show: "others"), "they went public on April 1; the team-only months do not exist for a visitor"
+    assert_equal eras(nil, show: "others"), eras(nina, show: "others")
+    assert_current_era_matches_kind_table(eras(nil, show: "others"), nil, show: "others")
+  end
+
+  test "on the team, a visitor and a non-team viewer read the same history as a member, team-only months included" do
+    on 1, 5, 10
+    people = %w[pia quinn rex].map { |handle| member(handle, visibility: "team") }
+    people.each { |person| rank person, 1, @cursor }
+    on 2, 10
+    people.each { |person| rank person, 1, @claude_code }
+    nina = outsider("nina", visibility: "only_me")
+
+    full = [ era("2026-01-05", "2026-02-09", @cursor), era("2026-02-10", nil, @claude_code) ]
+    [ watcher, nil, nina ].each { |viewer| assert_equal full, eras(viewer) }
     assert_current_era_matches_kind_table(eras(nil), nil)
+    assert_empty Audience.new(viewer: nil).people, "a visitor counts them but may name none of them"
   end
 
   # Same-day edits after narrowing
@@ -158,15 +209,15 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
     "an every-team period" => [ "team", :team_viewer ],
     "an anyone-with-the-link period" => [ "link", :visitor ]
   }.each do |name, (level, who)|
-    test "an edit made after narrowing on the same day never counts, for #{name}" do
+    test "outside the team, an edit made after narrowing on the same day never counts, for #{name}" do
       on 1, 5, 10
-      ana, bob, cyd = %w[ana bob cyd].map { |handle| member(handle, visibility: level) }
+      ana, bob, cyd = %w[ana bob cyd].map { |handle| outsider(handle, visibility: level) }
       rank ana, 1, @windsurf
       rank ana, 2, @claude_code
       rank bob, 1, @zed
       rank bob, 2, @claude_code
       rank cyd, 1, @cursor
-      pat = member("pat", visibility: level)
+      pat = outsider("pat", visibility: level)
       rank pat, 1, @cursor
       on 3, 10, 9
       pat.update!(visibility: "only_me")
@@ -183,9 +234,30 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
           era("2026-03-11", "2026-05-31", @claude_code),
           era("2026-06-01", nil, @zed)
         ],
-        eras(viewer),
+        eras(viewer, show: "others"),
         "March 10 is Pat's last shared day and is sampled at 09:00, before the Zed edit"
       )
+    end
+  end
+
+  test "on the team, narrowing changes nothing: an edit counts from the day it is made" do
+    on 1, 5, 10
+    ana, bob, cyd = %w[ana bob cyd].map { |handle| member(handle) }
+    rank ana, 1, @windsurf
+    rank ana, 2, @claude_code
+    rank bob, 1, @zed
+    rank bob, 2, @claude_code
+    rank cyd, 1, @cursor
+    pat = member("pat")
+    rank pat, 1, @cursor
+    on 3, 10, 9
+    pat.update!(visibility: "only_me")
+    on 3, 10, 15
+    rank pat, 1, @zed
+
+    [ watcher, nil ].each do |viewer|
+      assert_equal [ era("2026-01-05", "2026-03-09", @cursor), era("2026-03-10", nil, @zed) ], eras(viewer),
+        "the Zed edit counts at the end of March 10 though Pat was Only me by then"
     end
   end
 
@@ -258,7 +330,22 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
     assert_equal [], eras(watcher)
   end
 
-  test "a person is counted from the day they share, though they ranked earlier" do
+  test "outside the team, a person is counted from the day they share, though they ranked earlier" do
+    three_teammates(team: false)
+    on 2, 1
+    lee = outsider("lee", visibility: "only_me")
+    rank lee, 1, @claude_code
+    rank lee, 2, @zed
+    on 3, 1
+    lee.update!(visibility: "team")
+
+    for_others = eras(watcher, show: "others")
+    assert_equal [ era("2026-01-05", "2026-02-28", @cursor), era("2026-03-01", nil, @claude_code) ], for_others,
+      "Lee's Claude Code (a 1st pick) and Zed make Claude Code the most used, but only from March 1"
+    assert_current_era_matches_kind_table(for_others, watcher, show: "others")
+  end
+
+  test "on the team, a member is counted from the day they rank, whatever they shared then" do
     three_teammates
     on 2, 1
     lee = member("lee", visibility: "only_me")
@@ -267,14 +354,11 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
     on 3, 1
     lee.update!(visibility: "team")
 
-    for_team = eras(watcher)
-    assert_equal [ era("2026-01-05", "2026-02-28", @cursor), era("2026-03-01", nil, @claude_code) ], for_team,
-      "Lee's Claude Code (a 1st pick) and Zed make Claude Code the most used, but only from March 1"
-    assert_current_era_matches_kind_table(for_team, watcher)
-
-    own = eras(lee)
-    assert_equal [ era("2026-01-05", "2026-01-31", @cursor), era("2026-02-01", nil, @claude_code) ], own, "Lee's own history starts the day they ranked"
-    assert_current_era_matches_kind_table(own, lee)
+    [ watcher, nil, lee ].each do |viewer|
+      result = eras(viewer)
+      assert_equal [ era("2026-01-05", "2026-01-31", @cursor), era("2026-02-01", nil, @claude_code) ], result, "the same history as Lee's own"
+      assert_current_era_matches_kind_table(result, viewer)
+    end
   end
 
   # Ordering
@@ -394,9 +478,9 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
   end
 
   test "migration baseline rows carry a person's picks into the days they share" do
-    three_teammates
+    three_teammates(team: false)
     on 1, 20
-    lee = member("lee", visibility: "only_me")
+    lee = outsider("lee", visibility: "only_me")
     Entry.create!(user: lee, category: @coding, tool: @claude_code, rank: 1)
     Entry.create!(user: lee, category: @coding, tool: @zed, rank: 2)
     lee.entries.each do |entry|
@@ -409,13 +493,29 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
     lee.update!(visibility: "team")
 
     assert_replays(lee)
-    assert_equal [ era("2026-01-05", "2026-01-31", @cursor), era("2026-02-01", nil, @claude_code) ], eras(watcher),
+    assert_equal [ era("2026-01-05", "2026-01-31", @cursor), era("2026-02-01", nil, @claude_code) ], eras(watcher, show: "others"),
       "the baseline is Lee's state when they start sharing; without it Cursor would lead throughout"
   end
 
-  test "AE10: a person who was never visible cannot move anyone else's history" do
+  test "AE10: outside the team, a person who was never visible cannot move anyone else's history" do
+    three_teammates(team: false)
+    before = eras(watcher, show: "others")
+    on 2, 1
+    hidden = outsider("hid", visibility: "only_me")
+    rank hidden, 1, @claude_code
+    rank hidden, 2, @zed
+    on 3, 1
+    rank hidden, 1, @windsurf
+    write hidden, { op: "suggest", category: "coding", tool: @cursor.slug }, source: "mcp", client_name: "Claude"
+
+    assert_equal before, eras(watcher, show: "others")
+    assert_equal [ era("2026-01-05", nil, @cursor) ], before, "guard: the leader really is Cursor, which Claude Code and Zed picks would have unseated"
+  end
+
+  test "AE10: on the team, a member who was never visible moves everyone's history, and only by their picks" do
     three_teammates
     before = eras(watcher)
+    assert_equal [ era("2026-01-05", nil, @cursor) ], before
     on 2, 1
     hidden = member("hid", visibility: "only_me")
     rank hidden, 1, @claude_code
@@ -424,13 +524,19 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
     rank hidden, 1, @windsurf
     write hidden, { op: "suggest", category: "coding", tool: @cursor.slug }, source: "mcp", client_name: "Claude"
 
-    assert_equal before, eras(watcher)
-    assert_equal [ era("2026-01-05", nil, @cursor) ], before, "guard: the leader really is Cursor, which Claude Code and Zed picks would have unseated"
+    moved = [
+      era("2026-01-05", "2026-01-31", @cursor),
+      era("2026-02-01", "2026-02-28", @claude_code),
+      era("2026-03-01", nil, @windsurf)
+    ]
+    [ watcher, nil ].each { |viewer| assert_equal moved, eras(viewer), "Claude Code, then Windsurf, each with two 1st picks; the suggestion moves nothing" }
+    assert_equal [], eras(watcher, show: "others"), "a member never reaches the others' history"
+    assert_not_includes Audience.new(viewer: watcher).people.pluck(:handle), "hid"
   end
 
   test "a deleted person no longer influences any era" do
     dan = dan_shares_from_march_to_may(again_in_july: true)
-    assert_equal 4, eras(watcher).size
+    assert_equal 2, eras(watcher).size
 
     dan.destroy!
 
@@ -458,25 +564,28 @@ class NumberOneHistoryTest < ActiveSupport::TestCase
   end
 
   test "the replay is a fixed number of queries, however long the history" do
-    dan_shares_from_march_to_may(again_in_july: true)
+    dan_shares_from_march_to_may(again_in_july: true, team: false)
+    %w[max mia moe].each { |handle| rank member(handle), 1, @cursor }
     watcher
 
-    counts = ->(today) do
+    counts = ->(today, show) do
       travel_to today
       statements = []
       counter = ->(*, payload) { statements << payload[:sql] unless payload[:name] == "SCHEMA" }
       ActiveRecord::Base.uncached do
-        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { NumberOneHistory.new(viewer: watcher).eras(@coding) }
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { assert_not_empty NumberOneHistory.new(viewer: watcher, show:).eras(@coding) }
       end
       statements.filter_map { |sql| sql[/FROM "(\w+)"/, 1] }.tally
     end
 
-    short = counts.(TODAY)
-    long = counts.(Time.utc(2029, 8, 10))
+    { "others" => 1, "team" => 0 }.each do |show, period_queries|
+      short = counts.(TODAY, show)
+      long = counts.(Time.utc(2029, 8, 10), show)
 
-    assert_equal short, long, "no query per day"
-    assert_equal 1, short["entry_changes"]
-    assert_equal 1, short["visibility_periods"]
+      assert_equal short, long, "no query per day (#{show})"
+      assert_equal 1, short["entry_changes"]
+      assert_equal period_queries, short.fetch("visibility_periods", 0), "only the others are clipped by periods"
+    end
   end
 
   test "the replay equals the picks after a swap, a compaction, a confirmed suggestion and a removal" do
@@ -521,13 +630,26 @@ class NumberOneHistoryFixturesTest < ActiveSupport::TestCase
     User.find_each { |user| assert_replays(user) }
   end
 
-  test "the fixture populations have fewer than three people, so there is no history to show" do
+  test "the fixture team is three coders, one of them private, and every viewer reads the same history" do
+    coding = categories(:coding)
+    day = ->(days_ago) { days_ago.days.ago.beginning_of_hour.utc.to_date.iso8601 }
+    expected = [
+      # From dee's first pick: Cursor for ana (2nd), cy and dee; Opus 5 and GPT-6 tie on one 1st pick each, and Claude Opus 5 sorts first.
+      { from: day.(55), to: day.(41), tool: tools(:cursor).to_prop, model: ai_models(:opus_5).to_prop },
+      # From ana's and dee's swaps: Opus 5.5 for both of them.
+      { from: day.(40), to: nil, tool: tools(:cursor).to_prop, model: ai_models(:opus_5_5).to_prop }
+    ]
+
+    [ nil, users(:one), users(:every_dee), users(:every_ana), users(:every_cy), users(:outside_eli), users(:every_fay) ].each do |viewer|
+      assert_equal expected, NumberOneHistory.new(viewer:, show: "team").eras(coding), "team history for #{viewer&.handle || "a visitor"}"
+    end
+  end
+
+  test "the fixture others are two people, so there is no history to show" do
     coding = categories(:coding)
 
     [ nil, users(:every_dee), users(:every_ana), users(:outside_eli) ].each do |viewer|
-      %w[team others].each do |show|
-        assert_equal [], NumberOneHistory.new(viewer:, show:).eras(coding)
-      end
+      assert_equal [], NumberOneHistory.new(viewer:, show: "others").eras(coding)
     end
   end
 end

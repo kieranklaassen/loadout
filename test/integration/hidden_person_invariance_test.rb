@@ -1,12 +1,19 @@
 require "test_helper"
 
-# AE10, R12, R13: whatever a hidden person does, nobody else can tell. Two people are hidden
-# and each once shared: Cy, an Every member with a past team period, and Otto, someone
-# outside Every with a past link period. For each viewer class this reads Home, the Kind pages
-# (with "What we used before"), a visible person's Profile, the hidden person's own handle,
-# search results and the agent tools. Then the hidden person changes their picks, suggestions,
-# visibility, pending catalog items and account, and is finally deleted; what every other
-# viewer sees must stay byte-identical throughout.
+# AE10, R12, R13: a hidden person is never named, linked, searchable or selectable, and
+# nothing about them leaks except counts. Two people are hidden and each once shared: Cy, an
+# Every member with a past team period, and Otto, someone outside Every with a past link
+# period. For each viewer class this reads Home, the Kind pages (with "What we used before"),
+# a visible person's Profile, the hidden person's own handle, search results and the agent
+# tools. Then the hidden person changes their picks, suggestions, visibility, pending catalog
+# items and account, and is finally deleted.
+#
+# Otto is outside the team, so he counts for nobody else: every other viewer's view stays
+# byte-identical throughout. Cy is on the team, and the team is counted whatever each member
+# shares, so her picks move every viewer's team numbers (N of M, order, leaders, eras, last
+# update). On those surfaces only the people named must stay exactly the same; everywhere
+# else, and for every change that is not a pick (suggestions, visibility, renames), the view
+# stays byte-identical.
 #
 # Time is frozen, so timestamps such as a kind's last update are compared exactly: they are
 # one of the ways a hidden edit could show, so they are not normalised away. The hidden
@@ -19,11 +26,16 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
   SEARCHES = [ "cy", "otto", "opus", "secret", "cursor", "runway" ].freeze
   PROFILES = %w[/ana /dee /eli /cy /otto /nobody-here].freeze
 
-  # handle => the viewer and SHOW class whose history the person's past would land in
+  # handle => the viewer and SHOW class whose history the person's past would land in, how
+  # many people that class counts, and whether the person is counted there (the team counts
+  # every member; outside it only the people the viewer may open count).
   SUBJECTS = {
-    "cy" => { about: "an Every member whose team period is in the past", history: [ "dee", "team" ] },
-    "otto" => { about: "someone outside Every whose link period is in the past", history: [ "newcomer", "others" ] }
+    "cy" => { about: "an Every member whose team period is in the past", history: [ "dee", "team" ], class_size: 7, counted: true },
+    "otto" => { about: "someone outside Every whose link period is in the past", history: [ "newcomer", "others" ], class_size: 5, counted: false }
   }.freeze
+
+  # What nobody but the hidden person may ever read, whatever they do.
+  IDENTIFIERS = [ "Cy Every", "Otto", "Renamed Person", "Now writing about Zed" ].freeze
 
   setup do
     @now = Time.current.change(usec: 0)
@@ -49,28 +61,51 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
       get kind_path("coding"), params: { show: }
 
       assert_operator page_props[:eras].to_a.size, :>=, 2
-      assert_equal 5, page_props[:ranked][:of], "the five other people in the class, not #{handle}"
+      if subject[:counted]
+        assert_equal subject[:class_size], page_props[:ranked][:of], "every onboarded member with a pick, #{handle} and dot included"
+      else
+        assert_equal subject[:class_size], page_props[:ranked][:of], "the five other people in the class, not #{handle}"
+      end
     end
 
-    test "were #{handle} to share again, their past period would change the history" do
-      viewer, show = subject[:history]
-      sign_in_as User.find_by!(handle: viewer)
-      get kind_path("coding"), params: { show: }
-      hidden = page_props[:eras]
+    if subject[:counted]
+      test "#{handle} is in the team's history every day already, so sharing again changes no era, only who is named" do
+        viewer, show = subject[:history]
+        sign_in_as User.find_by!(handle: viewer)
+        get kind_path("coding"), params: { show: }
+        hidden = page_props
 
-      travel 1.minute
-      User.find_by!(handle:).update!(visibility: "link")
-      get kind_path("coding"), params: { show: }
+        travel 1.minute
+        User.find_by!(handle:).update!(visibility: "link")
+        get kind_path("coding"), params: { show: }
 
-      assert_not_equal hidden, page_props[:eras]
+        assert_equal hidden[:eras], page_props[:eras]
+        assert_equal hidden[:ranked], page_props[:ranked]
+        assert_not_includes named_handles(hidden.to_json).keys, handle
+        assert_includes named_handles(page_props.to_json).keys, handle
+      end
+    else
+      test "were #{handle} to share again, their past period would change the history" do
+        viewer, show = subject[:history]
+        sign_in_as User.find_by!(handle: viewer)
+        get kind_path("coding"), params: { show: }
+        hidden = page_props[:eras]
+
+        travel 1.minute
+        User.find_by!(handle:).update!(visibility: "link")
+        get kind_path("coding"), params: { show: }
+
+        assert_not_equal hidden, page_props[:eras]
+      end
     end
 
-    test "AE10: #{handle} (#{subject[:about]}): picks, suggestions, visibility, pending items, account and deletion change nothing for anyone else" do
+    test "AE10: #{handle} (#{subject[:about]}): nothing they do names them to anyone else#{subject[:counted] ? "; only their picks move the team's numbers" : ", or changes anything"}" do
       person = User.find_by!(handle:)
       baseline = read_everyone
       themselves = read_as(person)
+      counted = subject[:counted]
 
-      mutate(baseline, "they change their picks") do
+      after = mutate(baseline, "they change their picks", counts_may_change: counted) do
         update_toolbox person, [
           { op: "set_pick", category: "coding", rank: 1, tool: "claude-code", model: "claude-opus-5-5", context: "1m", effort: "high" },
           { op: "set_pick", category: "coding", rank: 2, tool: "cursor" },
@@ -79,6 +114,13 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
         ]
       end
       assert_not_equal themselves, read_as(person), "their own page shows the change, so the snapshot can see it"
+      if counted
+        @viewers.each_key do |viewer|
+          assert_not_equal baseline[viewer]["Kind video, team"], after[viewer]["Kind video, team"], "#{viewer} counts their new Runway pick"
+          assert_equal baseline[viewer]["Home, others"], after[viewer]["Home, others"], "#{viewer}: the others do not count a member"
+        end
+      end
+      baseline = after
 
       mutate(baseline, "an agent suggests picks for them") do
         update_toolbox person, [ { op: "suggest", category: "knowledge-work", tool: "claude-code", model: "claude-opus-5-5" }, { op: "suggest", category: "video", tool: "Secret Agent Tool" } ],
@@ -95,13 +137,14 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
         person.update!(visibility: "only_me")
       end
 
-      mutate(baseline, "they add pending catalog items and rank them") do
+      # A pending pick counts nowhere, but it is a confirmed change, so it moves a counted person's "last update".
+      baseline = mutate(baseline, "they add pending catalog items and rank them", counts_may_change: counted) do
         Tool.resolve_or_suggest!("Secret Tool", user: person)
         AiModel.resolve_or_suggest!("Secret Model", user: person)
         update_toolbox person, [ { op: "set_pick", category: "coding", rank: 3, tool: "Secret Tool", model: "Secret Model" } ]
       end
 
-      mutate(baseline, "they remove a pick") do
+      baseline = mutate(baseline, "they remove a pick", counts_may_change: counted) do
         update_toolbox person, [ { op: "remove_pick", category: "coding", rank: 1 } ]
       end
 
@@ -109,7 +152,7 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
         person.update!(name: "Renamed Person", handle: "#{handle}-renamed", bio: "Now writing about Zed.")
       end
 
-      mutate(baseline, "their account is deleted") do
+      mutate(baseline, "their account is deleted", counts_may_change: counted) do
         person.destroy!
       end
     end
@@ -127,16 +170,20 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
     @viewers.each_key { |viewer| assert_not_equal before[viewer], after[viewer], "#{viewer} sees a change by a person who shares with the link" }
   end
 
-  test "a team-only person's change reaches the team and nobody else" do
+  test "a team-only person's change reaches every viewer's team numbers, and names her only for the team" do
     before = read_everyone
 
     travel 1.minute
     update_toolbox users(:every_dee), [ { op: "set_pick", category: "coding", rank: 3, tool: "runway" } ]
     after = read_everyone
 
-    assert_equal before["a visitor"], after["a visitor"]
-    assert_equal before["a signed-in member outside Every"], after["a signed-in member outside Every"]
+    [ "a visitor", "a signed-in member outside Every" ].each do |viewer|
+      assert_not_equal before[viewer]["Kind coding, team"], after[viewer]["Kind coding, team"], "#{viewer} counts dee's new pick"
+      assert_only_counts_changed before[viewer], after[viewer], "dee's change, for #{viewer}"
+      after[viewer].each { |surface, text| assert_not_includes named_handles(text).keys, "dee", "#{viewer} is shown dee on #{surface}" }
+    end
     assert_not_equal before["another Every member whose picks are private"], after["another Every member whose picks are private"]
+    assert_includes named_handles(after["another Every member whose picks are private"]["Kind coding, team"]).keys, "dee"
   end
 
   private
@@ -176,19 +223,47 @@ class HiddenPersonInvarianceTest < ActionDispatch::IntegrationTest
     Toolbox::Update.call(user:, source:, operations:, **agent)
   end
 
-  # Runs the change, then requires everyone else's view to be what it was.
-  def mutate(baseline, label)
+  # Runs the change, then requires everyone else's view to be what it was; with
+  # counts_may_change, a team surface may differ in its numbers but must name exactly the
+  # same people. Either way no one else ever reads the hidden person. Returns the new views.
+  def mutate(baseline, label, counts_may_change: false)
     travel 1.minute
     yield
     travel 1.minute
     after = read_everyone
 
     baseline.each do |viewer, surfaces|
-      changed = surfaces.keys.reject { |surface| surfaces[surface] == after.fetch(viewer)[surface] }
-      first = changed.first
-      assert_empty changed, "#{label} changed what #{viewer} sees on #{changed.join(", ")}: #{first && difference(surfaces[first], after.fetch(viewer)[first])}"
+      if counts_may_change
+        assert_only_counts_changed surfaces, after.fetch(viewer), "#{label}, for #{viewer}"
+      else
+        changed = surfaces.keys.reject { |surface| surfaces[surface] == after.fetch(viewer)[surface] }
+        first = changed.first
+        assert_empty changed, "#{label} changed what #{viewer} sees on #{changed.join(", ")}: #{first && difference(surfaces[first], after.fetch(viewer)[first])}"
+      end
+      after.fetch(viewer).each do |surface, text|
+        leaked = IDENTIFIERS.select { |identifier| text.include?(identifier) } + (named_handles(text).keys & SUBJECTS.keys.flat_map { |handle| [ handle, "#{handle}-renamed" ] })
+        assert_empty leaked, "#{label}: #{viewer} reads #{leaked.join(", ")} on #{surface}"
+      end
+    end
+    after
+  end
+
+  # Team surfaces count every member, so their numbers may move; they must still name the
+  # same people. Every other surface must be byte-identical.
+  def assert_only_counts_changed(before, after, label)
+    before.each do |surface, text|
+      if counts_team?(surface)
+        assert_equal named_handles(text), named_handles(after.fetch(surface)), "#{label}: who #{surface} names"
+      else
+        assert_equal text, after.fetch(surface), "#{label} changed #{surface}: #{difference(text, after.fetch(surface))}"
+      end
     end
   end
+
+  def counts_team?(surface) = surface.include?(", team") || surface.include?('"audience":"team"')
+
+  # handle => how often a surface names that person, however deeply its JSON is nested in strings.
+  def named_handles(text) = text.scan(/\\*"handle\\*":\s*\\*"([^"\\]+)/).flatten.tally
 
   # The first place two snapshots differ, for a failure message.
   def difference(before, after)

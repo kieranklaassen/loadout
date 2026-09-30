@@ -27,8 +27,10 @@
 #   hero           nil or { boards: [{ category:, picks: [{ rank:, tool:, model: }] }], people:, picks:, last_update_at: }
 #   overall        { tools: [{ item:, count: }], models: [...] }, ten each, distinct people across kinds
 #   kind(category) { category:, ranked: Count of K people, tools: [listing], models: [listing], setups:, takes:, last_update_at: }
-#                  listing = { item:, count:, by_rank: { 1 => [person], 2 => [...], 3 => [...] } }
-#                  (JSON turns the rank keys into "1", "2", "3"); person = { handle:, name: }
+#                  listing = { item:, count:, by_rank: { 1 => [person], 2 => [...], 3 => [...] }, unnamed: }
+#                  (JSON turns the rank keys into "1", "2", "3"); person = { handle:, name: }. by_rank
+#                  names only people the viewer may open; unnamed is how many other counted people
+#                  have the item, never split by rank ("and 2 others").
 #                  setups = [{ tool:, model:, context:, effort:, count: }], picks with a model only
 #                  takes  = [{ model:, url: }], Vibe Check links of launched models ranked in the kind
 #   team_top       the editor's team list: { "<kind slug>" => { tools: [{ item:, count:, yours_rank: }],
@@ -38,8 +40,8 @@
 #   mostly_in(model)             the Mark item of the tool most people use the model in; nil under two people
 #
 # Last update is the newest confirmed change (entry_changes set, moved, removed, confirmed,
-# baseline) by a counted person in the kind, so suggestions never move it. stale is true
-# from six weeks by UTC date. Items are Mark items (CatalogItem#to_prop).
+# baseline) on an approved tool by a counted person in the kind, so suggestions and picks
+# that count nowhere never move it. stale is true from six weeks by UTC date. Items are Mark items (CatalogItem#to_prop).
 class TeamRankings
   OVERALL_LIMIT = 10
   TEAM_TOP_LIMIT = 5
@@ -156,7 +158,7 @@ class TeamRankings
   end
 
   def last_updates
-    @last_updates ||= EntryChange.where(user_id: audience.ids, action: EntryChange::SLOT_ACTIONS).group(:category_id).maximum(:created_at)
+    @last_updates ||= EntryChange.joins(:tool).merge(Tool.approved).where(user_id: audience.ids, action: EntryChange::SLOT_ACTIONS).group(:category_id).maximum(:created_at)
   end
 
   # The ranked tallies of one kind, or of every kind when category is nil.
@@ -211,9 +213,9 @@ class TeamRankings
   def listing(tally, entries, kind)
     holders = entries.select { |entry| item_of(entry, kind)&.id == tally.item.id }
     by_rank = (1..Entry::MAX_RANK).index_with do |rank|
-      holders.select { |entry| entry.rank == rank }.map { |entry| audience.person_ref(entry.user_id) }.sort_by { |person| Audience.name_key(person[:name], person[:handle]) }
+      holders.select { |entry| entry.rank == rank }.filter_map { |entry| audience.person_ref(entry.user_id) }.sort_by { |person| Audience.name_key(person[:name], person[:handle]) }
     end
-    standing(tally).merge(by_rank:)
+    standing(tally).merge(by_rank:, unnamed: tally.people.size - by_rank.values.sum(&:size))
   end
 
   # People, not picks: each person has a tool once per kind, so a group is at most one pick each.

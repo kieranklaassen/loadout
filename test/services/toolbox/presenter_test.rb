@@ -42,7 +42,7 @@ class Toolbox::PresenterTest < ActiveSupport::TestCase
     top = Toolbox::Presenter.new(users(:every_ana)).team_top
 
     assert_equal %w[coding knowledge-work video], top.keys
-    assert_equal [ [ "claude-code", 2 ], [ "cursor", 1 ] ], top["coding"][:tools].map { |tool| [ tool[:item][:slug], tool[:yours_rank] ] }
+    assert_equal [ [ "cursor", 1 ], [ "claude-code", 2 ] ], top["coding"][:tools].map { |tool| [ tool[:item][:slug], tool[:yours_rank] ] }
     assert_equal({ tools: [], models: [] }, top["video"])
   end
 

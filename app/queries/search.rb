@@ -15,8 +15,9 @@
 #   { query: the cleaned query,
 #     people: [{ handle:, name: }],
 #     items: [{ kind: "tool" | "model", item: Mark item, kinds: [{ category:, count: { n:, of: } }] }] }
-# People are matched on name and handle only (never email) and only when they are in the
-# audience: someone the viewer may not open, or who has no confirmed pick, is never found.
+# People are matched on name and handle only (never email) and only when the audience names
+# them: someone the viewer may not open, or who has no confirmed pick, is never found, even
+# though their picks count toward the items' numbers.
 # Items are approved tools and models that the audience ranks somewhere; kinds lists each kind
 # it is ranked in, in catalog order, with the Count from TeamRankings.item_counts. Tools come
 # first, each group in the usual ranking order, and each list has at most LIMIT hits.
@@ -48,7 +49,7 @@ class Search
   attr_reader :rankings, :audience
 
   def people(pattern)
-    User.where(id: audience.ids)
+    User.where(id: audience.named_ids)
       .where("name LIKE :q ESCAPE '\\' OR handle LIKE :q ESCAPE '\\'", q: pattern)
       .map { |user| Audience.person(user) }
       .sort_by { |person| Audience.name_key(person[:name], person[:handle]) }

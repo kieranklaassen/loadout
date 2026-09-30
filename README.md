@@ -5,7 +5,7 @@
 - Home is the team page: the most used tool and model per kind of work as plain counts ("5 of 6 use it"), the latest model launches, an Overall top 10, and filters for who is counted. Each kind has its own page with who ranks what first, second and third, and how people set their tools up.
 - Sign in with Every, claim `toolbox.every.to/<you>`, and rank up to three picks per kind of work in about a minute. A pick is a tool (Cursor), optionally with the model behind it (Claude Opus 5.5), a context size and an effort.
 - Or connect your agent (Claude, Claude Code, Cursor, Codex) over MCP with a normal sign-in. It can only suggest picks: nothing shows on your page until you confirm it on the site.
-- Pages are private by default. Choose Only me, Every team or Anyone with the link, and only people who chose to share are counted. The link-preview card is served only for Anyone with the link.
+- New pages start public (Anyone with the link). Choose Private, Every team or Anyone with the link: that decides who can open your page and see your name. Every onboarded Every team member's picks count toward the team's totals either way; a private member is counted anonymously and never named. The link-preview card is served only for Anyone with the link.
 - Tools and models show their real marks where the catalog has one, and a serif initial otherwise. The look is "Every dark".
 - Every change to your picks is kept with its date, so a kind's page can show what the team used before a new model shipped.
 

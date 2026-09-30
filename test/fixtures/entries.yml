@@ -1,5 +1,5 @@
-# Confirmed picks only, ranked 1 to 3 per person and kind. every_cy is hidden, and
-# her Claude Opus 5 pick is the one thing that would leak if a read ignored that.
+# Confirmed picks only, ranked 1 to 3 per person and kind. every_cy is private: her
+# Claude Opus 5 pick counts toward the team's numbers, but she is never named.
 # Each person's rows replay from entry_changes.yml to exactly these.
 ana_cursor:
   user: every_ana

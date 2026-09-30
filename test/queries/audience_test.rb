@@ -1,30 +1,33 @@
 require "test_helper"
 
-# Fixture population (test/fixtures): with confirmed picks are ana and dee (verified
-# team), cy (verified team, only me), eli (non-team, link) and fay (unverified
-# @every.to, link). one and two have none.
+# Fixture population (test/fixtures): with confirmed picks are ana (verified team, link),
+# dee (verified team, team), cy (verified team, only me), eli (non-team, link) and fay
+# (unverified @every.to, link). one and two have none. The team counts ana, cy and dee for
+# every viewer; who is named still depends on the viewer.
 class AudienceTest < ActiveSupport::TestCase
   def handles(audience) = audience.people.pluck(:handle)
+  def counted(audience) = User.where(id: audience.ids).pluck(:handle).sort
 
-  # Viewer class by SHOW: who is in the population, in name order, and so what M is.
+  # Viewer class by SHOW: who is named (in name order) and who is counted (M).
   POPULATIONS = {
-    nil => { "team" => %w[ana], "others" => %w[eli fay] },
-    one: { "team" => %w[ana], "others" => %w[eli fay] },
-    outside_eli: { "team" => %w[ana], "others" => %w[eli fay] },
-    every_fay: { "team" => %w[ana], "others" => %w[eli fay] },
-    every_dee: { "team" => %w[ana dee], "others" => %w[eli fay] },
-    every_ana: { "team" => %w[ana dee], "others" => %w[eli fay] },
-    every_cy: { "team" => %w[ana cy dee], "others" => %w[eli fay] }
+    nil => { "team" => [ %w[ana], %w[ana cy dee] ], "others" => [ %w[eli fay], %w[eli fay] ] },
+    one: { "team" => [ %w[ana], %w[ana cy dee] ], "others" => [ %w[eli fay], %w[eli fay] ] },
+    outside_eli: { "team" => [ %w[ana], %w[ana cy dee] ], "others" => [ %w[eli fay], %w[eli fay] ] },
+    every_fay: { "team" => [ %w[ana], %w[ana cy dee] ], "others" => [ %w[eli fay], %w[eli fay] ] },
+    every_dee: { "team" => [ %w[ana dee], %w[ana cy dee] ], "others" => [ %w[eli fay], %w[eli fay] ] },
+    every_ana: { "team" => [ %w[ana dee], %w[ana cy dee] ], "others" => [ %w[eli fay], %w[eli fay] ] },
+    every_cy: { "team" => [ %w[ana cy dee], %w[ana cy dee] ], "others" => [ %w[eli fay], %w[eli fay] ] }
   }.freeze
 
   POPULATIONS.each do |viewer_name, shows|
-    shows.each do |show, expected|
+    shows.each do |show, (named, everyone)|
       test "population for #{viewer_name.inspect} with SHOW #{show}" do
         viewer = viewer_name && users(viewer_name)
         audience = Audience.new(viewer:, show:)
 
-        assert_equal expected, handles(audience)
-        assert_equal expected.size, audience.size
+        assert_equal named, handles(audience)
+        assert_equal everyone, counted(audience)
+        assert_equal everyone.size, audience.size
         assert_equal show, audience.show
         assert_nil audience.notice
       end
@@ -35,7 +38,49 @@ class AudienceTest < ActiveSupport::TestCase
     viewer = users(:every_dee)
 
     assert_equal "team", Audience.new(viewer:).show
-    assert_equal 4, Audience.new(viewer:, show: "team").size + Audience.new(viewer:, show: "others").size
+    assert_equal 5, Audience.new(viewer:, show: "team").size + Audience.new(viewer:, show: "others").size
+  end
+
+  test "a private team member counts for everyone but is named, selectable and referenced for nobody else" do
+    cy = users(:every_cy)
+
+    [ nil, users(:one), users(:every_dee), users(:every_ana) ].each do |viewer|
+      audience = Audience.new(viewer:)
+      assert_includes audience.ids, cy.id, "counted for #{viewer&.handle.inspect}"
+      assert_not_includes handles(audience), "cy"
+      assert_nil Audience.new(viewer:, person: "cy").person
+      assert_nil audience.person_ref(cy.id)
+    end
+    assert_equal({ handle: "ana", name: "Ana Every" }, Audience.new(viewer: nil).person_ref(users(:every_ana).id))
+  end
+
+  test "outside the team visibility still decides who counts" do
+    users(:outside_eli).update!(visibility: "only_me")
+
+    assert_not_includes Audience.new(viewer: users(:every_dee), show: "others").ids, users(:outside_eli).id
+    assert_includes Audience.new(viewer: users(:outside_eli), show: "others").ids, users(:outside_eli).id
+  end
+
+  test "a team member who shares but has not finished onboarding is counted and named for nobody, so M is the same for every viewer" do
+    halfway = add_person("halfway", visibility: "team", team: true)
+    halfway.update_columns(onboarded_at: nil)
+    add_pick(halfway, :coding, 1, :cursor)
+
+    [ nil, users(:every_dee) ].each do |viewer|
+      audience = Audience.new(viewer:)
+      assert_equal 3, audience.size
+      assert_not_includes handles(audience), "halfway"
+    end
+  end
+
+  test "a team member who has not finished onboarding counts only once they are onboarded" do
+    newcomer = add_person("newcomer", visibility: "only_me", team: true)
+    newcomer.update_columns(onboarded_at: nil)
+    add_pick(newcomer, :coding, 1, :cursor)
+
+    assert_not_includes Audience.new(viewer: nil).ids, newcomer.id
+    newcomer.update_columns(onboarded_at: Time.current)
+    assert_includes Audience.new(viewer: nil).ids, newcomer.id
   end
 
   test "an unverified @every.to address is in the rest, not the team" do
@@ -43,7 +88,7 @@ class AudienceTest < ActiveSupport::TestCase
     assert_not_includes handles(Audience.new(viewer: users(:every_dee), show: "team")), "fay"
   end
 
-  test "AE2: a person who is only me is in nobody's population but their own, with a note for them" do
+  test "AE2: a person who is only me is named for nobody but themselves, with a note for them" do
     cy = users(:every_cy)
 
     assert_not_includes handles(Audience.new(viewer: users(:every_dee))), "cy"
@@ -107,7 +152,7 @@ class AudienceTest < ActiveSupport::TestCase
     assert quinn.visible_to?(users(:every_dee))
     assert_not_includes handles(audience), "quinn"
     assert_nil audience.person
-    assert_equal 2, audience.size
+    assert_equal 3, audience.size
   end
 
   test "a person whose only pick is a pending item is not counted until it is approved" do
@@ -118,6 +163,7 @@ class AudienceTest < ActiveSupport::TestCase
 
     assert_not_includes handles(Audience.new(viewer: dee)), "ren"
     assert_not_includes handles(Audience.new(viewer: ren)), "ren", "not even for the owner: aggregates only see approved items"
+    assert_not_includes Audience.new(viewer: dee).ids, ren.id
 
     pending.update!(status: "approved")
     assert_includes handles(Audience.new(viewer: dee)), "ren"
@@ -169,7 +215,7 @@ class AudienceTest < ActiveSupport::TestCase
       rows.sort_by { |count, firsts, name| Audience.sort_key(count, firsts, name) }
   end
 
-  test "the population is the same for a viewer whatever hidden people do" do
+  test "who is named is the same for a viewer whatever a private person does, and they stay counted" do
     before = Audience.new(viewer: users(:every_dee))
     snapshot = [ before.people, before.size, before.filters ]
 

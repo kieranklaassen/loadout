@@ -54,9 +54,9 @@ class ToolboxControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "claude-opus-5-5", [ "coding", "knowledge-work" ] ], props[:catalog][:models].first.values_at(:slug, :suggested_for)
 
     coding = props[:team_top]["coding"]
-    assert_equal [ [ "claude-code", 2 ], [ "cursor", 1 ] ], coding[:tools].map { |tool| [ tool[:item][:slug], tool[:yours_rank] ] }
-    assert_equal [ [ "claude-opus-5-5", 2, 1, true ], [ "gpt-6-astra", 1, nil, false ] ], coding[:models].map { |model| [ model[:item][:slug], model[:count][:n], model[:yours_rank], model[:launched] ] }
-    assert_equal [ 2, 2 ], coding[:tools].first[:count].values_at(:n, :of)
+    assert_equal [ [ "cursor", 1 ], [ "claude-code", 2 ] ], coding[:tools].map { |tool| [ tool[:item][:slug], tool[:yours_rank] ] }
+    assert_equal [ [ "claude-opus-5-5", 2, 1, true ], [ "claude-opus-5", 1, nil, false ], [ "gpt-6-astra", 1, nil, false ] ], coding[:models].map { |model| [ model[:item][:slug], model[:count][:n], model[:yours_rank], model[:launched] ] }
+    assert_equal [ 3, 3 ], coding[:tools].first[:count].values_at(:n, :of)
   end
 
   test "the open kind defaults to the first with room and ignores an unknown one" do

@@ -2,7 +2,9 @@ require "test_helper"
 
 # Ana (link) holds Cursor with Opus 5.5 at 1M and high effort in 1st and a plain Claude
 # Code in 2nd for coding, and Claude with Opus 5.5 for knowledge work; her Runway is a
-# suggestion, so video is unranked. The team viewer dee sees the team (ana and dee).
+# suggestion, so video is unranked. The team viewer dee may open ana and dee; "Team uses"
+# counts every onboarded member (ana, cy and dee), so in coding Cursor (3 people) and
+# Opus 5.5 (2) lead, and in knowledge work Claude and Opus 5.5.
 class PersonPicksTest < ActiveSupport::TestCase
   setup do
     @dee = users(:every_dee)
@@ -40,11 +42,14 @@ class PersonPicksTest < ActiveSupport::TestCase
   end
 
   test "team uses: only where the first pick differs from what the team uses most" do
-    result = picks.for(@ana, team: true)
+    result = picks.for(@dee, team: true)
 
-    assert_equal({ tool: tools(:claude_code).to_prop, model: nil }, kind(result, "coding")[:team_uses], "Cursor is ana's 1st; the team's most used tool is Claude Code, the model is the same")
-    assert_nil kind(result, "knowledge-work")[:team_uses], "Claude and Opus 5.5 lead there and she has both"
+    assert_equal({ tool: tools(:cursor).to_prop, model: nil }, kind(result, "coding")[:team_uses], "Claude Code is dee's 1st; the team's most used tool is Cursor, the model is the same")
     assert_nil kind(result, "video")[:team_uses]
+
+    result = picks.for(@ana, team: true)
+    assert_nil kind(result, "coding")[:team_uses], "Cursor and Opus 5.5 lead there and she has both"
+    assert_nil kind(result, "knowledge-work")[:team_uses], "Claude and Opus 5.5 lead there and she has both"
   end
 
   test "team uses compares with the SHOW class the viewer is looking at" do
@@ -57,10 +62,11 @@ class PersonPicksTest < ActiveSupport::TestCase
   end
 
   test "team uses names no model when the person picked none" do
-    result = picks.for(@dee, team: true)
+    assert_nil kind(picks.for(@dee, team: true), "knowledge-work")[:team_uses], "dee's Claude has no model; the tool is the team's top"
 
-    assert_nil kind(result, "knowledge-work")[:team_uses], "dee's Claude has no model; the tool is the team's top"
-    assert_nil kind(result, "coding")[:team_uses], "dee's first pick is the team's top tool and model"
+    entries(:dee_claude_code).update!(ai_model: nil)
+    assert_equal({ tool: tools(:cursor).to_prop, model: nil }, kind(picks.for(@dee, team: true), "coding")[:team_uses],
+      "the team has a top model in coding, but dee's Claude Code has none to differ from it")
   end
 
   test "AE5: new in a toolbox lists the launches the person uses, in the launch shape" do
@@ -70,7 +76,7 @@ class PersonPicksTest < ActiveSupport::TestCase
     launch = result[:new_in_toolbox].first
     assert_equal %i[model released_on vibe_check_url newest adoption mostly_in], launch.keys
     assert_equal ai_models(:opus_5_5).to_prop, launch[:model]
-    assert_equal({ n: 2, of: 2 }, launch[:adoption])
+    assert_equal({ n: 2, of: 3 }, launch[:adoption])
 
     entries(:dee_claude_code).update!(ai_model: ai_models(:gpt_6))
     assert_empty picks.for(@dee, team: true)[:new_in_toolbox], "dee's models are GPT-6, which is not a launch"
