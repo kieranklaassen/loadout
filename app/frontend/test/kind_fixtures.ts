@@ -12,10 +12,11 @@ export const dan: Person = { handle: 'dan', name: 'Dan' }
 export const rob: Person = { handle: 'rob', name: 'Rob' }
 
 /** A tool or model with N of M and the people at each rank (1st, 2nd, 3rd). */
-export const listing = (item: MarkItem, count: Count, byRank: Record<number, Person[]>): Listing => ({
+export const listing = (item: MarkItem, count: Count, byRank: Record<number, Person[]>, unnamed = 0): Listing => ({
   item,
   count,
   by_rank: { 1: [], 2: [], 3: [], ...byRank },
+  unnamed,
 })
 
 export const tools = [

@@ -1,9 +1,11 @@
 require "test_helper"
 
-# A team viewer (dee) searches the Every team: ana and dee. Cursor and Claude Code are
-# both 2 of 2 in coding; Claude is 2 of 2 in knowledge work; Opus 5.5 is 2 of 2 in coding
-# and 1 of 2 in knowledge work; Claude Opus 5 is only on hidden cy; Runway is ranked by eli
-# and fay's class (the rest), and ana's Runway is a suggestion.
+# A team viewer (dee) searches the Every team. People are the ones dee may open (ana and
+# dee); counts are over every onboarded member (ana, cy and dee, M = 3), so private cy's
+# picks count but cy is never found. Cursor is 3 of 3 in coding and Claude Code 2 of 3;
+# Claude is 2 of 3 in knowledge work; Opus 5.5 is 2 of 3 in coding and 1 of 3 in knowledge
+# work; Claude Opus 5 is only on cy, 1 of 3 in coding. Runway is ranked by eli and fay's
+# class (the rest), and ana's Runway is a suggestion.
 class SearchTest < ActiveSupport::TestCase
   setup { @dee = users(:every_dee) }
 
@@ -28,6 +30,8 @@ class SearchTest < ActiveSupport::TestCase
     assert_empty search("cy")[:people]
     assert_empty search("cy every")[:people]
     assert_empty search("cy", viewer: nil)[:people]
+    assert_empty search("dee", viewer: nil)[:people], "team-only dee counts for a visitor but is not found"
+    assert_equal [ "ana" ], names(search("every", viewer: nil), :people)
 
     cy = users(:every_cy)
     assert_equal [ "cy" ], names(search("cy", viewer: cy), :people)
@@ -47,11 +51,11 @@ class SearchTest < ActiveSupport::TestCase
   test "items: approved tools and models the audience ranks, tools first, each with the kinds and counts" do
     result = search("cl")
 
-    assert_equal %w[claude claude-code], names(result, :items).first(2), "Claude before Claude Code: both 2 of 2, but more 1st picks"
-    assert_equal %w[tool tool model], result[:items].pluck(:kind)
+    assert_equal %w[claude claude-code claude-opus-5-5 claude-opus-5], names(result, :items), "Claude before Claude Code: both 2 of 3, but more 1st picks"
+    assert_equal %w[tool tool model model], result[:items].pluck(:kind)
     claude = result[:items].first
     assert_equal(
-      { kind: "tool", item: tools(:claude).to_prop, kinds: [ { category: categories(:knowledge_work).to_prop, count: { n: 2, of: 2 } } ] },
+      { kind: "tool", item: tools(:claude).to_prop, kinds: [ { category: categories(:knowledge_work).to_prop, count: { n: 2, of: 3 } } ] },
       claude
     )
     assert_equal [ categories(:coding).to_prop ], result[:items].second[:kinds].pluck(:category)
@@ -62,14 +66,18 @@ class SearchTest < ActiveSupport::TestCase
 
     assert_equal "claude-opus-5-5", opus[:item][:slug]
     assert_equal(
-      [ { category: categories(:coding).to_prop, count: { n: 2, of: 2 } }, { category: categories(:knowledge_work).to_prop, count: { n: 1, of: 2 } } ],
+      [ { category: categories(:coding).to_prop, count: { n: 2, of: 3 } }, { category: categories(:knowledge_work).to_prop, count: { n: 1, of: 3 } } ],
       opus[:kinds]
     )
   end
 
-  test "items: only what the viewer's audience ranks, so a hidden person's model stays out" do
-    assert_equal %w[claude-opus-5-5], names(search("opus"), :items)
-    assert_equal %w[claude-opus-5-5 claude-opus-5], names(search("opus", viewer: users(:every_cy)), :items)
+  test "items: what the counted team ranks, so a hidden person's model is found and counted, never the person" do
+    [ @dee, nil, users(:one), users(:every_cy) ].each do |viewer|
+      result = search("opus", viewer:)
+      assert_equal %w[claude-opus-5-5 claude-opus-5], names(result, :items)
+      assert_equal [ { category: categories(:coding).to_prop, count: { n: 1, of: 3 } } ], result[:items].second[:kinds]
+      assert_empty result[:people]
+    end
     assert_empty search("runway")[:items], "nobody on the team ranks Runway"
     assert_equal %w[runway], names(search("runway", show: "others"), :items)
   end
@@ -84,7 +92,7 @@ class SearchTest < ActiveSupport::TestCase
     zed.update!(status: "approved")
     hit = search("zedcode")[:items].first
     assert_equal zed.slug, hit[:item][:slug]
-    assert_equal [ { n: 1, of: 2 } ], hit[:kinds].pluck(:count)
+    assert_equal [ { n: 1, of: 3 } ], hit[:kinds].pluck(:count)
   end
 
   test "items: hidden catalog items are not found" do

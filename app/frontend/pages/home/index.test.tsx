@@ -188,10 +188,14 @@ describe('Home call to action by viewer', () => {
 })
 
 describe('Home viewer notes', () => {
-  it('tells a member who shares privately that the counts include their picks', () => {
+  it('tells a private team member their picks count anonymously, and anyone else that only they see them', () => {
     signIn({ ...member, visibility: 'only_me' })
-    render(<Home {...props({ private_picks: true, cta: null })} />)
+    const { rerender } = render(<Home {...props({ private_picks: true, cta: null })} />)
 
+    expect(screen.getByText('Your private picks count here anonymously. Nobody sees they are yours.')).toBeInTheDocument()
+
+    const base = props({ private_picks: true, cta: null })
+    rerender(<Home {...base} filters={{ ...base.filters, show: 'others' }} />)
     expect(screen.getByText('These counts include your private picks. Only you can see them.')).toBeInTheDocument()
   })
 

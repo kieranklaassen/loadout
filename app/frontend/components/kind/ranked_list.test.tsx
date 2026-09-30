@@ -36,6 +36,16 @@ describe('RankedList', () => {
     expect(second).toHaveTextContent('2nd for Dan')
   })
 
+  it('counts people it may not name as others, never by rank and never as a link', () => {
+    renderList([listing(claudeCodeMark, { n: 3, of: 6 }, { 1: [kieran] }, 2), listing(cursorMark, { n: 1, of: 6 }, {}, 1)])
+
+    const [first, second] = screen.getAllByRole('listitem')
+    expect(first).toHaveTextContent('1st for Kieran · and 2 others')
+    expect(within(first).getAllByRole('link')).toHaveLength(1)
+    expect(second).toHaveTextContent('1 person, not listed')
+    expect(within(second).queryByRole('link')).not.toBeInTheDocument()
+  })
+
   it('links every name to that person, wherever they appear', () => {
     renderList()
 

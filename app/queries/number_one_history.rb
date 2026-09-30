@@ -27,11 +27,12 @@
 #      wrote). Rows sharing a time and details["batch"] apply together: first clear the slots
 #      they remove or move away from, then set the rest. That gives the slots after each batch.
 #   2. Cover. The person counts on a day only if they are in the viewer's population today
-#      (an Only me person, a hidden one, or one in the other SHOW class counts for nothing) and
-#      the day overlaps one of their visibility periods at a level the viewer may read
-#      (Audience#levels). The day is sampled at the earlier of its end and the end of that
-#      period, so edits made after narrowing on the same day never count. The viewer's own
-#      history is always covered, whatever they shared.
+#      (Audience#ids: for the team every onboarded member, private ones anonymously; nobody
+#      from the other SHOW class). A team member and the viewer are covered every day, the
+#      same as the Kind table counts them. Anyone else counts only on days that overlap one
+#      of their visibility periods at a level the viewer may read (Audience#levels), sampled
+#      at the earlier of the day's end and the period's end, so edits made after narrowing
+#      on the same day never count.
 #   3. Count. A day counts only if at least MIN_PEOPLE covered people had a pick in the kind.
 #      Only approved tools count (their model too, if approved); a person is a person once.
 #   4. Lead. The leader is TeamRankings' rule: people, then 1st picks, then name (Audience.sort_key,
@@ -102,7 +103,7 @@ class NumberOneHistory
 
   # The instant to read a person's slots at on a day, or nil when they do not count that day.
   def sampled_until(user_id, day_start, day_end)
-    return day_end if user_id == audience.viewer&.id
+    return day_end if audience.team? || user_id == audience.viewer&.id
 
     periods.fetch(user_id, []).filter_map do |period|
       next unless period.starts_at < day_end && (period.ends_at.nil? || period.ends_at > day_start)

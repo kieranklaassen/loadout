@@ -13,6 +13,10 @@ module User::Visibility
 
   SHARING_LEVELS = %w[team link].freeze
   LEVELS = ([ "only_me" ] + SHARING_LEVELS).freeze
+  # What a new member starts with once they claim a handle. The column default stays
+  # only_me because a member is created at first sign-in, before a handle exists, and a
+  # shared page needs one.
+  ONBOARDING_VISIBILITY = "link"
 
   included do
     has_many :visibility_periods, dependent: :delete_all

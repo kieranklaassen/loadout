@@ -34,10 +34,13 @@ this file is the tie-breaker. Keep entries short; link to module docs for depth.
 - **Suggestion** — a pick an agent proposed over MCP or WebMCP. It lives in
   `pick_suggestions`, is visible only to its owner, and becomes a pick only when
   the owner confirms it on the web.
-- **Visibility** — who may open a person's page: `only_me` (default), `team` or
-  `link`. Every span in which a person shared is kept as a visibility period.
-- **Audience** — the set of people a given viewer may open. Every count on a page
-  or agent tool is taken over the audience, so it is "N of M" for that viewer.
+- **Visibility** — who may open a person's page: `only_me` (shown as Private), `team`
+  or `link`. New members start at `link` when they claim a handle. It decides who is
+  named, not who is counted: a private Every team member still counts anonymously.
+  Every span in which a person shared is kept as a visibility period.
+- **Audience** — who a viewer's page is about. Its counted people are every onboarded
+  Every team member (for the team view) and every "N of M" is taken over them; its named
+  people are the ones the viewer may open, the only people ever named, linked or found.
 - **Launch** — a model with a release date and a Vibe Check link, shown in
   "Latest model launches" on Home.
 - **Mark** — the light tile that stands for a tool (square) or a model (round):

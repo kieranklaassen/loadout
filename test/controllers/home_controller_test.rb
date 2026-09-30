@@ -57,27 +57,31 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to "/welcome"
   end
 
-  # AE1 and AE2: the same M for the same viewer, and nobody hidden anywhere
+  # AE1 and AE2: the whole team counts for every viewer, and only people the viewer may open are named
 
-  test "a team viewer reads the team class: two people, counts out of two" do
+  test "a team viewer reads the team class: the whole team counted, the people who share named" do
     sign_in_as users(:every_dee)
 
     get root_path
 
     assert_equal({ show: "team", person: nil, overall: false, q: nil }, page_props[:filters])
     assert_equal [ "Ana Every", "Dee Every" ], page_props[:people].map { |person| person[:name] }
-    assert_equal({ n: 2, of: 2 }, coding_row[:ranked])
-    assert_equal [ "claude-code", "cursor" ], [ coding_row[:top_tool][:item][:slug], coding_row[:top_tool][:runner_up][:item][:slug] ]
-    assert_equal({ n: 2, of: 2 }, coding_row[:top_tool][:count])
-    assert_equal({ n: 2, of: 2 }, coding_row[:top_model][:count])
+    assert_equal({ n: 3, of: 3 }, coding_row[:ranked])
+    assert_equal [ "cursor", "claude-code" ], [ coding_row[:top_tool][:item][:slug], coding_row[:top_tool][:runner_up][:item][:slug] ]
+    assert_equal({ n: 3, of: 3 }, coding_row[:top_tool][:count])
+    assert_equal({ n: 2, of: 3 }, coding_row[:top_model][:count])
   end
 
-  test "a visitor reads only people who share with anyone with the link" do
+  test "a visitor gets the whole team's numbers but only the people who share with anyone with the link" do
     get root_path
 
     assert_equal [ "ana" ], page_props[:people].map { |person| person[:handle] }
-    assert_equal({ n: 1, of: 1 }, coding_row[:ranked])
+    assert_equal({ n: 3, of: 3 }, coding_row[:ranked])
+    assert_equal 3, page_props[:hero][:people]
     assert_nil page_props[:person]
+    everything = page_props.to_json
+    refute_includes everything, "Dee Every"
+    refute_includes everything, "Cy Every"
   end
 
   test "Everyone else lists the rest of the visible people and switching SHOW switches the counts" do
@@ -90,12 +94,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ n: 2, of: 2 }, coding_row[:ranked])
   end
 
-  test "a hidden person is missing from counts and people for a colleague, and present for herself" do
+  test "a private person counts for a colleague but is never named, and is named for herself" do
     sign_in_as users(:every_dee)
     get root_path
-    everything = page_props.slice(:people, :rows, :hero, :overall, :launches).to_json
+    everything = page_props.to_json
     refute_includes everything, "Cy Every"
-    refute_includes everything, '"Claude Opus 5"', "her private model must not count for a colleague"
+    refute_includes everything, '"cy"'
+    assert_equal({ n: 3, of: 3 }, coding_row[:ranked], "her Coding pick counts")
 
     sign_in_as users(:every_cy)
     get root_path
@@ -137,20 +142,20 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   # Person view
 
   test "person= opens that person's picks, drops the hero and lists Team uses only where they differ" do
-    sign_in_as users(:every_dee)
+    sign_in_as users(:every_ana)
 
-    get root_path, params: { person: "ana" }
+    get root_path, params: { person: "dee" }
 
     person = page_props[:person]
-    assert_equal "ana", page_props[:filters][:person]
-    assert_equal({ handle: "ana", name: "Ana Every", avatar_url: "https://every.to/avatars/ana.png" }, person[:person])
+    assert_equal "dee", page_props[:filters][:person]
+    assert_equal({ handle: "dee", name: "Dee Every", avatar_url: nil }, person[:person])
     assert_equal 2, person[:ranked_count]
     assert_equal 3, person[:kinds].size, "every kind is listed, ranked or not"
     assert_nil page_props[:hero]
     coding = person[:kinds].find { |kind| kind[:category][:slug] == "coding" }
-    assert_equal %w[cursor claude-code], coding[:picks].map { |pick| pick[:tool][:slug] }
-    assert_equal "claude-code", coding[:team_uses][:tool][:slug], "her first pick is not the team's most used tool"
-    assert_nil coding[:team_uses][:model], "her model is the team's most used, so no note"
+    assert_equal %w[claude-code cursor], coding[:picks].map { |pick| pick[:tool][:slug] }
+    assert_equal "cursor", coding[:team_uses][:tool][:slug], "his first pick is not the team's most used tool"
+    assert_nil coding[:team_uses][:model], "his model is the team's most used, so no note"
     assert_nil person[:kinds].find { |kind| kind[:category][:slug] == "knowledge-work" }[:team_uses]
     assert_equal [ "claude-opus-5-5" ], person[:new_in_toolbox].map { |launch| launch[:model][:slug] }
   end
@@ -198,8 +203,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal true, page_props[:filters][:overall]
     tools = page_props[:overall][:tools]
-    assert_equal({ n: 2, of: 2 }, tools.find { |entry| entry[:item][:slug] == "claude-code" }[:count])
-    assert_equal({ n: 2, of: 2 }, tools.find { |entry| entry[:item][:slug] == "claude" }[:count])
+    assert_equal({ n: 2, of: 3 }, tools.find { |entry| entry[:item][:slug] == "claude-code" }[:count])
+    assert_equal({ n: 2, of: 3 }, tools.find { |entry| entry[:item][:slug] == "claude" }[:count])
   end
 
   # The call to action follows the viewer
@@ -265,7 +270,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_empty search["people"]
     cursor = search["items"].find { |hit| hit["item"]["slug"] == "cursor" }
     assert_equal "tool", cursor["kind"]
-    assert_equal [ { "category" => categories(:coding).to_prop.stringify_keys, "count" => { "n" => 2, "of" => 2 } } ], cursor["kinds"]
+    assert_equal [ { "category" => categories(:coding).to_prop.stringify_keys, "count" => { "n" => 3, "of" => 3 } } ], cursor["kinds"]
   end
 
   test "a search-only partial reload skips the reads only the rest of the page needs" do

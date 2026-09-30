@@ -6,26 +6,26 @@ import type { Visibility } from '../types'
 export const VISIBILITY_LEVELS: Visibility[] = ['only_me', 'team', 'link']
 
 export const VISIBILITY_LABEL: Record<Visibility, string> = {
-  only_me: 'Only me',
+  only_me: 'Private',
   team: 'Every team',
   link: 'Anyone with the link',
 }
 
 export const VISIBILITY_HELP: Record<Visibility, string> = {
-  only_me: 'Nobody else sees your picks.',
+  only_me: 'Your picks still count anonymously toward Every’s totals.',
   team: 'People on the Every team.',
   link: 'Anyone with your link, and anyone browsing the Every page.',
 }
 
 export const VISIBILITY_CONSEQUENCE: Record<Visibility, string> = {
-  only_me: 'Nobody else sees your picks. Cards already shared cannot be recalled.',
+  only_me: 'Nobody else sees your page or your name. Your picks still count anonymously toward Every’s totals. Cards already shared cannot be recalled.',
   team: 'People on the Every team can read your picks, and so can their connected agents.',
   link: 'Listed on the Every page and searchable by anyone. Cards already shared cannot be recalled.',
 }
 
 // The short line the Rank editor shows above the slots.
 export const VISIBILITY_STATUS: Record<Visibility, string> = {
-  only_me: 'Only you can see this.',
+  only_me: 'Only you can see this. Your picks count anonymously toward Every’s totals.',
   team: 'People on the Every team can see this.',
   link: 'Anyone with the link can see this and find you in search.',
 }

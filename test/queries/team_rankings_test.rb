@@ -1,12 +1,13 @@
 require "test_helper"
 
 # Hand-derived from test/fixtures for the Every team seen by a team viewer (dee): the
-# population is ana and dee (M = 2; cy is only me). Coding: both rank Claude Code and
-# Cursor (2 of 2 each, one 1st pick each, so name breaks the tie), Opus 5.5 is on both
-# (2 of 2, two 1st picks), GPT-6 only on dee's Cursor. Knowledge work: both use Claude,
-# only ana names a model. Video: nobody in the team ranks it (ana's is a suggestion).
-# The rest (eli, fay) are M = 2 too; the two classes together are the 4 people and the
-# counts (Cursor 3, Claude Code 4, Opus 5.5 3, GPT-6 2) the fixture notes give.
+# population is ana, cy and dee (M = 3). cy is only me, so cy counts but is never named.
+# Coding: Cursor is on all three (3 of 3, ana's and cy's 1st), Claude Code on ana and dee
+# (2 of 3), Opus 5.5 on ana and dee (2 of 3, two 1st picks), Opus 5 only on cy's Cursor
+# (1 of 3, a 1st pick), GPT-6 only on dee's Cursor (1 of 3). Knowledge work: ana and dee use
+# Claude, only ana names a model. Video: nobody in the team ranks it (ana's is a suggestion).
+# The rest (eli, fay) are M = 2; the two classes together are the 5 people and the counts
+# (Cursor 4, Claude Code 4, Opus 5.5 3, GPT-6 2, Opus 5 1) the fixtures give.
 class TeamRankingsTest < ActiveSupport::TestCase
   setup do
     @dee = users(:every_dee)
@@ -28,9 +29,9 @@ class TeamRankingsTest < ActiveSupport::TestCase
     assert_equal(
       {
         category: categories(:coding).to_prop,
-        top_tool: { item: item(tools(:claude_code)), count: count(2, 2), runner_up: { item: item(tools(:cursor)), count: count(2, 2) } },
-        top_model: { item: item(ai_models(:opus_5_5)), count: count(2, 2), runner_up: { item: item(ai_models(:gpt_6)), count: count(1, 2) } },
-        ranked: count(2, 2),
+        top_tool: { item: item(tools(:cursor)), count: count(3, 3), runner_up: { item: item(tools(:claude_code)), count: count(2, 3) } },
+        top_model: { item: item(ai_models(:opus_5_5)), count: count(2, 3), runner_up: { item: item(ai_models(:opus_5)), count: count(1, 3) } },
+        ranked: count(3, 3),
         last_update_at: iso(:ana_4),
         stale: false
       },
@@ -42,9 +43,9 @@ class TeamRankingsTest < ActiveSupport::TestCase
     assert_equal(
       {
         category: categories(:knowledge_work).to_prop,
-        top_tool: { item: item(tools(:claude)), count: count(2, 2), runner_up: nil },
-        top_model: { item: item(ai_models(:opus_5_5)), count: count(1, 2), runner_up: nil },
-        ranked: count(2, 2),
+        top_tool: { item: item(tools(:claude)), count: count(2, 3), runner_up: nil },
+        top_model: { item: item(ai_models(:opus_5_5)), count: count(1, 3), runner_up: nil },
+        ranked: count(2, 3),
         last_update_at: iso(:ana_5),
         stale: false
       },
@@ -52,7 +53,7 @@ class TeamRankingsTest < ActiveSupport::TestCase
     )
 
     assert_equal(
-      { category: categories(:video).to_prop, top_tool: nil, top_model: nil, ranked: count(0, 2), last_update_at: nil, stale: false },
+      { category: categories(:video).to_prop, top_tool: nil, top_model: nil, ranked: count(0, 3), last_update_at: nil, stale: false },
       row(@team, "video")
     )
   end
@@ -74,12 +75,12 @@ class TeamRankingsTest < ActiveSupport::TestCase
     coding = categories(:coding)
     combined = ->(kind, record) { [ @team, @others ].sum { |rankings| rankings.item_counts(category: coding)[kind].fetch(record.id, count(0, 0))[:n] } }
 
-    assert_equal 3, combined.call(:tools, tools(:cursor))
+    assert_equal 4, combined.call(:tools, tools(:cursor))
     assert_equal 4, combined.call(:tools, tools(:claude_code))
     assert_equal 3, combined.call(:models, ai_models(:opus_5_5))
     assert_equal 2, combined.call(:models, ai_models(:gpt_6))
-    assert_equal 0, combined.call(:models, ai_models(:opus_5)), "Opus 5 is only on hidden cy"
-    assert_equal 4, @team.people_count + @others.people_count
+    assert_equal 1, combined.call(:models, ai_models(:opus_5)), "Opus 5 is only on private cy, who still counts"
+    assert_equal 5, @team.people_count + @others.people_count
   end
 
   test "M is the same in every count of one audience" do
@@ -101,14 +102,14 @@ class TeamRankingsTest < ActiveSupport::TestCase
   test "overall: distinct people across kinds, ranked by people, then 1st picks, then name" do
     overall = @team.overall
 
-    assert_equal %w[claude claude-code cursor], slugs(overall[:tools])
-    assert_equal [ count(2, 2) ] * 3, overall[:tools].pluck(:count)
-    assert_equal %w[claude-opus-5-5 gpt-6-astra], slugs(overall[:models])
-    assert_equal [ count(2, 2), count(1, 2) ], overall[:models].pluck(:count)
+    assert_equal %w[cursor claude claude-code], slugs(overall[:tools])
+    assert_equal [ count(3, 3), count(2, 3), count(2, 3) ], overall[:tools].pluck(:count), "Claude and Claude Code tie on people; Claude has two 1st picks"
+    assert_equal %w[claude-opus-5-5 claude-opus-5 gpt-6-astra], slugs(overall[:models])
+    assert_equal [ count(2, 3), count(1, 3), count(1, 3) ], overall[:models].pluck(:count)
   end
 
   test "overall: a person with a model in two kinds is counted once" do
-    assert_equal count(2, 2), @team.item_counts[:models].fetch(ai_models(:opus_5_5).id), "ana has Opus 5.5 in coding and knowledge work"
+    assert_equal count(2, 3), @team.item_counts[:models].fetch(ai_models(:opus_5_5).id), "ana has Opus 5.5 in coding and knowledge work"
   end
 
   test "overall lists at most ten tools and ten models" do
@@ -127,14 +128,21 @@ class TeamRankingsTest < ActiveSupport::TestCase
   # Ties
 
   test "equal people and 1st picks break by name; equal people break by 1st picks before name" do
-    assert_equal %w[claude-code cursor], slugs(@team.kind(categories(:coding))[:tools]), "2 of 2 and one 1st pick each: Claude Code before Cursor by name"
+    kind = Category.create!(slug: "tie", name: "Tie", position: 30)
+    alpha, beta = add_tool("Alpha"), add_tool("Beta")
+    [ [ beta, alpha ], [ alpha, beta ] ].each_with_index do |(first, second), index|
+      person = add_person("tie-#{index}")
+      add_pick(person, kind, 1, first)
+      add_pick(person, kind, 2, second)
+    end
+    assert_equal [ alpha.slug, beta.slug ], slugs(TeamRankings.new(viewer: nil, show: "others").kind(kind)[:tools]), "2 people and one 1st pick each: Alpha before Beta by name"
 
     gia = add_person("gia")
     add_pick(gia, :coding, 1, :cursor)
     coding = TeamRankings.new(viewer: nil, show: "others").kind(categories(:coding))
 
-    assert_equal %w[cursor claude-code], slugs(coding[:tools]), "2 of 3 each, but Cursor has two 1st picks against one"
-    assert_equal [ count(2, 3), count(2, 3) ], coding[:tools].pluck(:count)
+    assert_equal %w[cursor claude-code], slugs(coding[:tools]), "2 people each, but Cursor has two 1st picks against one"
+    assert_equal [ count(2, 5), count(2, 5) ], coding[:tools].pluck(:count)
   end
 
   # Kind detail
@@ -144,41 +152,55 @@ class TeamRankingsTest < ActiveSupport::TestCase
     ana = { handle: "ana", name: "Ana Every" }
     dee = { handle: "dee", name: "Dee Every" }
 
-    assert_equal count(2, 2), coding[:ranked]
+    assert_equal count(3, 3), coding[:ranked]
     assert_equal categories(:coding).to_prop, coding[:category]
-    assert_equal [ item(tools(:claude_code)), item(tools(:cursor)) ], coding[:tools].pluck(:item)
-    assert_equal [ { 1 => [ dee ], 2 => [ ana ], 3 => [] }, { 1 => [ ana ], 2 => [ dee ], 3 => [] } ], coding[:tools].pluck(:by_rank)
-    assert_equal [ item(ai_models(:opus_5_5)), item(ai_models(:gpt_6)) ], coding[:models].pluck(:item)
-    assert_equal [ count(2, 2), count(1, 2) ], coding[:models].pluck(:count)
-    assert_equal [ { 1 => [ ana, dee ], 2 => [], 3 => [] }, { 1 => [], 2 => [ dee ], 3 => [] } ], coding[:models].pluck(:by_rank)
+    assert_equal [ item(tools(:cursor)), item(tools(:claude_code)) ], coding[:tools].pluck(:item)
+    assert_equal [ { 1 => [ ana ], 2 => [ dee ], 3 => [] }, { 1 => [ dee ], 2 => [ ana ], 3 => [] } ], coding[:tools].pluck(:by_rank)
+    assert_equal [ 1, 0 ], coding[:tools].pluck(:unnamed), "private cy's Cursor counts, unnamed and not placed at a rank"
+    assert_equal [ item(ai_models(:opus_5_5)), item(ai_models(:opus_5)), item(ai_models(:gpt_6)) ], coding[:models].pluck(:item)
+    assert_equal [ count(2, 3), count(1, 3), count(1, 3) ], coding[:models].pluck(:count)
+    assert_equal [ { 1 => [ ana, dee ], 2 => [], 3 => [] }, { 1 => [], 2 => [], 3 => [] }, { 1 => [], 2 => [ dee ], 3 => [] } ], coding[:models].pluck(:by_rank)
+    assert_equal [ 0, 1, 0 ], coding[:models].pluck(:unnamed)
     assert_equal iso(:ana_4), coding[:last_update_at]
   end
 
-  test "kind: the names for an item add up to its count, for every kind and audience" do
+  test "kind: the names and the unnamed for an item add up to its count, and only people the viewer may open are named" do
     [ @team, @others, TeamRankings.new(viewer: users(:every_cy)), TeamRankings.new(viewer: nil) ].each do |rankings|
+      nameable = rankings.audience.people.pluck(:handle)
       Category.all.each do |category|
         kind = rankings.kind(category)
         (kind[:tools] + kind[:models]).each do |entry|
           named = entry[:by_rank].values.flatten.uniq
-          assert_equal entry[:count][:n], named.size, "#{entry[:item][:name]} in #{category.name}"
+          assert_equal entry[:count][:n], named.size + entry[:unnamed], "#{entry[:item][:name]} in #{category.name}"
+          assert_empty named.pluck(:handle) - nameable
         end
       end
     end
   end
 
+  test "a visitor gets the whole team's numbers but only the names of people who share with anyone" do
+    coding = TeamRankings.new(viewer: nil).kind(categories(:coding))
+    cursor = coding[:tools].find { |entry| entry[:item][:slug] == "cursor" }
+
+    assert_equal count(3, 3), coding[:ranked]
+    assert_equal count(3, 3), cursor[:count]
+    assert_equal({ 1 => [ { handle: "ana", name: "Ana Every" } ], 2 => [], 3 => [] }, cursor[:by_rank])
+    assert_equal 2, cursor[:unnamed], "dee shares with the team only and cy with nobody"
+  end
+
   test "kind: K counts the people with any pick in the kind, and an unranked kind is 0 of M" do
-    assert_equal count(2, 2), @team.kind(categories(:knowledge_work))[:ranked]
+    assert_equal count(2, 3), @team.kind(categories(:knowledge_work))[:ranked]
 
     video = @team.kind(categories(:video))
-    assert_equal({ ranked: count(0, 2), tools: [], models: [], setups: [], takes: [], last_update_at: nil }, video.slice(:ranked, :tools, :models, :setups, :takes, :last_update_at))
+    assert_equal({ ranked: count(0, 3), tools: [], models: [], setups: [], takes: [], last_update_at: nil }, video.slice(:ranked, :tools, :models, :setups, :takes, :last_update_at))
   end
 
   test "a pick without a model counts for its tool and for no model" do
     knowledge = @team.kind(categories(:knowledge_work))
 
-    assert_equal [ count(2, 2) ], knowledge[:tools].pluck(:count)
+    assert_equal [ count(2, 3) ], knowledge[:tools].pluck(:count)
     assert_equal [ item(ai_models(:opus_5_5)) ], knowledge[:models].pluck(:item)
-    assert_equal [ count(1, 2) ], knowledge[:models].pluck(:count), "dee's Claude pick names no model"
+    assert_equal [ count(1, 3) ], knowledge[:models].pluck(:count), "dee's Claude pick names no model"
   end
 
   test "setups group by tool, model, context and effort and count people" do
@@ -186,9 +208,10 @@ class TeamRankingsTest < ActiveSupport::TestCase
 
     assert_equal(
       [
-        { tool: item(tools(:claude_code)), model: item(ai_models(:opus_5_5)), context: nil, effort: "medium", count: count(1, 2) },
-        { tool: item(tools(:cursor)), model: item(ai_models(:opus_5_5)), context: "1m", effort: "high", count: count(1, 2) },
-        { tool: item(tools(:cursor)), model: item(ai_models(:gpt_6)), context: nil, effort: nil, count: count(1, 2) }
+        { tool: item(tools(:claude_code)), model: item(ai_models(:opus_5_5)), context: nil, effort: "medium", count: count(1, 3) },
+        { tool: item(tools(:cursor)), model: item(ai_models(:opus_5)), context: "200k", effort: nil, count: count(1, 3) },
+        { tool: item(tools(:cursor)), model: item(ai_models(:opus_5_5)), context: "1m", effort: "high", count: count(1, 3) },
+        { tool: item(tools(:cursor)), model: item(ai_models(:gpt_6)), context: nil, effort: nil, count: count(1, 3) }
       ],
       setups
     )
@@ -201,7 +224,7 @@ class TeamRankingsTest < ActiveSupport::TestCase
     coding = TeamRankings.new(viewer: @dee).kind(categories(:coding))
 
     opus_1m = coding[:setups].find { |setup| setup[:model][:slug] == "claude-opus-5-5" && setup[:context] == "1m" }
-    assert_equal count(1, 2), opus_1m[:count], "one person per tool here"
+    assert_equal count(1, 3), opus_1m[:count], "one person per tool here"
     gpt = coding[:setups].select { |setup| setup[:model][:slug] == "gpt-6-astra" }
     assert_equal 2, gpt.size, "ana on Claude Code, dee on Cursor: separate groups"
     assert_includes gpt.pluck(:context), nil
@@ -236,11 +259,12 @@ class TeamRankingsTest < ActiveSupport::TestCase
 
   # Hidden people, the owner, pending items
 
-  test "AE2: a hidden person is in no count or name for colleagues, and counted for themselves" do
+  test "AE2: a private person counts for colleagues but is never named, and is named for themselves" do
     coding = @team.kind(categories(:coding))
-    assert_equal count(2, 2), coding[:tools].find { |entry| entry[:item][:slug] == "cursor" }[:count]
-    assert_not_includes slugs(coding[:models]), "claude-opus-5"
-    assert_not_includes coding[:tools].flat_map { |entry| entry[:by_rank].values.flatten.pluck(:handle) }, "cy"
+    assert_equal count(3, 3), coding[:tools].find { |entry| entry[:item][:slug] == "cursor" }[:count]
+    assert_includes slugs(coding[:models]), "claude-opus-5"
+    assert_not_includes (coding[:tools] + coding[:models]).flat_map { |entry| entry[:by_rank].values.flatten.pluck(:handle) }, "cy"
+    assert_no_match(/\bcy\b|Cy Every/, [ @team.rows, @team.hero, @team.overall, @team.team_top, Category.all.map { |category| @team.kind(category) } ].to_json)
 
     own = TeamRankings.new(viewer: users(:every_cy))
     assert_equal count(3, 3), own.kind(categories(:coding))[:tools].find { |entry| entry[:item][:slug] == "cursor" }[:count]
@@ -248,22 +272,32 @@ class TeamRankingsTest < ActiveSupport::TestCase
     assert_equal count(3, 3), row(own, "coding")[:ranked]
   end
 
-  test "AE10: nothing a hidden person does changes what a colleague gets" do
+  test "AE10: a private person's picks move colleagues' counts, but nothing else about them reaches a colleague" do
     read = ->(viewer) do
       rankings = TeamRankings.new(viewer:)
       [ rankings.rows, rankings.hero, rankings.overall, rankings.team_top, Category.all.map { |category| rankings.kind(category) }, rankings.item_counts ].to_json
     end
-    before = [ @dee, users(:outside_eli), nil ].map { |viewer| read.call(viewer) }
+    names = ->(viewer) do
+      rankings = TeamRankings.new(viewer:)
+      named = Category.all.flat_map { |category| rankings.kind(category).values_at(:tools, :models).flatten.flat_map { |entry| entry[:by_rank].values.flatten } }
+      [ rankings.audience.people, named.uniq ]
+    end
+    viewers = [ @dee, users(:outside_eli), nil ]
+    before = viewers.map { |viewer| read.call(viewer) }
+    named_before = viewers.map { |viewer| names.call(viewer) }
 
     cy = users(:every_cy)
-    add_pick(cy, :video, 1, :runway)
-    add_pick(cy, :knowledge_work, 1, :claude, model: :opus_5_5)
     cy.update!(visibility: "team")
     cy.update!(visibility: "only_me")
-    cy.update!(handle: "cy-renamed")
+    cy.update!(handle: "cy-renamed", name: "Cy Renamed")
     add_tool("Cy Only", status: "pending", created_by: cy)
+    assert_equal before, viewers.map { |viewer| read.call(viewer) }, "visibility, handle, name and pending items change nothing"
 
-    assert_equal before, [ @dee, users(:outside_eli), nil ].map { |viewer| read.call(viewer) }
+    add_pick(cy, :video, 1, :runway)
+    add_pick(cy, :knowledge_work, 1, :claude, model: :opus_5_5)
+    assert_not_equal before, viewers.map { |viewer| read.call(viewer) }, "new picks count"
+    assert_equal named_before, viewers.map { |viewer| names.call(viewer) }, "but nobody new is named"
+    assert_equal count(1, 3), row(TeamRankings.new(viewer: nil), "video")[:ranked]
   end
 
   test "a pending tool or model is counted for no one until it is approved, then retroactively" do
@@ -279,13 +313,13 @@ class TeamRankingsTest < ActiveSupport::TestCase
       assert_not_includes slugs(coding[:models]), "beta-model"
       assert_equal 2, coding[:tools].size
     end
-    assert_equal count(2, 2), row(TeamRankings.new(viewer: @dee), "coding")[:ranked]
+    assert_equal count(3, 3), row(TeamRankings.new(viewer: @dee), "coding")[:ranked]
 
     zed.update!(status: "approved")
     beta.update!(status: "approved")
     coding = TeamRankings.new(viewer: @dee).kind(categories(:coding))
-    assert_equal count(1, 2), coding[:tools].find { |entry| entry[:item][:slug] == zed.slug }[:count]
-    assert_equal count(1, 2), coding[:models].find { |entry| entry[:item][:slug] == beta.slug }[:count]
+    assert_equal count(1, 3), coding[:tools].find { |entry| entry[:item][:slug] == zed.slug }[:count]
+    assert_equal count(1, 3), coding[:models].find { |entry| entry[:item][:slug] == beta.slug }[:count]
   end
 
   test "a hidden catalog item is not counted either" do
@@ -296,7 +330,7 @@ class TeamRankingsTest < ActiveSupport::TestCase
 
   test "suggestions count nowhere" do
     assert PickSuggestion.open.exists?(user: users(:every_ana), category: categories(:video)), "ana has an open Runway suggestion"
-    assert_equal count(0, 2), row(@team, "video")[:ranked]
+    assert_equal count(0, 3), row(@team, "video")[:ranked]
     assert_empty @team.kind(categories(:video))[:tools]
   end
 
@@ -332,16 +366,16 @@ class TeamRankingsTest < ActiveSupport::TestCase
     hero = @team.hero
 
     assert_equal %i[boards people picks last_update_at], hero.keys
-    assert_equal 2, hero[:people]
-    assert_equal 6, hero[:picks]
+    assert_equal 3, hero[:people]
+    assert_equal 7, hero[:picks]
     assert_equal iso(:ana_5), hero[:last_update_at]
     assert_equal(
       [
         {
           category: categories(:coding).to_prop,
           picks: [
-            { rank: 1, tool: item(tools(:claude_code)), model: item(ai_models(:opus_5_5)) },
-            { rank: 2, tool: item(tools(:cursor)), model: item(ai_models(:opus_5_5)) }
+            { rank: 1, tool: item(tools(:cursor)), model: item(ai_models(:opus_5)) },
+            { rank: 2, tool: item(tools(:claude_code)), model: item(ai_models(:opus_5_5)) }
           ]
         },
         { category: categories(:knowledge_work).to_prop, picks: [ { rank: 1, tool: item(tools(:claude)), model: item(ai_models(:opus_5_5)) } ] }
@@ -402,19 +436,19 @@ class TeamRankingsTest < ActiveSupport::TestCase
   test "item_counts: Count per item, in ranking order, for one kind or across kinds" do
     coding = @team.item_counts(category: categories(:coding))
 
-    assert_equal [ tools(:claude_code).id, tools(:cursor).id ], coding[:tools].keys
-    assert_equal count(2, 2), coding[:tools][tools(:cursor).id]
-    assert_equal [ ai_models(:opus_5_5).id, ai_models(:gpt_6).id ], coding[:models].keys
-    assert_equal count(1, 2), coding[:models][ai_models(:gpt_6).id]
+    assert_equal [ tools(:cursor).id, tools(:claude_code).id ], coding[:tools].keys
+    assert_equal count(3, 3), coding[:tools][tools(:cursor).id]
+    assert_equal [ ai_models(:opus_5_5).id, ai_models(:opus_5).id, ai_models(:gpt_6).id ], coding[:models].keys
+    assert_equal count(1, 3), coding[:models][ai_models(:gpt_6).id]
 
-    assert_equal count(1, 2), @team.item_counts(category: categories(:knowledge_work))[:models][ai_models(:opus_5_5).id]
-    assert_equal count(2, 2), @team.item_counts[:models][ai_models(:opus_5_5).id]
+    assert_equal count(1, 3), @team.item_counts(category: categories(:knowledge_work))[:models][ai_models(:opus_5_5).id]
+    assert_equal count(2, 3), @team.item_counts[:models][ai_models(:opus_5_5).id]
   end
 
   test "count_of: zero for an item nobody ranked, with the same M" do
-    assert_equal count(0, 2), @team.count_of(:model, ai_models(:opus_5).id)
-    assert_equal count(2, 2), @team.count_of(:tool, tools(:cursor).id, category: categories(:coding))
-    assert_equal count(0, 2), @team.count_of(:tool, tools(:runway).id)
+    assert_equal count(0, 3), @team.count_of(:model, ai_models(:opus_5).id, category: categories(:knowledge_work))
+    assert_equal count(3, 3), @team.count_of(:tool, tools(:cursor).id, category: categories(:coding))
+    assert_equal count(0, 3), @team.count_of(:tool, tools(:runway).id)
   end
 
   test "mostly_in: the tool most people use a model in, only from two people" do
@@ -434,15 +468,16 @@ class TeamRankingsTest < ActiveSupport::TestCase
     assert_equal %w[coding knowledge-work video], top.keys
     assert_equal(
       {
-        tools: [ { item: item(tools(:claude_code)), count: count(2, 2), yours_rank: 1 }, { item: item(tools(:cursor)), count: count(2, 2), yours_rank: 2 } ],
+        tools: [ { item: item(tools(:cursor)), count: count(3, 3), yours_rank: 2 }, { item: item(tools(:claude_code)), count: count(2, 3), yours_rank: 1 } ],
         models: [
-          { item: item(ai_models(:opus_5_5)), count: count(2, 2), yours_rank: 1, launched: true },
-          { item: item(ai_models(:gpt_6)), count: count(1, 2), yours_rank: 2, launched: false }
+          { item: item(ai_models(:opus_5_5)), count: count(2, 3), yours_rank: 1, launched: true },
+          { item: item(ai_models(:opus_5)), count: count(1, 3), yours_rank: nil, launched: false },
+          { item: item(ai_models(:gpt_6)), count: count(1, 3), yours_rank: 2, launched: false }
         ]
       },
       top["coding"]
     )
-    assert_equal({ tools: [ { item: item(tools(:claude)), count: count(2, 2), yours_rank: 1 } ], models: [ { item: item(ai_models(:opus_5_5)), count: count(1, 2), yours_rank: nil, launched: true } ] }, top["knowledge-work"])
+    assert_equal({ tools: [ { item: item(tools(:claude)), count: count(2, 3), yours_rank: 1 } ], models: [ { item: item(ai_models(:opus_5_5)), count: count(1, 3), yours_rank: nil, launched: true } ] }, top["knowledge-work"])
     assert_equal({ tools: [], models: [] }, top["video"])
   end
 
@@ -485,7 +520,7 @@ class TeamRankingsTest < ActiveSupport::TestCase
     assert_equal %i[item count], @team.overall[:tools].first.keys
     kind = @team.kind(coding)
     assert_equal %i[category ranked tools models setups takes last_update_at], kind.keys
-    assert_equal %i[item count by_rank], kind[:tools].first.keys
+    assert_equal %i[item count by_rank unnamed], kind[:tools].first.keys
     assert_equal [ 1, 2, 3 ], kind[:tools].first[:by_rank].keys
     assert_equal %i[handle name], kind[:tools].first[:by_rank][1].first.keys
     assert_equal %i[tool model context effort count], kind[:setups].first.keys

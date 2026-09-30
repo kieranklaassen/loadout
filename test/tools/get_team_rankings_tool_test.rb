@@ -23,14 +23,14 @@ class GetTeamRankingsToolTest < ActiveSupport::TestCase
   test "a team member gets the team's overall top picks and each kind's leaders" do
     body = rankings(users(:every_ana))
 
-    assert_equal [ "team", 2 ], body.values_at("audience", "people")
-    assert_equal [ [ "claude", 2 ], [ "claude-code", 2 ], [ "cursor", 2 ] ], counted(body.dig("overall", "tools"))
-    assert_equal [ [ "claude-opus-5-5", 2 ], [ "gpt-6-astra", 1 ] ], counted(body.dig("overall", "models"))
-    assert_equal({ "n" => 2, "of" => 2 }, body.dig("overall", "tools").first["count"])
+    assert_equal [ "team", 3 ], body.values_at("audience", "people")
+    assert_equal [ [ "cursor", 3 ], [ "claude", 2 ], [ "claude-code", 2 ] ], counted(body.dig("overall", "tools"))
+    assert_equal [ [ "claude-opus-5-5", 2 ], [ "claude-opus-5", 1 ], [ "gpt-6-astra", 1 ] ], counted(body.dig("overall", "models"))
+    assert_equal({ "n" => 3, "of" => 3 }, body.dig("overall", "tools").first["count"])
 
     coding = body["kinds"].find { |kind| kind["slug"] == "coding" }
-    assert_equal [ "claude-code", "claude-opus-5-5", { "n" => 2, "of" => 2 } ], [ coding.dig("top_tool", "item", "slug"), coding.dig("top_model", "item", "slug"), coding["ranked"] ]
-    assert_equal "cursor", coding.dig("top_tool", "runner_up", "item", "slug")
+    assert_equal [ "cursor", "claude-opus-5-5", { "n" => 3, "of" => 3 } ], [ coding.dig("top_tool", "item", "slug"), coding.dig("top_model", "item", "slug"), coding["ranked"] ]
+    assert_equal "claude-code", coding.dig("top_tool", "runner_up", "item", "slug")
     video = body["kinds"].find { |kind| kind["slug"] == "video" }
     assert_nil video["top_tool"], "a suggestion is not a pick, so nobody on the team ranks video yet"
   end
@@ -38,28 +38,31 @@ class GetTeamRankingsToolTest < ActiveSupport::TestCase
   test "one kind comes with who ranked what, the shared setups and the Vibe Check links" do
     body = rankings(users(:every_ana), category: "coding")
 
-    assert_equal [ "coding", { "n" => 2, "of" => 2 } ], [ body.dig("kind", "slug"), body["ranked"] ]
+    assert_equal [ "coding", { "n" => 3, "of" => 3 } ], [ body.dig("kind", "slug"), body["ranked"] ]
     cursor = body["tools"].find { |tool| tool.dig("item", "slug") == "cursor" }
     assert_equal [ [ "Ana Every" ], [ "Dee Every" ], [] ], cursor["ranked_by"].values_at("1", "2", "3").map { |people| people.map { |person| person["name"] } }
     assert_equal [ "ana", "dee" ], [ cursor["ranked_by"]["1"], cursor["ranked_by"]["2"] ].flatten.pluck("handle")
+    assert_equal 1, cursor["unlisted"], "private cy counts but is not listed"
+    assert_no_match(/Cy Every|"cy"/, body.to_json)
 
     setups = body["setups"].map { |setup| [ setup.dig("tool", "slug"), setup.dig("model", "slug"), setup["context"], setup["effort"], setup.dig("count", "n") ] }
     assert_equal [
       [ "claude-code", "claude-opus-5-5", nil, "medium", 1 ],
+      [ "cursor", "claude-opus-5", "200k", nil, 1 ],
       [ "cursor", "claude-opus-5-5", "1m", "high", 1 ],
       [ "cursor", "gpt-6-astra", nil, nil, 1 ]
     ], setups.sort_by(&:to_s)
     assert_equal [ [ "claude-opus-5-5", "https://checks.every.to/vibe-checks/claude-opus-5-5" ] ], body["takes"].map { |take| [ take.dig("model", "slug"), take["vibe_check_url"] ] }
   end
 
-  test "the audience argument switches to everyone else, and only counts people who share with the viewer" do
+  test "the audience argument switches to everyone else, where only people who share with the viewer count" do
     others = rankings(users(:every_ana), audience: "others")
     assert_equal [ "others", 2 ], others.values_at("audience", "people")
     assert_equal [ [ "claude-code", 2 ], [ "cursor", 1 ], [ "runway", 1 ] ], counted(others.dig("overall", "tools"))
 
     outsider = rankings(users(:outside_eli))
-    assert_equal [ "team", 1 ], outsider.values_at("audience", "people")
-    assert_no_match(/Dee|dee|Cy Every/, outsider.to_json, "team-only and hidden people are not visible to a non-team viewer")
+    assert_equal [ "team", 3 ], outsider.values_at("audience", "people"), "the whole team counts"
+    assert_no_match(/Dee|dee|Cy Every/, outsider.to_json, "team-only and private people are never named to a non-team viewer")
   end
 
   test "the owner is counted even when private, and is told so" do

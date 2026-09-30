@@ -14,7 +14,7 @@ type Props = {
   filters: HomeFilters
   people: PersonOption[]
   notice: string | null
-  /** The viewer is counted here but shares with nobody, so these numbers include picks colleagues cannot see. */
+  /** The viewer is counted here but shares with nobody: on the team view their picks count anonymously, elsewhere only they see them. */
   private_picks: boolean
   empty_reason: string | null
   launches: Launch[]
@@ -87,7 +87,9 @@ export default function Home({
             <p className={note}>
               {subject && subject.handle === current_user?.handle
                 ? 'Only you can see this page.'
-                : 'These counts include your private picks. Only you can see them.'}
+                : filters.show === 'team'
+                  ? 'Your private picks count here anonymously. Nobody sees they are yours.'
+                  : 'These counts include your private picks. Only you can see them.'}
             </p>
           ) : (
             current_user?.visibility === 'link' &&

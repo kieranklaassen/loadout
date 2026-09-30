@@ -1,8 +1,9 @@
 require "test_helper"
 
 # Opus 5.5 is the one launched fixture model (dated 20 days ago, with a checks.every.to
-# link). Opus 5 has a date only and GPT-6 neither. For a team viewer (dee) the team is
-# ana and dee, who both use Opus 5.5 (ana in coding and knowledge work), so 2 of 2.
+# link). Opus 5 has a date only and GPT-6 neither. On the team every viewer counts ana,
+# cy and dee (cy privately); ana and dee use Opus 5.5 (ana in coding and knowledge work)
+# and cy uses Opus 5, so 2 of 3.
 class ModelLaunchesTest < ActiveSupport::TestCase
   setup { @dee = users(:every_dee) }
 
@@ -43,7 +44,7 @@ class ModelLaunchesTest < ActiveSupport::TestCase
         released_on: opus.released_on.iso8601,
         vibe_check_url: "https://checks.every.to/vibe-checks/claude-opus-5-5",
         newest: true,
-        adoption: { n: 2, of: 2 },
+        adoption: { n: 2, of: 3 },
         mostly_in: tools(:claude).to_prop
       },
       launch
@@ -61,17 +62,21 @@ class ModelLaunchesTest < ActiveSupport::TestCase
   end
 
   test "adoption is N of M across all kinds, counting a person once" do
-    assert_equal({ n: 2, of: 2 }, launches.first[:adoption], "ana has Opus 5.5 in two kinds")
+    assert_equal({ n: 2, of: 3 }, launches.first[:adoption], "ana has Opus 5.5 in two kinds")
     assert_equal({ n: 1, of: 2 }, launches(@dee, show: "others").first[:adoption], "fay only")
-    assert_equal({ n: 1, of: 1 }, launches(nil).first[:adoption], "a visitor sees ana on the team")
+    assert_equal({ n: 2, of: 3 }, launches(nil).first[:adoption], "a visitor counts the whole team, though it names only ana")
   end
 
-  test "AE10: a hidden person changes no adoption for colleagues but counts for themselves" do
+  test "AE10: a hidden person's pick counts in adoption for everyone on the team, and nowhere else" do
     cy = users(:every_cy)
+    before = [ nil, @dee, cy ].map { |viewer| launches(viewer) }
+    others_before = launches(@dee, show: "others")
     add_pick(cy, :knowledge_work, 1, :claude, model: :opus_5_5)
 
-    assert_equal({ n: 2, of: 2 }, launches.first[:adoption])
-    assert_equal({ n: 3, of: 3 }, launches(cy).first[:adoption])
+    [ nil, @dee, cy ].each { |viewer| assert_equal({ n: 3, of: 3 }, launches(viewer).first[:adoption]) }
+    assert_equal before.map { |list| list.map { |launch| launch.except(:adoption, :mostly_in) } },
+      [ nil, @dee, cy ].map { |viewer| launches(viewer).map { |launch| launch.except(:adoption, :mostly_in) } }
+    assert_equal others_before, launches(@dee, show: "others")
   end
 
   test "mostly in a tool only from two people, and the tool most of them use it in" do

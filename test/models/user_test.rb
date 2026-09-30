@@ -88,6 +88,22 @@ class UserTest < ActiveSupport::TestCase
 
   # Visibility (R12, R13, KTD5)
 
+  test "a member starts public once they claim a handle; before that a page cannot be shared" do
+    assert_equal "link", User::ONBOARDING_VISIBILITY
+    user = User.create!(email_address: "fresh@example.com")
+
+    assert_not user.update(visibility: User::ONBOARDING_VISIBILITY)
+    assert user.update(handle: "fresh", visibility: User::ONBOARDING_VISIBILITY)
+  end
+
+  test "onboarded is every member with a handle who finished onboarding" do
+    halfway = User.create!(email_address: "halfway@example.com", handle: "halfway")
+
+    assert_includes User.onboarded, users(:every_ana)
+    assert_not_includes User.onboarded, halfway
+    assert_not_includes User.onboarded, users(:one)
+  end
+
   test "visibility defaults to only me and the public column is ignored" do
     user = User.create!(email_address: "new@example.com")
 

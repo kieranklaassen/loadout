@@ -21,6 +21,9 @@ class User < ApplicationRecord
   validates :email_address, presence: true, uniqueness: true
   validates :bio, length: { maximum: 160 }
 
+  # The SQL twin of onboarded?.
+  scope :onboarded, -> { where.not(onboarded_at: nil).where.not(handle: [ nil, "" ]) }
+
   def display_name
     name.presence || handle.presence || email_address.split("@").first
   end

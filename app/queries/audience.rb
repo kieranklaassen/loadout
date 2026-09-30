@@ -13,19 +13,30 @@
 #   person:  a handle. It only takes effect for someone in the population below; a hidden
 #            person, an unknown handle and a person in the other SHOW class all behave as nil.
 #
-# The population P is the people the viewer may open (User.visible_to, which owns the
-# visibility rule) who have at least one confirmed pick on an approved tool, in the SHOW
-# class. M is its size. The viewer counts as themselves even when they share with nobody
-# (includes_private_picks? says when the count contains picks colleagues cannot see).
-# Suggestions, hidden people and pending or hidden catalog items count nowhere.
+# Two sets of people, both limited to those with at least one confirmed pick on an approved
+# tool, in the SHOW class:
+#   named    the people the viewer may open (User.visible_to, which owns the visibility
+#            rule), themselves included. Only they are ever named, linked or searchable.
+#   counted  the population P that every count is taken over; M is its size. For "team" it
+#            is every onboarded Every team member whatever their visibility, plus the viewer:
+#            a private member's picks count anonymously and the member is never named. For
+#            "others" it is the named people, so outside the team visibility still decides.
+# The viewer counts as themselves even when they share with nobody (includes_private_picks?
+# says when the count contains the viewer's own private picks). Suggestions and pending or
+# hidden catalog items count nowhere.
+#
+# Privacy trade-off: counts over everyone can narrow a private person down. With one private
+# member, "N of M" minus the named holders is that member's pick. Names never leak; the
+# number is the price of the totals reflecting the whole team.
 #
 # Public methods
 #   viewer, show, notice, person         the normalised inputs (person is a User or nil)
 #   filters                              { show:, person: handle or nil }, for the Home filters prop
-#   people                               PERSON options: [{ handle:, name: }], in name order
+#   people                               PERSON options: [{ handle:, name: }], the named people in name order
 #   size / empty?                        M
-#   ids, entries                         the people, and their picks that may count (used by TeamRankings)
-#   person_ref(user_id)                  the { handle:, name: } entry for someone in the population
+#   ids, entries                         the counted people, and their picks that may count (used by TeamRankings)
+#   named_ids                            the named people's ids (search)
+#   person_ref(user_id)                  the { handle:, name: } entry for a named person, nil for anyone else
 #   levels                               the visibility levels the viewer may read (for period clipping)
 #   includes_private_picks?              the viewer is counted and nobody else can open them
 #   Audience.person(user)                the { handle:, name: } entry used everywhere a person is named
@@ -73,7 +84,7 @@ class Audience
   end
 
   def person
-    members.find { |user| user.handle == @person_handle } if @person_handle.present?
+    named.find { |user| user.handle == @person_handle } if @person_handle.present?
   end
 
   def filters
@@ -81,23 +92,27 @@ class Audience
   end
 
   def people
-    members.map { |user| self.class.person(user) }
+    named.map { |user| self.class.person(user) }
   end
 
   def ids
-    members.map(&:id)
+    counted.map(&:id)
+  end
+
+  def named_ids
+    named.map(&:id)
   end
 
   def size
-    members.size
+    counted.size
   end
 
   def empty?
-    members.empty?
+    counted.empty?
   end
 
   def person_ref(user_id)
-    self.class.person(members_by_id.fetch(user_id))
+    named_by_id[user_id]&.then { |user| self.class.person(user) }
   end
 
   # The confirmed picks of the population that may count.
@@ -110,23 +125,33 @@ class Audience
   end
 
   def includes_private_picks?
-    viewer.present? && members.any? { |user| user.id == viewer.id } && !viewer.shared?
+    viewer.present? && counted.any? { |user| user.id == viewer.id } && !viewer.shared?
   end
+
+  def team? = show == "team"
 
   private
 
   # In name order, so every list built from it is.
-  def members
-    @members ||= begin
+  def named
+    @named ||= begin
       openable = User.visible_to(viewer).where(id: self.class.counted_entries.select(:user_id))
-      openable = team? ? openable.every_members : openable.where.not(id: User.every_members.select(:id))
+      # On the team only onboarded members count, so only they (and the viewer) are named: M is the same for every viewer.
+      openable = team? ? openable.every_members.merge(User.onboarded.or(User.where(id: viewer&.id))) : openable.where.not(id: User.every_members.select(:id))
       openable.sort_by { |user| self.class.name_key(user.name, user.handle) }
     end
   end
 
-  def members_by_id
-    @members_by_id ||= members.index_by(&:id)
+  def counted
+    @counted ||= if team?
+      everyone = User.every_members.onboarded.where(id: self.class.counted_entries.select(:user_id)).to_a
+      (named + everyone).uniq(&:id).sort_by { |user| self.class.name_key(user.name, user.handle) }
+    else
+      named
+    end
   end
 
-  def team? = show == "team"
+  def named_by_id
+    @named_by_id ||= named.index_by(&:id)
+  end
 end

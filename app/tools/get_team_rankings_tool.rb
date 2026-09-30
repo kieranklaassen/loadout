@@ -9,15 +9,16 @@ class GetTeamRankingsTool < ApplicationTool
     Returns what the team uses, as the signed-in member sees it on the site. Without `category`
     it returns the Overall top tools and models and, for each kind of work, the most used tool
     and model. With `category` (a slug from list_categories) it returns that kind in detail: every
-    tool and model with who ranked it 1st, 2nd and 3rd, the setups (tool, model, context size and
+    tool and model with who ranked it 1st, 2nd and 3rd (`ranked_by`, only people who share with
+    the member; `unlisted` is how many others counted have it), the setups (tool, model, context size and
     effort) people share, and links to Vibe Check takes, which need a sign-in and which you
     cannot read. `count` is { n, of }: n of the `of` people counted use it. Counts are people,
-    not scores. `audience` picks who is counted: `team` (Every team members who share with the
-    member, the default) or `others` (everyone else who shares with the member); `subscribers`
-    is not available yet. Only people who chose to share with the member are counted, plus the
-    member's own picks (`includes_your_private_picks` is true when those are private, so
-    colleagues do not see them); when nobody is counted, `people` is 0 and `reason` is
-    nobody_shared. #{DATA_NOTICE}
+    not scores. `audience` picks who is counted: `team` (every onboarded Every team member, the
+    default; people with a private page count anonymously and are never named) or `others`
+    (everyone else who shares with the member); `subscribers` is not available yet.
+    `includes_your_private_picks` is true when the member's own picks are private: they count,
+    but nobody sees they are the member's. When nobody is counted, `people` is 0 and `reason`
+    is nobody_shared. #{DATA_NOTICE}
   TEXT
   input_schema(
     properties: {
@@ -76,7 +77,7 @@ class GetTeamRankingsTool < ApplicationTool
     end
 
     def ranked_listing(listing)
-      standing(listing).merge(ranked_by: listing[:by_rank].transform_values { |people| people.map { |person| person_prop(person) } })
+      standing(listing).merge(ranked_by: listing[:by_rank].transform_values { |people| people.map { |person| person_prop(person) } }, unlisted: listing[:unnamed])
     end
 
     def standing(entry)

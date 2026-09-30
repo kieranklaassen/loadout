@@ -3,8 +3,12 @@ require "test_helper"
 # AE1, AE2, R13, R15: every surface counts and names the same people. For each viewer class
 # and each SHOW class, Home, the Kind pages, search and the get_team_rankings tool are read as
 # the same member and must agree on who is counted (M), on every N of M and on the people they
-# name; a person the viewer may not open is on none of them, and their profile and share card
-# are the same not-found as a handle nobody claimed.
+# name. Two sets: the named people are the ones the viewer may open, and only they are ever
+# named, offered as PERSON or found by search; the counted people are who every number is
+# over. On the team that is every onboarded member with a pick, whatever they share, so a
+# private or team-only member counts for a visitor too but is named nowhere; outside the team
+# the two sets are the same. A person the viewer may not open has a profile and share card
+# that are the same not-found as a handle nobody claimed.
 #
 # Expectations come from the table of people below and the visibility rule written out
 # longhand, never from the read layer. The tool is a member-only transport, so a visitor is
@@ -17,7 +21,7 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
   # Everyone the test knows about. The fixtures give ana, dee, cy, eli and fay (see
   # test/fixtures/users.yml); setup adds the rest, so every visibility level exists on and off
   # the Every team. `team` is a verified @every.to address (fay's is not verified) and
-  # `picks` says whether the person has a confirmed pick.
+  # `picks` says whether the person has a confirmed pick. Everyone here is onboarded.
   PEOPLE = {
     "ana" => { visibility: "link", team: true, picks: true },
     "dee" => { visibility: "team", team: true, picks: true },
@@ -65,27 +69,34 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
       test "AE1: Home, the Kind pages and get_team_rankings count the same people for #{label} reading #{show}" do
         viewer = viewer_handle && User.find_by!(handle: viewer_handle)
         sign_in_or_out(viewer)
-        counted = population(viewer_handle, show)
+        named = named(viewer_handle, show)
+        counted = counted(viewer_handle, show)
         where = "#{label} / #{show}"
 
         home = read_home(show:)
         kinds = Category.order(:position).index_with { |category| read_kind(category, show) }
 
-        assert_home_counts_the_population(home, counted, where)
-        kinds.each { |category, kind| assert_kind_lists_what_the_population_ranked(kind, category, counted, where) }
-        assert_nobody_hidden_is_named(viewer_handle, counted, where, home.except(:current_user, :webmcp), kinds.values.map { |kind| kind.except(:current_user, :webmcp) })
-        assert_tool_agrees_with_pages(viewer, show, home, kinds, where) if viewer
+        assert_home_counts_the_population(home, named, counted, where)
+        kinds.each { |category, kind| assert_kind_lists_what_the_population_ranked(kind, category, named, counted, where) }
+        assert_nobody_hidden_is_named(viewer_handle, named, where, home.except(:current_user, :webmcp), kinds.values.map { |kind| kind.except(:current_user, :webmcp) })
+        assert_tool_agrees_with_pages(viewer, show, home, kinds, counted, where) if viewer
       end
     end
+  end
+
+  test "the oracle really splits the sets: on the team a visitor counts three people and names one" do
+    assert_equal %w[ana cy dee], counted(nil, "team")
+    assert_equal %w[ana], named(nil, "team")
+    assert_equal counted(nil, "others"), named(nil, "others")
   end
 
   # PERSON, search and the unknown handle
 
   VIEWERS.each do |label, viewer_handle|
     SHOWS.each do |show|
-      test "AE2: PERSON and search offer exactly the people counted, and any other handle is the unknown handle for #{label} reading #{show}" do
+      test "AE2: PERSON and search offer exactly the people named, and any other handle is the unknown handle for #{label} reading #{show}" do
         sign_in_or_out(viewer_handle && User.find_by!(handle: viewer_handle))
-        counted = population(viewer_handle, show)
+        named = named(viewer_handle, show)
         where = "#{label} / #{show}"
 
         unknown = read_home(show:, person: "nobody-here")
@@ -93,13 +104,13 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
         PEOPLE.each_key do |handle|
           home = read_home(show:, person: handle)
 
-          if counted.include?(handle)
+          if named.include?(handle)
             assert_equal handle, home.dig(:person, :person, :handle), "PERSON #{handle}, #{where}"
           else
-            assert_equal unknown, home, "PERSON #{handle} is not offered, so it is the unknown handle, #{where}"
+            assert_equal unknown, home, "PERSON #{handle} is not offered, so it is the unknown handle, even when counted, #{where}"
           end
           found = partial_search(handle, show:)["people"].pluck("handle")
-          assert_equal counted.include?(handle) ? [ handle ] : [], found, "search for #{handle}, #{where}"
+          assert_equal named.include?(handle) ? [ handle ] : [], found, "search for #{handle}, #{where}"
         end
       end
     end
@@ -109,7 +120,7 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
     SHOWS.each do |show|
       test "search hits are the items the population ranked, with the Kind page's counts, for #{label} reading #{show}" do
         sign_in_or_out(viewer_handle && User.find_by!(handle: viewer_handle))
-        counted = population(viewer_handle, show)
+        counted = counted(viewer_handle, show)
         where = "#{label} / #{show}"
 
         { "cursor" => Tool, "olive tool" => Tool, "opus" => AiModel, "gpt" => AiModel }.each do |query, klass|
@@ -181,9 +192,16 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
     viewer_handle == handle || level == "link" || (level == "team" && team_member?(viewer_handle))
   end
 
-  # Counted: people the viewer may open who have a confirmed pick, in the SHOW class.
-  def population(viewer_handle, show)
+  # Named: people the viewer may open who have a confirmed pick, in the SHOW class.
+  def named(viewer_handle, show)
     PEOPLE.select { |handle, person| person[:picks] && openable?(viewer_handle, handle) && person[:team] == (show == "team") }.keys.sort
+  end
+
+  # Counted: on the team, every member with a confirmed pick whoever may open them; outside it, the named.
+  def counted(viewer_handle, show)
+    return named(viewer_handle, show) unless show == "team"
+
+    (named(viewer_handle, show) + PEOPLE.select { |_handle, person| person[:picks] && person[:team] }.keys).uniq.sort
   end
 
   # Distinct people among the handles with a pick in the kind, straight from the rows.
@@ -219,9 +237,9 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
     page_props
   end
 
-  def assert_home_counts_the_population(home, counted, where)
+  def assert_home_counts_the_population(home, named, counted, where)
     m = counted.size
-    assert_equal counted, home[:people].pluck(:handle).sort, "PERSON options, #{where}"
+    assert_equal named, home[:people].pluck(:handle).sort, "PERSON options, #{where}"
     assert_equal m, home[:hero][:people], "hero people, #{where}"
     assert_equal [ m ], all_counts(home.slice(:rows, :overall, :launches)).pluck(:of).uniq, "every count on Home is out of M, #{where}"
     assert_empty home[:rows].map { |row| row[:category][:slug] } - Category.pluck(:slug), "rows, #{where}"
@@ -232,7 +250,7 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
     end
   end
 
-  def assert_kind_lists_what_the_population_ranked(kind, category, counted, where)
+  def assert_kind_lists_what_the_population_ranked(kind, category, named, counted, where)
     m = counted.size
     assert_equal({ n: people_with(counted, category:), of: m }, kind[:ranked], "K of M, #{category.slug}, #{where}")
     assert_equal [ m ], all_counts(kind.slice(:ranked, :tools, :models, :setups)).pluck(:of).uniq, "every count on the Kind page is out of M, #{where}"
@@ -243,31 +261,33 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
 
       kind[listing].each do |entry|
         rows = expected.fetch(klass.find_by!(slug: entry.dig(:item, :slug)).id)
-        named = by_rank(entry, :by_rank)
+        shown = rows.select { |_rank, handle| named.include?(handle) }
+        names = by_rank(entry, :by_rank)
 
         assert_equal rows.map(&:last).uniq.size, entry.dig(:count, :n), "N of #{entry.dig(:item, :slug)} in #{category.slug}, #{where}"
-        assert_equal (1..3).to_h { |rank| [ rank, rows.select { |r, _| r == rank }.map(&:last).sort ] }, named.transform_values(&:sort), "who ranked #{entry.dig(:item, :slug)} in #{category.slug}, #{where}"
-        assert_equal entry.dig(:count, :n), named.values.sum(&:size), "the names add up to N, #{where}"
+        assert_equal (1..3).to_h { |rank| [ rank, shown.select { |r, _| r == rank }.map(&:last).sort ] }, names.transform_values(&:sort), "who is named for #{entry.dig(:item, :slug)} in #{category.slug}, #{where}"
+        assert_equal (rows.map(&:last) - named).uniq.size, entry[:unnamed], "counted but unnamed, #{entry.dig(:item, :slug)} in #{category.slug}, #{where}"
+        assert_equal entry.dig(:count, :n), names.values.sum(&:size) + entry[:unnamed], "the names and the unnamed add up to N, #{where}"
       end
     end
   end
 
-  # No one the viewer may not open, or who is in the other SHOW class, is named or counted
-  # by handle or by name on any page or tool result. (Their absence from the counts is
-  # asserted above.)
-  def assert_nobody_hidden_is_named(viewer_handle, counted, where, *outputs)
+  # No one the viewer may not open, or who is in the other SHOW class, is named by handle or
+  # by name on any page or tool result, even when they are counted.
+  def assert_nobody_hidden_is_named(viewer_handle, named, where, *outputs)
     text = outputs.to_json
-    (PEOPLE.keys - counted - [ viewer_handle ]).each do |handle|
+    (PEOPLE.keys - named - [ viewer_handle ]).each do |handle|
       assert_not_includes text, %("handle":"#{handle}"), "#{handle} is named by handle, #{where}"
       assert_not_includes text, User.find_by!(handle:).name.to_json, "#{handle} is named, #{where}"
     end
   end
 
-  def assert_tool_agrees_with_pages(viewer, show, home, kinds, where)
+  def assert_tool_agrees_with_pages(viewer, show, home, kinds, counted, where)
     overview = tool_result(viewer, "get_team_rankings", audience: show)
     text = overview.to_json
 
-    assert_equal [ show, home[:people].size ], overview.values_at(:audience, :people), "population, #{where}"
+    assert_equal [ show, counted.size ], overview.values_at(:audience, :people), "population, #{where}"
+    assert_equal home[:hero][:people], overview[:people], "M on Home and in the tool, #{where}"
     assert_equal home[:rows].map { |row| row_summary(row, row.dig(:category, :slug)) }, overview[:kinds].map { |row| row_summary(row, row[:slug]) }, "the What we use rows, #{where}"
     assert_equal standings(home[:overall]), standings(overview[:overall]), "Overall top ten, #{where}"
     assert_equal home[:private_picks], overview.fetch(:includes_your_private_picks, false), "the private picks note, #{where}"
@@ -303,7 +323,7 @@ class SurfaceParityTest < ActionDispatch::IntegrationTest
   end
 
   def listings(entries, key)
-    entries.map { |entry| [ entry.dig(:item, :slug), entry[:count], by_rank(entry, key) ] }
+    entries.map { |entry| [ entry.dig(:item, :slug), entry[:count], by_rank(entry, key), entry[key == :by_rank ? :unnamed : :unlisted] ] }
   end
 
   # { 1 => ["ana"], 2 => [...], 3 => [...] }, whatever the keys serialise as.

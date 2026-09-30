@@ -2,7 +2,7 @@ import { VISIBILITY_CONSEQUENCE, VISIBILITY_HELP, VISIBILITY_LABEL, VISIBILITY_L
 import type { Visibility } from '../types'
 
 /**
- * "Who can see it": Only me, Every team, Anyone with the link, as radio cards. The
+ * "Who can see it": Private, Every team, Anyone with the link, as radio cards. The
  * selected card is followed by what that choice means (the same lines on Claim your
  * link and Settings). `labelledBy` is the id of the heading that names the group.
  */
