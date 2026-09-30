@@ -21,6 +21,9 @@ class DockerEntrypointTest < ActiveSupport::TestCase
       runner)
         echo "runner $2" >> calls.log
         exit "${FAKE_RUNNER_EXIT:-0}" ;;
+      toolbox:import_vibe_checks)
+        echo "$1" >> calls.log
+        exit "${FAKE_IMPORT_EXIT:-0}" ;;
       *)
         echo "$*" >> calls.log ;;
     esac
@@ -48,7 +51,7 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     result = run_entrypoint("./bin/rails", "server", "FAKE_PENDING_EXIT" => "1")
 
     assert result.success?, result.stderr
-    assert_equal [ "pending-check", "prepare backups=1", "runner Catalog::Sync.call", "server" ], calls
+    assert_equal [ "pending-check", "prepare backups=1", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls
     backup = Dir[File.join(@dir, "storage/backup-*")].sole
     assert_equal "600", format("%o", File.stat(backup).mode & 0o777)
     assert_equal [ "ana@every.to", "dee@every.to" ], query(backup, "SELECT email FROM users ORDER BY email"), "the copy holds what the migration is about to change"
@@ -62,7 +65,7 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     result = run_entrypoint("./bin/rails", "server")
 
     assert result.success?, result.stderr
-    assert_equal [ "pending-check", "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls
+    assert_equal [ "pending-check", "prepare backups=0", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls
     assert_empty Dir[File.join(@dir, "storage/backup-*")]
   end
 
@@ -70,15 +73,23 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     result = run_entrypoint("./bin/rails", "server")
 
     assert result.success?, result.stderr
-    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls
   end
 
   test "a failed catalog sync is logged and the server still starts" do
     result = run_entrypoint("./bin/rails", "server", "FAKE_RUNNER_EXIT" => "1")
 
     assert result.success?, result.stderr
-    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls
     assert_match(/Catalog sync failed/, result.stderr)
+  end
+
+  test "a failed Vibe Check import is logged and the server still starts" do
+    result = run_entrypoint("./bin/rails", "server", "FAKE_IMPORT_EXIT" => "1")
+
+    assert result.success?, result.stderr
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls
+    assert_match(/Vibe Check import failed/, result.stderr)
   end
 
   test "a failed migration stops the boot before the catalog sync and the server" do
@@ -136,7 +147,7 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     result = run_entrypoint("./bin/rails", "server", "INERTIA_SSR_ENABLED" => "false")
 
     assert result.success?, result.stderr
-    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls
   end
 
   test "without a built SSR bundle no render server starts" do
@@ -145,7 +156,7 @@ class DockerEntrypointTest < ActiveSupport::TestCase
     result = run_entrypoint("./bin/rails", "server")
 
     assert result.success?, result.stderr
-    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls
   end
 
   test "other commands run untouched" do
@@ -165,7 +176,7 @@ class DockerEntrypointTest < ActiveSupport::TestCase
   def assert_render_server_started_once_before_the_server
     assert_equal 1, calls.count("ssr")
     assert_operator calls.index("ssr"), :<, calls.index("server")
-    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "server" ], calls - [ "ssr" ]
+    assert_equal [ "prepare backups=0", "runner Catalog::Sync.call", "toolbox:import_vibe_checks", "server" ], calls - [ "ssr" ]
   end
 
   Result = Struct.new(:stdout, :stderr, :status) do
