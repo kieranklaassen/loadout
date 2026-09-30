@@ -25,7 +25,7 @@ const baseProps = {
   suggested_handle: 'olive-jones',
   name: 'Olive Jones',
   avatar_url: null,
-  visibility: 'only_me' as const,
+  visibility: 'link' as const,
   preview_kinds: ['Coding', 'Knowledge work'],
 }
 
@@ -62,14 +62,19 @@ describe('Claim your link', () => {
     expect(within(preview).getByText('toolbox.example.test/olive')).toBeInTheDocument()
   })
 
-  it('offers the three levels, private by default, and says what the chosen one means', async () => {
+  it('offers the three levels, public as the server preselects it, and says what the chosen one means', async () => {
     render(<OnboardingShow {...baseProps} />)
 
     const group = screen.getByRole('radiogroup', { name: 'Who can see it' })
     expect(within(group).getAllByRole('radio').map((radio) => (radio as HTMLInputElement).value)).toEqual(['only_me', 'team', 'link'])
-    expect(screen.getByRole('radio', { name: /only me/i })).toBeChecked()
-    expect(screen.getByRole('radio', { name: /every team/i })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: /anyone with the link/i })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /private/i })).not.toBeChecked()
     expect(screen.getByText('People on the Every team.')).toBeInTheDocument()
+    expect(screen.getByText('Your picks still count anonymously toward Every’s totals.')).toBeInTheDocument()
+    expect(screen.getByText(VISIBILITY_CONSEQUENCE.link)).toBeInTheDocument()
+    expect(screen.getByText(VISIBILITY_STATUS.link)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('radio', { name: /private/i }))
     expect(screen.getByText(VISIBILITY_CONSEQUENCE.only_me)).toBeInTheDocument()
     expect(screen.getByText(VISIBILITY_STATUS.only_me)).toBeInTheDocument()
 
@@ -88,22 +93,24 @@ describe('Claim your link', () => {
   it('keeps the radios reachable and described for a keyboard user', async () => {
     render(<OnboardingShow {...baseProps} />)
 
-    const radio = screen.getByRole('radio', { name: /only me/i })
-    expect(radio).toHaveAccessibleDescription(VISIBILITY_CONSEQUENCE.only_me)
+    const radio = screen.getByRole('radio', { name: /anyone with the link/i })
+    expect(radio).toHaveAccessibleDescription(VISIBILITY_CONSEQUENCE.link)
     linkField().focus()
     await userEvent.tab()
     expect(radio).toHaveFocus()
-    await userEvent.keyboard('{ArrowDown}')
+    await userEvent.keyboard('{ArrowUp}')
     expect(screen.getByRole('radio', { name: /every team/i })).toBeChecked()
   })
 
   it('saves the handle and the chosen level with one PATCH to /welcome', async () => {
     render(<OnboardingShow {...baseProps} />)
 
-    await userEvent.click(screen.getByRole('radio', { name: /anyone with the link/i }))
     await userEvent.click(screen.getByRole('button', { name: 'Save and rank my first tools' }))
-
     expect(router.patch).toHaveBeenCalledWith('/welcome', { handle: 'olive-jones', visibility: 'link' }, expect.objectContaining({ preserveState: true }))
+
+    await userEvent.click(screen.getByRole('radio', { name: /private/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save and rank my first tools' }))
+    expect(router.patch).toHaveBeenLastCalledWith('/welcome', { handle: 'olive-jones', visibility: 'only_me' }, expect.objectContaining({ preserveState: true }))
   })
 
   it('checks a typed handle live through a partial reload of /handles/check and waits for the answer', () => {

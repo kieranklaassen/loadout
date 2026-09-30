@@ -33,7 +33,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
     assert_not HandlesController.__callbacks[:process_action].map(&:filter).include?(:require_onboarding)
   end
 
-  test "welcome is one page: a suggested handle, the name, private by default and two real kinds for the preview" do
+  test "welcome is one page: a suggested handle, the name, public preselected and two real kinds for the preview" do
     users(:one).update!(name: "Olive Jones", avatar_url: "https://every.to/avatars/olive.png")
     sign_in_as users(:one)
 
@@ -45,7 +45,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
     assert_equal "olive-jones", props[:suggested_handle]
     assert_equal "Olive Jones", props[:name]
     assert_equal "https://every.to/avatars/olive.png", props[:avatar_url]
-    assert_equal "only_me", props[:visibility]
+    assert_equal "link", props[:visibility]
     assert_equal [ "Coding", "Knowledge work" ], props[:preview_kinds]
     assert_not props.key?(:picker), "the picker belongs to the editor now"
     assert_not props.key?(:step)
@@ -88,7 +88,7 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "link" ], users(:one).visibility_periods.map(&:level)
   end
 
-  test "without a visibility the member stays private and no period opens" do
+  test "without a visibility the member starts public, the new default, and a link period opens" do
     sign_in_as users(:one)
 
     patch welcome_path, params: { handle: "olive" }
@@ -96,8 +96,29 @@ class OnboardingControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to edit_toolbox_path
     user = users(:one).reload
     assert user.onboarded?
+    assert_equal "link", user.visibility
+    assert_equal [ "link" ], user.visibility_periods.map(&:level)
+  end
+
+  test "choosing private keeps the member private, with no period" do
+    sign_in_as users(:one)
+
+    patch welcome_path, params: { handle: "olive", visibility: "only_me" }
+
+    user = users(:one).reload
+    assert user.onboarded?
     assert_equal "only_me", user.visibility
     assert_empty user.visibility_periods
+  end
+
+  test "the new default leaves existing members' visibility alone" do
+    before = User.where.not(onboarded_at: nil).pluck(:id, :visibility)
+    sign_in_as users(:one)
+
+    patch welcome_path, params: { handle: "olive" }
+
+    assert_equal before, User.where(id: before.map(&:first)).pluck(:id, :visibility)
+    assert_equal "only_me", users(:every_cy).reload.visibility
   end
 
   test "an unknown visibility is rejected and nothing is saved" do

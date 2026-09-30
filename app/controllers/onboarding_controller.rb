@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 # First-run flow, one page: claim a handle and choose who sees the page, then rank
-# the first tools in the editor. Abandoning it leaves a valid, empty, private
-# member, and the onboarding gate sends them back here until they finish.
+# the first tools in the editor. Public (User::ONBOARDING_VISIBILITY) is preselected;
+# Private is one click away. Abandoning it leaves a valid, empty, private member (a
+# page cannot be shared before it has a handle), and the onboarding gate sends them
+# back here until they finish.
 class OnboardingController < InertiaController
   skip_onboarding_gate
   before_action :redirect_onboarded
@@ -15,7 +17,7 @@ class OnboardingController < InertiaController
       suggested_handle: user.handle || User.suggest_handle(from: user.name.presence || user.email_address, except: user),
       name: user.display_name,
       avatar_url: user.avatar_url,
-      visibility: user.visibility,
+      visibility: User::ONBOARDING_VISIBILITY,
       preview_kinds: Category.limit(PREVIEW_KINDS).pluck(:name)
     }
   end
@@ -25,7 +27,7 @@ class OnboardingController < InertiaController
     availability = User.handle_availability(params[:handle], except: user)
     return onboarding_error(:handle, availability[:message]) unless availability[:available]
 
-    visibility = params[:visibility].presence || user.visibility
+    visibility = params[:visibility].presence || User::ONBOARDING_VISIBILITY
     if user.update(handle: availability[:handle], visibility:, onboarded_at: user.onboarded_at || Time.current)
       redirect_to edit_toolbox_path, status: :see_other
     else
