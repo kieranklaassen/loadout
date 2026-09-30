@@ -988,6 +988,16 @@ describe('the Tool and Model pickers', () => {
     expect(patch.mock.calls[0]![1].operations[0]).toEqual({ op: 'set_pick', category: 'video', rank: 1, tool: 'veo', expected_tool: 'runway' })
   })
 
+  it('empties the field while the save of a draft the catalog does not list is out, instead of showing the pick again', async () => {
+    const user = userEvent.setup()
+    patch.mockImplementation(() => {})
+    render(<ToolboxEdit {...props()} />)
+
+    await choose(user, '1st pick', 'Model', 'Not set')
+
+    expect(field('1st pick', 'Model')).toHaveValue('')
+  })
+
   it('offers to add a name nothing matches, and saves it into the slot as a pending item', async () => {
     const user = userEvent.setup()
     render(<ToolboxEdit {...props()} />)

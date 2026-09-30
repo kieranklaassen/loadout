@@ -44,20 +44,24 @@ class SearchCatalogTool < ApplicationTool
     end
 
     # A tool the catalog pairs with no approved model says so, and the search runs over every model.
+    # A pairing is the whole answer, so only the open catalog is capped: suggest_picks accepts
+    # every model the tool runs, however many that is.
     def paired(tool, query, category)
       paired = tool.paired_ai_models
       models = paired.presence || AiModel.approved.ordered.to_a
-      result = { tools: [ prop(tool) ], models: search(models, query, category, browse: paired.any?) }
+      result = { tools: [ prop(tool) ], models: search(models, query, category, browse: paired.any?, limit: (LIMIT if paired.empty?)) }
       result[:note] = "The catalog does not list which models #{tool.name} runs, so any model is accepted." if paired.empty?
       result
     end
 
     # browse: keep every item when only a category is given, instead of just its suggestions.
-    def search(items, query, category, browse: false)
+    # limit: nil lists them all, for a list a tool's own pairing already bounds.
+    def search(items, query, category, browse: false, limit: LIMIT)
       items = items.select { |item| matches?(item, query.downcase) } if query.present?
       items = items.select { |item| suggested?(item, category) } if category && query.blank? && !browse
       items = items.sort_by.with_index { |item, index| [ category && suggested?(item, category) ? 0 : 1, index ] }
-      items.first(LIMIT).map { |item| prop(item) }
+      items = items.first(limit) if limit
+      items.map { |item| prop(item) }
     end
 
     def prop(item)

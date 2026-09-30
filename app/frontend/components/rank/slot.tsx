@@ -69,8 +69,10 @@ export default function Slot({ kind, view, catalog, enums, top, actions }: {
   const change = (fields: SlotFields) => actions.saveSlot(rank, pick, fields)
   const toolOption = catalog.tools.find((item) => item.slug === shown.tool)
   const modelOption = catalog.models.find((item) => item.slug === shown.model)
-  const toolItem = toolOption ?? pick?.tool
-  const modelItem = modelOption ?? pick?.model
+  // A saved item the catalog no longer lists (an admin hid it) falls back to the pick; a draft
+  // that is no slug of its own — cleared, or a name being added — must not snap back to it.
+  const toolItem = toolOption ?? (shown.tool === pick?.tool.slug ? pick?.tool : undefined)
+  const modelItem = modelOption ?? (shown.model === pick?.model?.slug ? pick?.model : undefined)
   const chooseTool = (slug: string) => change({ tool: slug, ...modelForTool(catalog.tools.find((item) => item.slug === slug), modelOption) })
   const waiting = !pick && suggestions.length > 0
 
