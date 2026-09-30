@@ -41,6 +41,9 @@ this file is the tie-breaker. Keep entries short; link to module docs for depth.
 - **Audience** — who a viewer's page is about. Its counted people are every onboarded
   Every team member (for the team view) and every "N of M" is taken over them; its named
   people are the ones the viewer may open, the only people ever named, linked or found.
+- **Vibe Check history** — what an Every Vibe Check article quoted a member using, written
+  into their dated history from `config/vibe_checks.yml` so "What we used before" reaches back
+  before Toolbox. It holds until their next Vibe Check, their own first change, or 90 days.
 - **Launch** — a model with a release date and a Vibe Check link, shown in
   "Latest model launches" on Home.
 - **Mark** — the light tile that stands for a tool (square) or a model (round):

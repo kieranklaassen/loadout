@@ -1,0 +1,224 @@
+# What Every's Vibe Checks (https://every.to/vibe-check) say each team member used,
+# written into their dated history by VibeChecks::Import on every deploy.
+#
+# Keyed by the member's Every email; `name` is the fallback match against a verified
+# @every.to member's name, for when the email here is not the one they sign in with.
+# People not in Toolbox yet are skipped until they sign in.
+#
+# A snapshot is one kind's ranked picks (first pick first, at most three) on the day
+# the article came out, and replaces whatever that kind held before. It holds until the
+# next snapshot of that kind, the member's own first change in Toolbox, or 90 days.
+# `picks: []` means the article says they stopped. tool and model are catalog slugs;
+# history-only models are in config/catalog.yml marked `retired`.
+#
+# Only statements of real use count ("my daily driver", "switched to", "I use it for"),
+# never first impressions from testing. `quote` is the line the snapshot rests on, as the
+# article has it; a `note` says where the snapshot reads more into it than the quote says,
+# usually the tool when the quote names only a model.
+
+people:
+  kieran@every.to:
+    name: Kieran Klaassen
+    snapshots:
+      - date: 2025-03-08
+        url: https://every.to/vibe-check/vibe-check-claude-3-7-sonnet-and-claude-code
+        kind: coding
+        picks: [ { tool: claude-code } ]
+        quote: "for new projects, Claude Code is very impressive."
+      - date: 2025-10-20
+        url: https://every.to/vibe-check/vibe-check-we-spent-a-weekend-trying-to-code-from-our-phones
+        kind: coding
+        picks: [ { tool: claude-code } ]
+        quote: "Kieran still swears by Claude Code, running multiple instances in parallel as part of his compounding engineering workflow."
+      - date: 2025-11-24
+        url: https://every.to/vibe-check/vibe-check-opus-4-5-is-the-coding-model-we-ve-been-waiting-for
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-opus-4-5 } ]
+        quote: "If you're not token-maxxing on Claude [...] and running parallel agent flows on this launch, you're a loser :P"
+      - date: 2026-02-05
+        url: https://every.to/vibe-check/gpt-5-3-codex
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-opus-4-6 }, { tool: codex, model: gpt-5-3-codex } ]
+        quote: "My daily driver will still be Claude, but Codex has a place in my workflow now. I use it for research, reviews, and long feature builds, and Claude for planning."
+      - date: 2026-03-05
+        url: https://every.to/vibe-check/gpt-5-4-openai-is-back
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-opus-4-6 }, { tool: codex, model: gpt-5-4 } ]
+        quote: "I'm reaching for GPT-5.4 more than Codex 5.3"
+      - date: 2026-07-09
+        url: https://every.to/vibe-check/gpt-5-6-sol
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-fable-5 }, { tool: codex, model: gpt-5-6 } ]
+        quote: "Fable is still better at complex, long-horizon tasks, but Sol can do about 90 percent of what Fable can do."
+        note: The quote does not rank the two; Fable first rests on it being the harder-task model.
+      - date: 2026-09-01
+        url: https://every.to/vibe-check/fable-5-1-vibe-check
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-fable-5-1 } ]
+        quote: "Opus is replacing Fable 5.1 as my daily driver."
+        note: The quote is from the Opus 5.5 Vibe Check three weeks later, which says Fable 5.1 had been his daily driver.
+      - date: 2026-09-22
+        url: https://every.to/vibe-check/vibe-check-opus-5-5-is-pulling-our-codex-converts-back-to-claude
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-opus-5-5 } ]
+        quote: "Opus is replacing Fable 5.1 as my daily driver. For product work and writing code, I find it as good as Fable and sometimes better."
+      - date: 2026-09-22
+        url: https://every.to/vibe-check/vibe-check-opus-5-5-is-pulling-our-codex-converts-back-to-claude
+        kind: writing
+        picks: [ { tool: chatgpt, model: gpt-6-astra } ]
+        quote: "For technical writing I still prefer Astra."
+        note: The quote names the model only; ChatGPT is assumed.
+
+  dan@every.to:
+    name: Dan Shipper
+    snapshots:
+      - date: 2025-04-16
+        url: https://every.to/vibe-check/vibe-check-o3-is-out-and-it-s-great
+        kind: coding
+        picks: [ { tool: windsurf, model: claude-3-7-sonnet } ]
+        quote: "I still use GPT 4.5 for writing and 3.7 Sonnet for coding in Windsurf, but other than that, I'm all o3, all the time."
+      - date: 2025-06-23
+        url: https://every.to/vibe-check/o3-pro-vibe-check-a-slow-steady-last-resort
+        kind: coding
+        picks: [ { tool: claude-code } ]
+        quote: "Claude Code is by far my most reached-for coding tool"
+      - date: 2025-10-20
+        url: https://every.to/vibe-check/vibe-check-we-spent-a-weekend-trying-to-code-from-our-phones
+        kind: coding
+        picks: [ { tool: codex } ]
+        quote: "I'll admit that I've been using OpenAI's Codex for most of my coding lately"
+      - date: 2025-11-24
+        url: https://every.to/vibe-check/vibe-check-opus-4-5-is-the-coding-model-we-ve-been-waiting-for
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-opus-4-5 } ]
+        quote: "I really feel like I can vibe code an app end-to-end without having to get into the details of the code. [...] Absolutely a daily driver for me"
+        note: The quote names the model only; Claude Code is assumed.
+      - date: 2026-02-05
+        url: https://every.to/vibe-check/gpt-5-3-codex
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-3-codex }, { tool: claude-code, model: claude-opus-4-6 } ]
+        quote: "50/50 Vibe code with Opus and serious engineering with Codex"
+        note: The quote says 50/50; Codex first rests on "a daily driver for my non-vibe coding tasks in bigger code bases".
+      - date: 2026-03-05
+        url: https://every.to/vibe-check/gpt-5-4-openai-is-back
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-4 } ]
+        quote: "GPT-5.4 in the Codex app is my new daily driver for coding"
+      - date: 2026-04-23
+        url: https://every.to/vibe-check/gpt-5-5
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-5 } ]
+        quote: "GPT-5.5 is my new daily driver. It's what I reach for first on every coding task"
+      - date: 2026-09-01
+        url: https://every.to/vibe-check/fable-5-1-vibe-check
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-fable-5-1 } ]
+        quote: "All of my coding tasks are in it, and it's constantly working in the background"
+        note: The quote names the model only; Claude Code is assumed.
+      - date: 2026-09-22
+        url: https://every.to/vibe-check/vibe-check-opus-5-5-is-pulling-our-codex-converts-back-to-claude
+        kind: coding
+        picks: [ { tool: codex }, { tool: claude-code } ]
+        quote: "Still 80/20 Codex versus Claude in my usage, but far more tokens on Claude."
+
+  katie@every.to:
+    name: Katie Parrott
+    snapshots:
+      - date: 2025-10-23
+        url: https://every.to/vibe-check/vibe-check-we-tested-claude-sonnet-4-5-for-writing-and-editing
+        kind: writing
+        picks: [ { tool: claude, model: claude-sonnet-4-5 } ]
+        quote: "Then Anthropic dropped Sonnet 4.5, and within 48 hours my workflow collapsed from two chat interfaces into one."
+      - date: 2026-02-05
+        url: https://every.to/vibe-check/opus-4-6
+        kind: writing
+        picks: [ { tool: claude, model: claude-opus-4-6 } ]
+        quote: "The drafting experience is so much more fluid and responsive than Opus 4.5—I feel like I'm collaborating rather than wrestling."
+      - date: 2026-04-23
+        url: https://every.to/vibe-check/gpt-5-5
+        kind: writing
+        picks: [ { tool: codex, model: gpt-5-5 } ]
+        quote: "I'm switching my writing workflow over to GPT-5.5 and adapting my writing plugin for Codex."
+      - date: 2026-05-28
+        url: https://every.to/vibe-check/opus-4-8-vibecheck
+        kind: writing
+        picks: [ { tool: claude, model: claude-opus-4-8 } ]
+        quote: "Opus 4.8 has the brains and the personality to make me want to stick with it"
+        note: The quote names the model only; Claude is assumed.
+      - date: 2026-07-09
+        url: https://every.to/vibe-check/gpt-5-6-sol
+        kind: writing
+        picks: [ { tool: chatgpt, model: gpt-5-6 } ]
+        quote: "For writing specifically, I've found Sol to be stronger than Claude models at using context like style guides and samples to inform its work."
+        note: The quote names the model only; ChatGPT is assumed.
+      - date: 2026-09-01
+        url: https://every.to/vibe-check/fable-5-1-vibe-check
+        kind: writing
+        picks: [ { tool: claude, model: claude-fable-5-1 } ]
+        quote: "I've been using it for writing and liking its style"
+      - date: 2026-09-22
+        url: https://every.to/vibe-check/vibe-check-opus-5-5-is-pulling-our-codex-converts-back-to-claude
+        kind: writing
+        picks: [ { tool: claude, model: claude-opus-5-5 } ]
+        quote: "Even I am bringing my creative work back to Claude—a move I didn't expect after Opus 5."
+
+  naveen@every.to:
+    name: Naveen Naidu
+    snapshots:
+      - date: 2025-10-20
+        url: https://every.to/vibe-check/vibe-check-we-spent-a-weekend-trying-to-code-from-our-phones
+        kind: coding
+        picks: [ { tool: codex } ]
+        quote: "Monologue general manager Naveen Naidu uses Codex on the web to handle small papercut bug fixes."
+      - date: 2025-11-19
+        url: https://every.to/vibe-check/vibe-check-gemini-3-pro-a-reliable-workhorse-with-surprising-flair
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-1-codex } ]
+        quote: "For complex logic: I still reach for Codex 5.1 when I'm building features that require careful reasoning."
+      - date: 2026-02-05
+        url: https://every.to/vibe-check/gpt-5-3-codex
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-3-codex }, { tool: claude-code, model: claude-opus-4-6 } ]
+        quote: "Codex with some Opus for certain tasks"
+      - date: 2026-03-05
+        url: https://every.to/vibe-check/gpt-5-4-openai-is-back
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-4 } ]
+        quote: "it's a model I use every day and I enjoy working with it"
+      - date: 2026-04-23
+        url: https://every.to/vibe-check/gpt-5-5
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-5 } ]
+        quote: "Now I'm using it as my default model for almost everything."
+      - date: 2026-07-09
+        url: https://every.to/vibe-check/gpt-5-6-sol
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-6 }, { tool: claude-code, model: claude-fable-5 } ]
+        quote: "Fable acts as the orchestrator, shaping the plan, and Sol executes it."
+        note: The quote names the models only; Codex for Sol and Claude Code for Fable are assumed.
+
+  mike@every.to:
+    name: Mike Taylor
+    snapshots:
+      - date: 2026-04-02
+        url: https://every.to/vibe-check/cursor
+        kind: coding
+        picks: [ { tool: claude-code }, { tool: cursor } ]
+        quote: "I still open Cursor as an IDE because I'm used to it, not because 3.0 offers something new"
+      - date: 2026-04-23
+        url: https://every.to/vibe-check/gpt-5-5
+        kind: coding
+        picks: [ { tool: claude-code }, { tool: codex, model: gpt-5-5 } ]
+        quote: "I'll stick with Opus as my daily driver, but turn to GPT-5.5 when I need work I can use without thinking."
+        note: The quote names the models only; Claude Code for Opus and Codex for GPT-5.5 are assumed.
+      - date: 2026-07-09
+        url: https://every.to/vibe-check/gpt-5-6-sol
+        kind: coding
+        picks: [ { tool: codex, model: gpt-5-6 }, { tool: claude-code, model: claude-fable-5 } ]
+        quote: "Sol has turned into my daily driver."
+      - date: 2026-09-01
+        url: https://every.to/vibe-check/fable-5-1-vibe-check
+        kind: coding
+        picks: [ { tool: claude-code, model: claude-fable-5-1 } ]
+        quote: "Mike sends all of his new projects to it"
+        note: The quote names the model only; Claude Code is assumed.

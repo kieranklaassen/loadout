@@ -16,6 +16,18 @@ class Catalog::SyncTest < ActiveSupport::TestCase
     assert_equal "claude-opus", AiModel.find_by!(slug: "claude-opus-5-5").family
   end
 
+  test "creates retired models hidden, out of the pickers, and keeps them hidden" do
+    Catalog::Sync.call
+    retired = AiModel.find_by!(slug: "claude-opus-4-6")
+
+    assert_equal "hidden", retired.status
+    assert_not_includes AiModel.pickable, retired
+    assert_not_includes Tool.find_by!(slug: "claude-code").paired_ai_models, retired
+
+    Catalog::Sync.call
+    assert_equal "hidden", retired.reload.status
+  end
+
   test "seeds personal agents as a kind of work, right after knowledge work, with its agents" do
     Catalog::Sync.call
 

@@ -119,6 +119,11 @@ not list this variable, so add it under `env.clear` there before you set it.
    deploy: `test/services/catalog/sync_test.rb` loads the real file in the CI test job, and local
    `bin/ci` also runs `db:seed:replant`. Launch dates and Vibe Check links are admin-owned: Sync
    only fills them while they are blank on a model no admin has edited.
+4. **`toolbox:import_vibe_checks`.** Writes `config/vibe_checks.yml` (what Every's Vibe Checks say
+   each team member used, and when) into their dated history as `vibe_check` rows. It replaces
+   only the rows it wrote before, skips anyone not signed up yet, and never touches picks. A
+   failure is logged and the server still starts; `test/services/vibe_checks/import_test.rb`
+   checks the real file against the catalog in CI.
 
 The redesign's migrations drop data by design: picks beyond three in a kind, duplicate tools in a
 kind, notes, and the `other` kind's picks and history. What they drop is first written to

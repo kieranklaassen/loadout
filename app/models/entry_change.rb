@@ -7,10 +7,13 @@
 # is now empty. Suggested and dismissed rows never touch a slot. Rows sharing a
 # details["batch"] were written together and apply together. Baseline rows only
 # rebuild state for replay; they are not events, so no story or recent list shows them.
+# Rows from a Vibe Check (source "vibe_check", VibeChecks::Import) are dated to the
+# article; the closing ones (details["closing"]) only empty slots again when that
+# history runs out, so like baselines they are left out of every story.
 class EntryChange < ApplicationRecord
   SLOT_ACTIONS = %w[set moved removed confirmed baseline].freeze
   ACTIONS = (%w[added updated made_primary suggested dismissed] + SLOT_ACTIONS).freeze
-  SOURCES = %w[web mcp webmcp system].freeze
+  SOURCES = %w[web mcp webmcp system vibe_check].freeze
   PLACES = { 1 => "first", 2 => "second", 3 => "third" }.freeze
 
   belongs_to :user
@@ -25,7 +28,7 @@ class EntryChange < ApplicationRecord
   validates :effort, inclusion: { in: Entry::EFFORTS }, allow_nil: true
 
   scope :recent_first, -> { order(created_at: :desc, id: :desc) }
-  scope :narrated, -> { where.not(action: "baseline") }
+  scope :narrated, -> { where.not(action: "baseline").where("json_extract(details, '$.closing') IS NULL") }
 
   def subject
     [ tool.name, ai_model&.name ].compact.join(" with ")
@@ -60,9 +63,9 @@ class EntryChange < ApplicationRecord
   # category read as one switch ("Switched coding model from Opus 5 to Claude
   # Opus 5.5"), and a go-to mark on something just added is folded in. Only the
   # legacy added and removed rows fold that way; a new row already says what the slot
-  # holds now, so the rest read one line each. Baseline rows are left out.
+  # holds now, so the rest read one line each. Baseline and closing rows are left out.
   def self.story(changes)
-    changes.reject { |change| change.action == "baseline" }.group_by { |change| change.details["batch"] || "change-#{change.id}" }.flat_map do |_batch, batch|
+    changes.reject { |change| change.action == "baseline" || change.details["closing"] }.group_by { |change| change.details["batch"] || "change-#{change.id}" }.flat_map do |_batch, batch|
       batch.group_by(&:category_id).flat_map { |_category, group| narrate(group) }
     end.sort_by { |item| [ item[:created_at], item[:id] ] }.reverse
   end
