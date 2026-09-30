@@ -11,7 +11,8 @@
 # catalog   { tools: [...], models: [...] }: approved items in catalog order, then the
 #           member's own items still waiting for review (marked pending), each a
 #           CatalogItem#to_prop plus suggested_for, the slugs of the kinds it suits.
-#           Another member's pending item is never here.
+#           Another member's pending item is never here. A tool also carries models,
+#           the slugs of the approved models it runs, its own first (Tool#paired_ai_models).
 # enums     { context: Entry::CONTEXTS, effort: Entry::EFFORTS }, the only choices a slot accepts.
 # selected_kind  the slug asked for, else the first kind with fewer than three confirmed
 #           picks, else the first kind.
@@ -30,12 +31,15 @@ module Toolbox
     private
 
     def catalog
-      { tools: items(Tool), models: items(AiModel) }
+      approved_models = AiModel.pickable.ordered.to_a
+      tools = items(Tool).map { |tool, prop| prop.merge(models: tool.paired_ai_models(approved_models).map(&:slug)) }
+      { tools:, models: items(AiModel, approved_models).map(&:last) }
     end
 
-    def items(klass)
+    # [[item, prop], ...]
+    def items(klass, approved = klass.pickable.ordered.to_a)
       own = klass.pending.where(created_by: @user).order(:created_at, :id)
-      (klass.pickable.ordered.to_a + own.to_a).map { |item| item.to_prop.merge(suggested_for: suggested_for(item)) }
+      (approved + own.to_a).map { |item| [ item, item.to_prop.merge(suggested_for: suggested_for(item)) ] }
     end
 
     def suggested_for(item)

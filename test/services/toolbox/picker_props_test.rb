@@ -14,8 +14,17 @@ class Toolbox::PickerPropsTest < ActiveSupport::TestCase
     assert_equal %w[claude-opus-5-5 claude-opus-5 gpt-6-astra], slugs(catalog[:models])
     assert_not_includes slugs(catalog[:tools]), "old-thing", "a hidden tool leaves the pickers"
 
-    assert_equal tools(:cursor).to_prop.merge(suggested_for: [ "coding" ]), catalog[:tools].first
+    assert_equal tools(:cursor).to_prop.merge(suggested_for: [ "coding" ], models: []), catalog[:tools].first
     assert_equal ai_models(:opus_5_5).to_prop.merge(suggested_for: %w[coding knowledge-work]), catalog[:models].first
+  end
+
+  test "each tool lists the approved models it runs, its own first, and none when the catalog does not know" do
+    tools(:claude_code).update!(paired_models: %w[gpt claude-opus])
+    ai_models(:opus_5).update!(status: "hidden")
+
+    tools = props(users(:every_ana))[:catalog][:tools].index_by { |tool| tool[:slug] }
+    assert_equal %w[gpt-6-astra claude-opus-5-5], tools["claude-code"][:models]
+    assert_equal [], tools["cursor"][:models]
   end
 
   test "suggested_for lists only kinds that exist" do

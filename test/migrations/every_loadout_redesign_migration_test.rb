@@ -194,7 +194,7 @@ class EveryLoadoutRedesignMigrationTest < ActiveSupport::TestCase
   test "the migrated schema equals a schema-loaded database" do
     migrate_through(LAST_V1_VERSION)
     populate_v1_database
-    migrate_through(REDESIGN_VERSIONS.last)
+    migrate_through(migration_files.map { |file| version_of(file) }.max)
 
     schema_loaded = structure(ActiveRecord::Base.lease_connection)
     migrated = structure(@connection)

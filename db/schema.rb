@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_120000) do
   create_table "ai_models", force: :cascade do |t|
     t.string "slug", null: false
     t.string "name", null: false
@@ -252,6 +252,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_110000) do
     t.datetime "updated_at", null: false
     t.datetime "admin_edited_at"
     t.string "mark"
+    t.json "paired_models", default: [], null: false
     t.index ["created_by_id"], name: "index_tools_on_created_by_id"
     t.index ["slug"], name: "index_tools_on_slug", unique: true
     t.index ["status"], name: "index_tools_on_status"

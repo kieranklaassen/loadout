@@ -5,7 +5,8 @@
 # un-hides an item an admin hid, never undoes an admin rename, and never
 # touches member-suggested items. A model's release date and Vibe Check link
 # belong to the admin: the catalog only fills them while they are blank and the
-# model has never been edited by an admin. Categories are never deleted.
+# model has never been edited by an admin. A tool's paired models always follow
+# the catalog. Categories are never deleted.
 module Catalog
   class Sync
     PATH = Rails.root.join("config/catalog.yml")
@@ -13,8 +14,13 @@ module Catalog
 
     def self.call(path: PATH) = new(path).call
 
+    # The catalog file as data. Aliases let a tool's models reuse the lists under model_groups.
+    def self.data(path = PATH)
+      YAML.safe_load_file(path, permitted_classes: [ Date ], aliases: true) || {}
+    end
+
     def initialize(path)
-      @data = YAML.safe_load_file(path, permitted_classes: [ Date ]) || {}
+      @data = self.class.data(path)
     end
 
     def call
@@ -45,6 +51,7 @@ module Catalog
           fields.merge!(name: attrs.fetch("name"), maker: attrs["maker"], hue: attrs.fetch("hue"), monogram:)
         end
         fields.merge!(family: attrs["family"], **launch_fields(item, attrs)) if klass == AiModel
+        fields[:paired_models] = Array(attrs["models"]).flatten.uniq if klass == Tool
         fields[:status] = "approved" if item.new_record?
         item.update!(fields)
       end

@@ -130,7 +130,7 @@ class ToolRegistryTest < ActiveSupport::TestCase
   end
 
   test "no description enumerates the kinds of work or mentions the retired surface" do
-    kinds = YAML.safe_load_file(Rails.root.join("config/catalog.yml"), permitted_classes: [ Date ])["categories"].map { |category| category["slug"] }
+    kinds = Catalog::Sync.data["categories"].map { |category| category["slug"] }
     text = ([ ToolRegistry::INSTRUCTIONS ] + ToolRegistry.tools.map(&:description) + ToolRegistry.tools.map { |tool| tool.input_schema.to_h.to_json }).join(" ")
 
     assert_equal 12, kinds.size

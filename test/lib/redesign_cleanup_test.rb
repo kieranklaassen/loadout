@@ -117,7 +117,7 @@ class RedesignCleanupTest < ActiveSupport::TestCase
   end
 
   test "the catalog has no other kind, in the kinds or on any item" do
-    catalog = YAML.safe_load_file(Rails.root.join("config/catalog.yml"), permitted_classes: [ Date ])
+    catalog = Catalog::Sync.data
     items = catalog.values_at("tools", "models").flatten
 
     assert_not_includes catalog.fetch("categories").pluck("slug"), "other"
