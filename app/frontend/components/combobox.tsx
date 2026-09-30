@@ -183,7 +183,7 @@ export default function Combobox({
           tabIndex={-1}
           aria-hidden="true"
           disabled={disabled}
-          className="-my-2.5 -mr-3 self-stretch px-3 text-fg-muted"
+          className="-my-2.5 self-stretch text-fg-muted"
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
             input.current?.focus()
