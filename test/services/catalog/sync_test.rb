@@ -10,10 +10,23 @@ class Catalog::SyncTest < ActiveSupport::TestCase
     Catalog::Sync.call
 
     assert_equal counts, [ Category.count, Tool.count, AiModel.count ]
-    assert_equal 11, Category.count
+    assert_equal 12, Category.count
     assert_not Category.exists?(slug: "other")
     assert Tool.find_by!(slug: "claude-code").approved?
     assert_equal "claude-opus", AiModel.find_by!(slug: "claude-opus-5-5").family
+  end
+
+  test "seeds personal agents as a kind of work, right after knowledge work, with its agents" do
+    Catalog::Sync.call
+
+    category = Category.find_by!(slug: "personal-agents")
+    assert_equal "Personal agents", category.name
+    assert_equal "knowledge-work", Category.where("position < ?", category.position).last.slug
+
+    agents = Tool.all.select { |tool| tool.category_slugs.include?("personal-agents") }.map(&:slug)
+    assert_includes agents, "cora"
+    assert_empty %w[instinct muse dots grok-bot poke gemini-spark openclaw] - agents
+    assert_equal [ "Meta", "muse-spark" ], AiModel.find_by!(slug: "muse-spark-1-3").then { |model| [ model.maker, model.family ] }
   end
 
   test "never un-hides an admin-hidden item or overwrites a member suggestion" do
