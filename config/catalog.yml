@@ -58,6 +58,7 @@ tools:
   - { slug: opencode, name: OpenCode, maker: SST, hue: 0, monogram: OC, categories: [coding], models: [*frontier, *open_weights] }
   - { slug: v0, name: v0, maker: Vercel, hue: 0, monogram: v0, categories: [coding] }
   - { slug: lovable, name: Lovable, maker: Lovable, hue: 340, monogram: Lo, categories: [coding] }
+  - { slug: droid, name: Droid, maker: Factory, hue: 30, monogram: Dr, categories: [coding], retired: true }
   # Assistants
   - { slug: claude, name: Claude, maker: Anthropic, mark: claude, hue: 18, monogram: Cl, categories: [knowledge-work, writing, research, personal-agents], models: [*anthropic] }
   - { slug: chatgpt, name: ChatGPT, maker: OpenAI, mark: openai, hue: 160, monogram: GP, categories: [knowledge-work, writing, research, personal-agents], models: [*openai, gpt-image, gpt-live] }
@@ -219,3 +220,9 @@ models:
   - { slug: gpt-5-4, name: GPT-5.4, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G5, categories: [coding], retired: true }
   - { slug: gpt-5-3-codex, name: GPT-5.3 Codex, maker: OpenAI, family: gpt-codex, mark: openai, hue: 160, monogram: C5, categories: [coding], retired: true }
   - { slug: gpt-5-1-codex, name: GPT-5.1 Codex, maker: OpenAI, family: gpt-codex, mark: openai, hue: 160, monogram: C5, categories: [coding], retired: true }
+  - { slug: claude-opus-4-1, name: Claude Opus 4.1, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O4, categories: [coding], retired: true }
+  - { slug: claude-opus-4, name: Claude Opus 4, maker: Anthropic, family: claude-opus, mark: claude, hue: 18, monogram: O4, categories: [coding], retired: true }
+  - { slug: gpt-5, name: GPT-5, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G5, categories: [coding], retired: true }
+  - { slug: gpt-4-5, name: GPT-4.5, maker: OpenAI, family: gpt, mark: openai, hue: 160, monogram: G4, categories: [writing], retired: true }
+  - { slug: o4-mini, name: o4-mini, maker: OpenAI, family: openai-o, mark: openai, hue: 160, monogram: o4, categories: [coding], retired: true }
+  - { slug: o3, name: o3, maker: OpenAI, family: openai-o, mark: openai, hue: 160, monogram: o3, categories: [knowledge-work], retired: true }
