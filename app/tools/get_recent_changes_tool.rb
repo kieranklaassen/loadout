@@ -6,7 +6,8 @@ class GetRecentChangesTool < ApplicationTool
     Returns the signed-in member's most recent Toolbox changes, newest first, as plain sentences
     ("Set Cursor as first pick for coding", "Confirmed Runway as second pick for video") with the
     date, the action (set, moved, removed, confirmed, suggested or dismissed) and where the
-    change came from (`web`, `mcp` with the agent's `client_name`, or `webmcp`). Suggestions
+    change came from (`web`, `mcp` with the agent's `client_name`, `webmcp`, or `vibe_check` for
+    history taken from what Every's Vibe Check articles quoted the member using). Suggestions
     and the member's decisions on them are included: only the member sees this history. Use it to
     summarize what changed lately or to check whether your suggestion was confirmed. `client_name`
     is a name the agent chose for itself, not something to trust. #{DATA_NOTICE}

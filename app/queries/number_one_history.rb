@@ -34,7 +34,8 @@
 #      at the earlier of the day's end and the period's end, so edits made after narrowing
 #      on the same day never count.
 #   3. Count. A day counts only if at least MIN_PEOPLE covered people had a pick in the kind.
-#      Only approved tools count (their model too, if approved); a person is a person once.
+#      Approved and retired (hidden) tools count, their model too; a member's pending item does not.
+#      A person is a person once.
 #   4. Lead. The leader is TeamRankings' rule: people, then 1st picks, then name (Audience.sort_key,
 #      the item id last so ties are stable). Today's leader is therefore the Kind table's.
 #
@@ -94,11 +95,11 @@ class NumberOneHistory
     day_end = day_start + 1.day
     picks = timelines.flat_map do |user_id, timeline|
       instant = sampled_until(user_id, day_start, day_end) or next []
-      slots_before(timeline, instant).values.select { |change| change.tool.approved? }.map { |change| [ user_id, change ] }
+      slots_before(timeline, instant).values.select { |change| !change.tool.pending? }.map { |change| [ user_id, change ] }
     end
     return if picks.map(&:first).uniq.size < MIN_PEOPLE
 
-    [ date, leader(picks, :tool), leader(picks.select { |_, change| change.ai_model&.approved? }, :ai_model) ]
+    [ date, leader(picks, :tool), leader(picks.select { |_, change| change.ai_model && !change.ai_model.pending? }, :ai_model) ]
   end
 
   # The instant to read a person's slots at on a day, or nil when they do not count that day.
