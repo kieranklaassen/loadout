@@ -1,7 +1,12 @@
 Rails.application.routes.draw do
   # Sign in with Every. /auth/every itself is the OmniAuth middleware.
+  # The framed silent attempt (Sessions::SilentController) shares Every's one
+  # registered callback address and is told apart by its state.
+  get "session/silent", to: "sessions/silent#show", as: :silent_session
   resource :session, only: %i[new destroy]
-  get "auth/every/callback", to: "sessions/every#create"
+  get OmniAuth::Strategies::Every::CALLBACK_PATH, to: "sessions/silent#create",
+    constraints: ->(request) { OmniAuth::Strategies::Every.silent_state?(request.params["state"]) }
+  get OmniAuth::Strategies::Every::CALLBACK_PATH, to: "sessions/every#create"
   draw :dev_login if Rails.env.development?
 
   # Redirect to localhost from 127.0.0.1 to use same IP address with Vite server

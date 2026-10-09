@@ -7,9 +7,9 @@ require "omniauth/strategies/every"
 Rails.application.config.x.every_oauth.client_id = ENV["EVERY_OAUTH_CLIENT_ID"].presence
 Rails.application.config.x.every_oauth.client_secret = ENV["EVERY_OAUTH_CLIENT_SECRET"].presence
 Rails.application.config.x.every_oauth.base_url = ENV["EVERY_OAUTH_BASE_URL"].presence
-# openid lets sign-in go silent once Every marks this client a trusted first-party
-# app; the client must be registered with it. "basic_profile" alone turns silent
-# sign-in off.
+# openid lets sign-in happen by itself once Every's admin ticks "Skip the consent
+# page" on this client; the client must be registered with openid.
+# "basic_profile" alone turns automatic sign-in off.
 Rails.application.config.x.every_oauth.scope = ENV["EVERY_OAUTH_SCOPE"].presence || OmniAuth::Strategies::Every::DEFAULT_SCOPE
 Rails.application.config.x.public_base_url = ENV["PUBLIC_BASE_URL"].presence&.chomp("/")
 

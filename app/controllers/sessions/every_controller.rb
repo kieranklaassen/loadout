@@ -1,8 +1,6 @@
 # The app side of the OmniAuth `every` strategy: `create` receives a verified
 # callback, `failure` every other outcome (OmniAuth.config.on_failure).
 class Sessions::EveryController < InertiaController
-  include EverySilentSignIn
-
   allow_unauthenticated_access
   skip_onboarding_gate
 
@@ -16,30 +14,26 @@ class Sessions::EveryController < InertiaController
     auth = request.env["omniauth.auth"]
     return failure if auth.nil?
 
-    # Every's UserInfo carries no email_verified claim today: an Every account's
-    # address is the one it signs in with, so it counts as verified. An explicit
-    # false is refused, and clears any earlier team status of that account.
-    if auth.extra.raw_info["email_verified"] == false
-      User.where(every_user_id: auth.uid).update_all(email_verified: false)
-      return failure
-    end
-
-    user = User.from_every_auth!(uid: auth.uid, email: auth.info.email, name: auth.info.name, image: auth.info.image, email_verified: true)
-    forget_sign_out
-    start_new_session_for user
+    user = sign_in_from_every(auth) or return failure
     redirect_to((user.onboarded? || agent_consent_pending?) ? after_authentication_url : "/welcome")
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.warn("every sign-in could not save the user: #{e.record.errors.full_messages.to_sentence}")
-    redirect_to new_session_path, alert: DEFAULT_FAILURE_MESSAGE
+    redirect_to sign_in_page, alert: DEFAULT_FAILURE_MESSAGE
   end
 
+  # A silent attempt the person did not start fails without a word.
   def failure
     clear_state_cookie
     error_type = request.env["omniauth.error.type"].to_s
-    return redirect_to new_session_path if silent_sign_in_declined?(error_type)
+    if silent_sign_in_declined?(error_type)
+      remember_silent_attempt(DECLINED)
+      return redirect_to sign_in_page
+    end
 
     Rails.logger.info("every sign-in failed: #{error_type}")
-    redirect_to new_session_path, alert: FAILURE_MESSAGES.fetch(error_type, DEFAULT_FAILURE_MESSAGE)
+    return redirect_to sign_in_page if silent_attempt?
+
+    redirect_to sign_in_page, alert: FAILURE_MESSAGES.fetch(error_type, DEFAULT_FAILURE_MESSAGE)
   end
 
   private
@@ -49,6 +43,16 @@ class Sessions::EveryController < InertiaController
     URI(session[:return_to_after_authenticating].to_s).path == "/oauth/authorize"
   rescue URI::InvalidURIError
     false
+  end
+
+  def silent_attempt?
+    request.env["omniauth.params"].to_h["prompt"] == "none"
+  end
+
+  # The sign-in page, told not to ask Every silently again. A client that keeps
+  # no cookies comes back from a silent attempt with nothing else to say so.
+  def sign_in_page
+    new_session_path(silent: TRIED)
   end
 
   def clear_state_cookie

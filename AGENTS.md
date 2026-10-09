@@ -34,6 +34,33 @@ the `User`, and only a verified `@every.to` address counts as the Every team. In
 development, and only there, the sign-in page also lists users under "Dev login"
 (`bin/rails db:seed` creates demo members).
 
+**Signed in at Every means signed in here** (`EverySilentSignIn`). Every page
+carries `silent_sign_in_path` when an attempt is due, and the browser then asks
+Every once, with `prompt=none`, from a hidden frame (`lib/silent_sign_in.ts`,
+started in the browser entrypoint, never in the server render). The frame goes
+to `Sessions::SilentController`, on to Every, and back to the same controller,
+which answers one tiny page that says `signed_in` or `signed_out`; the page
+around the frame reads it and, when signed in, reloads its props. A member who
+has not finished onboarding is sent to `/welcome` by that reload, as after a
+clicked sign-in. Keep to these:
+
+- A public page (Home, a Kind, a profile, the not-found page) never redirects
+  to every.to and its server-rendered HTML does not depend on the attempt:
+  crawlers, link previews and anyone Every does not know must see the page as
+  it is. Only the sign-in page asks by redirect, which also covers a signed-out
+  visit to a gated page.
+- The framed attempt has its own state (a `silent.` prefix and its own
+  `__Host-` cookie) and never reads or writes the Rails session or OmniAuth's
+  session keys, so it cannot break a clicked sign-in that overlaps it. Its
+  outcome is never a redirect, a flash or an alert.
+- `every_silent_tried` says an attempt was made (`asking` set by the browser,
+  `tried` for ten minutes, `declined` for a day); `every_signed_out` says the
+  person signed out here, and nothing signs them back in but their own click.
+- The tiny page is the one non-Inertia page of sign-in and carries no script.
+  `Sessions::SilentController` is not an `InertiaController`, so the onboarding
+  gate does not apply to it; both paths create the member through
+  `sign_in_from_every`, so the team rule is the same.
+
 Admins are `users.admin`, or an address in `ADMIN_EMAILS` once Every verified
 it. Remove someone who left Every with
 `EMAIL=person@every.to bin/rails toolbox:remove_member` (see DEPLOYING.md).
@@ -100,3 +127,6 @@ Toolbox's own changes get no `docs/changelog/` entry and no manifest bump.
 Toolbox's own changes, so adapt an upgrade entry that touches those modules
 rather than applying it as written. `auth` was replaced by Sign in with Every;
 `docs/modules/auth.md` still describes the template's password sign-in.
+
+`@tailwindcss/typography` was removed from the frontend: no page uses `prose`,
+and its pinned parser failed `npm audit`. Add it back with the page that needs it.

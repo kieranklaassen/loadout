@@ -1,3 +1,4 @@
+import type { GlobalEvent } from '@inertiajs/core'
 import { router } from '@inertiajs/react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { getModelContext, registerTools, type WebmcpManifest } from './webmcp'
@@ -36,19 +37,28 @@ interface WebmcpProviderProps {
 /**
  * Sits above Inertia's `<App>` and follows every visit's `webmcp` prop, so
  * signing in registers the tools and signing out unregisters them without a
- * full page load and without a persistent layout.
+ * full page load and without a persistent layout. A reload of the same page
+ * is followed too.
  */
 export default function WebmcpProvider({ initialManifest, children }: WebmcpProviderProps) {
   const [manifest, setManifest] = useState(initialManifest)
 
-  useEffect(
-    () =>
-      router.on('navigate', (event) => {
-        const props = event.detail.page.props as { webmcp?: WebmcpManifest | null }
-        setManifest(props.webmcp ?? null)
-      }),
-    [],
-  )
+  useEffect(() => {
+    const follow = (event: GlobalEvent<'navigate' | 'success'>) => {
+      const props = event.detail.page.props as { webmcp?: WebmcpManifest | null }
+      setManifest(props.webmcp ?? null)
+    }
+
+    // `navigate` is not fired when a visit lands on the address the page
+    // already has, which is what the reload after an automatic sign-in does
+    // (lib/silent_sign_in.ts). `success` is.
+    const stopNavigate = router.on('navigate', follow)
+    const stopSuccess = router.on('success', follow)
+    return () => {
+      stopNavigate()
+      stopSuccess()
+    }
+  }, [])
 
   useWebmcpTools(manifest)
 

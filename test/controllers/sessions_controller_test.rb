@@ -10,6 +10,34 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://every.to", inertia.props[:join_every_url]
   end
 
+  test "a signed-in person who reaches the sign-in page is sent on to the home page" do
+    sign_in_as(users(:every_ana))
+
+    get new_session_path
+
+    assert_redirected_to root_url
+  end
+
+  test "a signed-in member who has not finished onboarding ends at onboarding from the sign-in page" do
+    sign_in_as(users(:one))
+
+    get new_session_path
+    assert_redirected_to root_url
+
+    follow_redirect!
+    assert_redirected_to welcome_path
+  end
+
+  test "a page that sent a signed-out person to sign in is where they land once signed in" do
+    get edit_toolbox_path
+    assert_redirected_to new_session_path
+
+    sign_in_as(users(:every_ana))
+    get new_session_path
+
+    assert_redirected_to edit_toolbox_url
+  end
+
   test "there is no password sign-in" do
     assert_raises(ActionController::RoutingError) do
       Rails.application.routes.recognize_path("/session", method: :post)

@@ -66,6 +66,12 @@ class PwaTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'cache: "reload"'
   end
 
+  test "the service worker leaves sign-in's requests to the browser" do
+    get "/service-worker"
+
+    assert_includes response.body, 'const SIGN_IN_PATHS = ["/session/", "/auth/"]'
+  end
+
   test "mismatched formats 404 at routing instead of raising MissingTemplate" do
     %w[/manifest /manifest.xml /service-worker.json].each do |path|
       get path

@@ -11,6 +11,7 @@ class InertiaController < ApplicationController
   # Authentication gate, default-on. `before_action :require_authentication` runs
   # for every subclass unless it opts out with `allow_unauthenticated_access`.
   include Authentication
+  include EverySilentSignIn
 
   # Onboarding gate: a signed-in member who has not finished onboarding is sent
   # to /welcome from any page. Flows that must work mid-onboarding (sign-in,
@@ -40,6 +41,10 @@ class InertiaController < ApplicationController
   # WebmcpProvider registers them on the browser's model context while this is
   # non-null and unregisters them when it turns null (sign-out).
   inertia_share webmcp: -> { ToolRegistry.manifest if authenticated? }
+
+  # Where the browser asks Every, in a hidden frame, whether it is signed in
+  # there (EverySilentSignIn); nil when no attempt is due.
+  inertia_share silent_sign_in_path: -> { silent_session_path if silent_sign_in_due? }
 
   # The host printed on pages and cards, from configuration (ToolboxHost).
   inertia_share public_host: -> { ToolboxHost.host }

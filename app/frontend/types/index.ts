@@ -20,6 +20,8 @@ export type SharedProps = {
   flash: FlashData
   /** Display host for links and the footer; read it through usePublicHost(). */
   public_host?: string
+  /** Where the hidden frame of an automatic sign-in goes; null when no attempt is due. */
+  silent_sign_in_path: string | null
 }
 
 export type Category = {

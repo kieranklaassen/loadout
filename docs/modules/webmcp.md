@@ -37,7 +37,9 @@ agent driving a signed-in user's tab can call them.
   JSON endpoint beside Inertia pages: definitions still travel as props, but
   the browser calls a tool long after the page rendered.
 - **`WebmcpProvider`** (mounted above `<App>` in `inertia.tsx`) follows every
-  Inertia visit's `webmcp` prop. On sign-in it registers each tool; on sign-out
+  Inertia visit's `webmcp` prop, and a reload of the page that is open (which
+  is how automatic sign-in brings the member's props in). On sign-in it
+  registers each tool; on sign-out
   (prop → `null`), on a changed manifest, or on unmount it unregisters them all.
   An equal manifest on the next visit does not re-register, and StrictMode's
   double effect is safe.

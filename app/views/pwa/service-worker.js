@@ -13,6 +13,7 @@ const CACHE_VERSION = "v2"
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`
 const OFFLINE_URL = "/offline.html"
 const ICON_URL = "/icon.png"
+const SIGN_IN_PATHS = ["/session/", "/auth/"]
 
 // public/ ships with a 1-year cache-control in production, so precache requests
 // bypass the browser HTTP cache — otherwise a new CACHE_VERSION would be
@@ -54,6 +55,11 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(caches.match(ICON_URL).then((hit) => hit || fetch(event.request)))
     return
   }
+
+  // Sign-in is left to the browser. A request passed on from here loses what
+  // the browser said it was for (Sec-Fetch-Dest), which the hidden frame of
+  // automatic sign-in is checked by.
+  if (url.origin === self.location.origin && SIGN_IN_PATHS.some((path) => url.pathname.startsWith(path))) return
 
   // Otherwise only full-page navigations are handled. Inertia XHR visits, Vite
   // assets, and any other request pass straight through untouched.
