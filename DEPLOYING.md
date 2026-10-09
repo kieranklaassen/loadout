@@ -29,7 +29,7 @@ silently reusing another app's config.
 
    # Optional — sensible defaults.
    # export KAMAL_REGISTRY_SERVER=ghcr.io
-   # export EVERY_OAUTH_SCOPE=basic_profile   # default "openid basic_profile"; basic_profile alone turns silent sign-in off
+   # export EVERY_OAUTH_SCOPE=basic_profile   # default "openid basic_profile"; basic_profile alone turns automatic sign-in off
    # export RIFFREC_ENDPOINT=https://riffrec.example.com   # blank → capture off
    ```
 
@@ -57,13 +57,46 @@ silently reusing another app's config.
   `EVERY_OAUTH_SCOPE=basic_profile`. Sign-in reads the person's name, photo and email. Any
   `@every.to` address is the Every team and `ADMIN_EMAILS` grants admin; every.to sends no
   `email_verified` claim, and only an explicit `false` is refused.
-- **Silent sign-in (later, no Toolbox change).** The sign-in page first asks every.to with
-  `prompt=none`. Until every.to marks the client a trusted first-party app, every.to answers
-  `consent_required` or `login_required` and Toolbox shows its sign-in page, whose button goes
-  through every.to's normal consent screen. Once an every.to admin ticks "Trusted first-party app"
-  on the client, a browser signed in to every.to lands on Toolbox signed in with no screen. Signing
-  out of Toolbox sticks: no silent sign-in until that person clicks "Sign in with Every" again.
+- A browser that is signed in to every.to can be signed in to Toolbox by itself; see
+  "Automatic sign-in" below for what every.to must have set first.
 - MCP clients discover the authorization server at `https://toolbox.every.to/.well-known/oauth-authorization-server`. Nothing to register; clients self-register.
+
+## Automatic sign-in
+
+A browser that is signed in to every.to is signed in to Toolbox by itself: every page asks
+every.to once, with `prompt=none`, in a hidden frame, and the visitor stays on the page whatever
+the answer. The sign-in page asks the same by redirect before it shows, which also covers a
+signed-out visit to a page that needs sign-in. Do these three in order, or every.to answers
+`consent_required` or `login_required` and nothing happens:
+
+1. every.to runs the change that adds "Skip the consent page" to an OAuth app (EveryInc/every
+   `0a9751e8`, with its migration).
+2. In every.to's admin, tick "Skip the consent page" on the Toolbox client and add `openid` to
+   its scopes.
+3. Set `EVERY_OAUTH_SCOPE=openid basic_profile` (the default when the variable is unset) and
+   deploy. Doing this before step 2 breaks every sign-in with an `invalid_scope` error. With
+   `basic_profile` alone the whole of automatic sign-in is off: no frame, no redirect.
+
+A "not signed in" answer stands for a day, a failed attempt for ten minutes (the
+`every_silent_tried` cookie). Signing out of Toolbox sticks until that person clicks "Sign in
+with Every" again. A session that began automatically lasts until sign-out, like any other, even
+if the browser later signs out of every.to. Someone signed in this way for the first time is
+taken to `/welcome` to finish onboarding, as after a clicked sign-in.
+
+Check it after the deploy:
+
+1. In a fresh browser profile, sign in at every.to with an account that has finished onboarding
+   on Toolbox, then open `https://toolbox.every.to/`. Within a few seconds the header shows you,
+   with no click and no navigation. Do it in Chrome, Safari and Firefox: the answer comes back
+   through a hidden frame, and every.to must answer `/oauth/authorize?...&prompt=none` with a
+   redirect, not a page, for the frame to get it.
+2. If nothing happens, the logs say `every silent sign-in failed: <reason>` for a failure and
+   nothing for a plain "not signed in"; a frame that never answers leaves no line at all.
+3. Sign out of Toolbox and reload: you stay signed out.
+4. Do it once more in a profile that has visited Toolbox before (sign out of Toolbox, clear its
+   cookies but keep its site data, reload): the service worker is installed on a second visit,
+   and the frame must get through with it there.
+5. With an Every account that is new to Toolbox, open the home page: you are taken to `/welcome`.
 
 ## Deploy
 

@@ -5,24 +5,29 @@ import { installModelContext, removeModelContext } from '../test/model_context_s
 import type { WebmcpManifest } from './webmcp'
 import WebmcpProvider from './webmcp_provider'
 
-type NavigateListener = (event: { detail: { page: { props: Record<string, unknown> } } }) => void
-const navigateListeners = new Set<NavigateListener>()
+type PageListener = (event: { detail: { page: { props: Record<string, unknown> } } }) => void
+const listeners: Record<string, Set<PageListener>> = { navigate: new Set(), success: new Set() }
 
 const { reload } = vi.hoisted(() => ({ reload: vi.fn() }))
 
 vi.mock('@inertiajs/react', () => ({
   router: {
     reload,
-    on: (type: string, listener: NavigateListener) => {
-      if (type !== 'navigate') return () => {}
-      navigateListeners.add(listener)
-      return () => navigateListeners.delete(listener)
+    on: (type: string, listener: PageListener) => {
+      const heard = listeners[type]
+      if (!heard) return () => {}
+      heard.add(listener)
+      return () => heard.delete(listener)
     },
   },
 }))
 
+function fire(type: 'navigate' | 'success', props: Record<string, unknown>) {
+  act(() => listeners[type]?.forEach((listener) => listener({ detail: { page: { props } } })))
+}
+
 function navigate(props: Record<string, unknown>) {
-  act(() => navigateListeners.forEach((listener) => listener({ detail: { page: { props } } })))
+  fire('navigate', props)
 }
 
 const manifest: WebmcpManifest = {
@@ -36,7 +41,7 @@ const manifest: WebmcpManifest = {
 
 describe('WebmcpProvider', () => {
   beforeEach(() => {
-    navigateListeners.clear()
+    Object.values(listeners).forEach((heard) => heard.clear())
     reload.mockClear()
   })
   afterEach(() => removeModelContext())
@@ -73,6 +78,16 @@ describe('WebmcpProvider', () => {
 
     navigate({ webmcp: null })
     expect(stub.tools.size).toBe(0)
+  })
+
+  // A reload of the same address (what follows an automatic sign-in) fires
+  // `success` and no `navigate`.
+  it('registers when a reload of the same page brings a manifest', () => {
+    const stub = installModelContext()
+    render(<WebmcpProvider initialManifest={null}>page</WebmcpProvider>)
+
+    fire('success', { webmcp: manifest })
+    expect(stub.tools.size).toBe(3)
   })
 
   it('keeps the registration when a visit re-sends an equal manifest', () => {

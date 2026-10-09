@@ -51,7 +51,7 @@ The marketing screenshots in `docs/screenshots/` are from v1 (light theme, the m
 See [DEPLOYING.md](DEPLOYING.md). Toolbox deploys with Kamal to Hetzner, like happyhappy. Before the first deploy, Kieran needs:
 
 - **DNS:** an `A` record for `toolbox.every.to` pointing at the Hetzner server's IPv4 address (add an `AAAA` record for IPv6 if the server has one). kamal-proxy issues the Let's Encrypt certificate.
-- **Every OAuth client:** redirect URI `https://toolbox.every.to/auth/every/callback`, scopes `basic_profile openid` (see DEPLOYING.md for silent sign-in). Put its id and secret in `EVERY_OAUTH_CLIENT_ID` and `EVERY_OAUTH_CLIENT_SECRET`.
+- **Every OAuth client:** redirect URI `https://toolbox.every.to/auth/every/callback`, scopes `basic_profile openid` (see DEPLOYING.md for automatic sign-in). Put its id and secret in `EVERY_OAUTH_CLIENT_ID` and `EVERY_OAUTH_CLIENT_SECRET`.
 - **Env:** `PUBLIC_BASE_URL=https://toolbox.every.to` (required in production), `EVERY_OAUTH_BASE_URL=https://every.to`, and `ADMIN_EMAILS=kieran@every.to`.
 
 ## For agents

@@ -197,7 +197,110 @@ class OmniAuth::Strategies::EveryTest < ActiveSupport::TestCase
     assert_equal [ 401, "timeout" ], [ status, body.join ]
   end
 
+  # The framed attempt (Sessions::SilentController): its own state, its own
+  # cookie, and nothing of the session.
+
+  test "a framed callback with its own state cookie reads the identity and never fails over to the sign-in page" do
+    stub_every_token
+    stub_every_userinfo
+    session = {}
+
+    status, _, body = silent_callback(session, "code=authorization-code")
+
+    assert_equal 200, status
+    assert_equal({ "error" => nil }, @silent)
+    assert_equal "4242", JSON.parse(body.join)["uid"]
+    assert_empty session
+  end
+
+  test "a framed callback records Every's answer and asks for no token" do
+    token = stub_every_token
+
+    status, = silent_callback({}, "error=login_required")
+
+    assert_equal 200, status
+    assert_equal({ "error" => "login_required" }, @silent)
+    assert_not_requested token
+  end
+
+  test "a framed callback without its state cookie is csrf_detected and asks for no token" do
+    token = stub_every_token
+
+    silent_callback({}, "code=c", cookie: nil)
+    assert_equal({ "error" => "csrf_detected" }, @silent)
+
+    silent_callback({}, "code=c", cookie: "__Host-every_silent_state=silent.other")
+    assert_equal({ "error" => "csrf_detected" }, @silent)
+    assert_not_requested token
+  end
+
+  test "a framed callback records a rejected code and an unreachable Every" do
+    stub_every_token(status: 400, payload: every_payload("token_invalid_grant"))
+    silent_callback({}, "code=c")
+    assert_equal({ "error" => "invalid_credentials" }, @silent)
+
+    stub_request(:post, "#{BASE}/oauth/token").to_timeout
+    silent_callback({}, "code=c")
+    assert_equal({ "error" => "timeout" }, @silent)
+  end
+
+  test "a framed callback records an error nobody named, and never reaches on_failure" do
+    stub_every_token
+    stub_request(:get, "#{BASE}/oauth/userinfo").to_return(status: 200, body: "<html>down</html>", headers: { "Content-Type" => "text/html" })
+
+    status, = silent_callback({}, "code=c")
+
+    assert_equal 200, status
+    assert_equal({ "error" => "failed" }, @silent)
+  end
+
+  test "a framed callback leaves a clicked sign-in that is under way as it was, and the click still completes" do
+    stub_every_token
+    stub_every_userinfo
+    session = {}
+    start(session, query: "origin=%2Ftoolbox%2Fedit")
+    state = session["omniauth.state"]
+    before = session.deep_dup
+
+    silent_callback(session, "error=login_required")
+    assert_equal before, session
+    silent_callback(session, "code=authorization-code")
+    assert_equal before, session
+
+    origin = nil
+    @app = ->(env) { origin = env["omniauth.origin"]; [ 200, {}, [] ] }
+    strategy = OmniAuth::Strategies::Every.new(@app, client_id: "client-id", client_secret: "client-secret", site: -> { BASE })
+    status, = strategy.call(Rack::MockRequest.env_for("/auth/every/callback?code=authorization-code&state=#{state}",
+      "rack.session" => session, "HTTP_COOKIE" => "__Host-every_state=#{state}"))
+
+    assert_equal [ 200, "/toolbox/edit" ], [ status, origin ]
+  end
+
+  test "the calls to Every give up after a few seconds" do
+    request = @strategy.client.connection.options
+
+    assert_equal [ 5, 5 ], [ request.open_timeout, request.timeout ]
+  end
+
+  test "the framed attempt's authorize URL asks silently with the given state and nothing else" do
+    url = OmniAuth::Strategies::Every.silent_authorize_url(site: BASE, client_id: "client-id", scope: "openid basic_profile",
+      redirect_uri: CALLBACK, state: "silent.abc")
+
+    assert url.start_with?("#{BASE}/oauth/authorize?")
+    params = Rack::Utils.parse_query(URI(url).query)
+    assert_equal({ "client_id" => "client-id", "prompt" => "none", "redirect_uri" => CALLBACK, "response_type" => "code",
+                   "scope" => "openid basic_profile", "state" => "silent.abc" }, params)
+  end
+
   private
+
+  # A callback of the framed attempt: the state is its own, bound by its own cookie.
+  def silent_callback(session, query, state: "silent.abc", cookie: "__Host-every_silent_state=silent.abc")
+    @silent = nil
+    app = ->(env) { @silent = env["every.silent"]; [ 200, {}, [ env["omniauth.auth"].to_json ] ] }
+    strategy = OmniAuth::Strategies::Every.new(app, client_id: "client-id", client_secret: "client-secret", site: -> { BASE })
+    strategy.call(Rack::MockRequest.env_for("/auth/every/callback?#{query}&state=#{state}", "rack.session" => session, "HTTP_COOKIE" => cookie))
+  end
 
   def start(session, query: nil)
     @strategy.call(Rack::MockRequest.env_for([ "/auth/every", query ].compact.join("?"), "rack.session" => session))

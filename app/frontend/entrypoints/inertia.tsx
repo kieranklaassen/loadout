@@ -2,8 +2,10 @@ import { createInertiaApp } from '@inertiajs/react'
 import { type ComponentType, StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import RiffrecProvider, { type RiffrecConfig } from '../lib/riffrec_provider'
+import { startSilentSignIn } from '../lib/silent_sign_in'
 import type { WebmcpManifest } from '../lib/webmcp'
 import WebmcpProvider from '../lib/webmcp_provider'
+import type { SharedProps } from '../types'
 
 void createInertiaApp({
   // Resolve page components from app/frontend/pages using the snake_case
@@ -40,6 +42,7 @@ void createInertiaApp({
       feedback_capture_enabled?: boolean
       riffrec?: RiffrecConfig | null
       webmcp?: WebmcpManifest | null
+      silent_sign_in_path?: SharedProps['silent_sign_in_path']
     }
 
     const app = (
@@ -60,6 +63,10 @@ void createInertiaApp({
     } else {
       createRoot(el).render(app)
     }
+
+    // Ask Every once, in a hidden frame, whether this signed-out visitor is
+    // signed in there. Outside the React tree on purpose (lib/silent_sign_in.ts).
+    startSilentSignIn(shared.silent_sign_in_path ?? null)
   },
 }).catch((error) => {
   // This ensures this entrypoint is only loaded on Inertia pages by checking for

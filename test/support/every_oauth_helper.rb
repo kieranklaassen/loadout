@@ -25,6 +25,13 @@ module EveryOauthHelper
     JSON.parse(file_fixture("every_oauth/#{name}.json").read).merge(overrides.stringify_keys)
   end
 
+  # A clicked sign-in up to the redirect to Every; returns its state.
+  def start_every_sign_in(**params)
+    get "/auth/every", params: params
+    assert_response :redirect
+    Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+  end
+
   def stub_every_token(status: 200, payload: every_payload("token"))
     stub_request(:post, "#{EVERY_BASE}/oauth/token")
       .to_return(status: status, body: payload.to_json, headers: { "Content-Type" => "application/json" })

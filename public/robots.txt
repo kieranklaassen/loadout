@@ -1,1 +1,5 @@
 # See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+
+# The hidden frame of automatic sign-in is not a page to crawl.
+User-agent: *
+Disallow: /session/

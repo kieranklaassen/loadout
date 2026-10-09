@@ -148,7 +148,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
       state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
 
       get "/auth/every/callback", params: { error: answer, state: }
-      assert_redirected_to new_session_url
+      assert_redirected_to new_session_url(silent: "tried")
       assert_nil flash[:alert]
 
       follow_redirect!
@@ -157,12 +157,68 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the sign-in page tries silently again once the last attempt is old" do
+  test "a decline stands for a day, on the sign-in page too" do
     get new_session_path
     follow_redirect!
     state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
     get "/auth/every/callback", params: { error: "login_required", state: }
 
+    assert_equal "declined", cookies[EverySilentSignIn::TRIED_COOKIE]
+    travel EverySilentSignIn::ATTEMPT_TTL + 1.second do
+      get new_session_path
+      assert_response :success
+    end
+    travel EverySilentSignIn::DECLINE_TTL + 1.second do
+      get new_session_path
+      assert_redirected_to "/auth/every?prompt=none"
+    end
+  end
+
+  test "a client that keeps no cookies is asked once, not in a loop" do
+    get new_session_path
+    follow_redirect!
+    state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+    cookies.to_hash.each_key { |name| cookies.delete(name) }
+
+    get "/auth/every/callback", params: { error: "login_required", state: }
+    assert_redirected_to new_session_url(silent: "tried")
+
+    cookies.to_hash.each_key { |name| cookies.delete(name) }
+    follow_redirect!
+    assert_response :success
+    assert_inertia_component "auth/sign_in"
+  end
+
+  test "a silent attempt that fails for any other reason says nothing either" do
+    get new_session_path
+    follow_redirect!
+    state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+    cookies.delete(OmniAuth::Strategies::Every::STATE_COOKIE)
+
+    get "/auth/every/callback", params: { code: "authorization-code", state: }
+
+    assert_redirected_to new_session_url(silent: "tried")
+    assert_nil flash[:alert]
+  end
+
+  test "a frame that was started and never answered does not stop the sign-in page from asking" do
+    cookies[EverySilentSignIn::TRIED_COOKIE] = "asking"
+
+    get new_session_path
+
+    assert_redirected_to "/auth/every?prompt=none"
+    assert_equal "tried", cookies[EverySilentSignIn::TRIED_COOKIE]
+  end
+
+  test "the sign-in page tries silently again once the last attempt is old" do
+    get new_session_path
+    follow_redirect!
+    state = Rack::Utils.parse_query(URI(response.location).query).fetch("state")
+    cookies.delete(OmniAuth::Strategies::Every::STATE_COOKIE)
+    get "/auth/every/callback", params: { code: "authorization-code", state: }
+
+    get new_session_path
+    assert_response :success
     travel EverySilentSignIn::ATTEMPT_TTL + 1.second do
       get new_session_path
       assert_redirected_to "/auth/every?prompt=none"
@@ -216,7 +272,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
       complete_every_sign_in
     end
 
-    assert_redirected_to new_session_url
+    assert_redirected_to new_session_url(silent: "tried")
   end
 
   test "an explicit false also clears the team status the account had" do
@@ -288,7 +344,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
       complete_every_sign_in
     end
 
-    assert_redirected_to new_session_url
+    assert_redirected_to new_session_url(silent: "tried")
     assert_equal "every-user-ana", users(:every_ana).reload.every_user_id
   end
 
@@ -309,7 +365,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
       get "/auth/every/callback", params: { code: "authorization-code", state: "forged" }
     end
 
-    assert_redirected_to new_session_url
+    assert_redirected_to new_session_url(silent: "tried")
     assert_equal "Sign in with Every did not complete. Try again.", flash[:alert]
     assert_empty cookies[:session_id].to_s
   end
@@ -321,7 +377,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
       get "/auth/every/callback", params: { error: "access_denied", state: state }
     end
 
-    assert_redirected_to new_session_url
+    assert_redirected_to new_session_url(silent: "tried")
     assert_equal "Sign in with Every did not complete. Try again.", flash[:alert]
   end
 
@@ -332,7 +388,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
       complete_every_sign_in
     end
 
-    assert_redirected_to new_session_url
+    assert_redirected_to new_session_url(silent: "tried")
     assert flash[:alert].present?
   end
 
@@ -341,7 +397,7 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
 
     get "/auth/every"
 
-    assert_redirected_to new_session_url
+    assert_redirected_to new_session_url(silent: "tried")
     assert_equal "Sign in with Every is not configured on this server.", flash[:alert]
   end
 
@@ -353,12 +409,6 @@ class Sessions::EveryControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-
-  def start_every_sign_in
-    get "/auth/every"
-    assert_response :redirect
-    Rack::Utils.parse_query(URI(response.location).query).fetch("state")
-  end
 
   def complete_every_sign_in
     state = start_every_sign_in
