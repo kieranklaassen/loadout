@@ -127,3 +127,6 @@ Toolbox's own changes get no `docs/changelog/` entry and no manifest bump.
 Toolbox's own changes, so adapt an upgrade entry that touches those modules
 rather than applying it as written. `auth` was replaced by Sign in with Every;
 `docs/modules/auth.md` still describes the template's password sign-in.
+
+`@tailwindcss/typography` was removed from the frontend: no page uses `prose`,
+and its pinned parser failed `npm audit`. Add it back with the page that needs it.
